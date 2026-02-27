@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — Magnolia Analytics{% endblock %}
+
+{% block content %}
+<section class="dashboard">
+
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div>
+      <h1 class="dashboard-title">Good to have you back, {{ current_user.first_name }}.</h1>
+      <p class="dashboard-subtitle">{{ current_user.home_course }} &nbsp;·&nbsp; HCP {{ current_user.handicap_index }}</p>
+    </div>
+    <a href="{{ url_for('rounds.new_round') }}" class="btn btn--gold">+ Log Round</a>
+  </div>
+
+  <!-- Season stats -->
+  {% if stats %}
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.rounds_played }}</div>
+      <div class="stat-label">Rounds this season</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.avg_score or '—' }}</div>
+      <div class="stat-label">Avg score</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.best_score or '—' }}</div>
+      <div class="stat-label">Best score</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.avg_putts or '—' }}</div>
+      <div class="stat-label">Avg putts</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.avg_gir or '—' }}</div>
+      <div class="stat-label">Avg GIR</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Recent rounds -->
+  <div class="section">
+    <h2 class="section-title">Recent rounds</h2>
+
+    {% if recent_rounds %}
+    <div class="rounds-list">
+      {% for round in recent_rounds %}
+      <div class="round-row">
+        <div class="round-date">{{ round.date_played.strftime('%d %b %Y') }}</div>
+        <div class="round-course">{{ round.course.name if round.course else 'Unknown Course' }}</div>
+        <div class="round-score">
+          {% if round.total_score %}
+            <span class="score-number">{{ round.total_score }}</span>
+            {% if round.score_vs_par() is not none %}
+              <span class="score-diff {% if round.score_vs_par() < 0 %}score-diff--under{% elif round.score_vs_par() == 0 %}score-diff--even{% else %}score-diff--over{% endif %}">
+                {% if round.score_vs_par() > 0 %}+{% endif %}{{ round.score_vs_par() }}
+              </span>
+            {% endif %}
+          {% else %}
+            <span class="score-dash">—</span>
+          {% endif %}
+        </div>
+        <div class="round-putts">{{ round.total_putts or '—' }} putts</div>
+        <div class="round-gir">{{ round.gir_count or '—' }}/18 GIR</div>
+        <div class="round-actions">
+          {% if round.report and round.report.html_content %}
+            <a href="{{ url_for('reports.view_report', round_id=round.id) }}" class="link-gold">View Report →</a>
+          {% else %}
+            <span class="badge badge--pending">Report pending</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>No rounds logged yet.</p>
+      <a href="{{ url_for('rounds.new_round') }}" class="btn btn--gold">Log your first round</a>
+    </div>
+    {% endif %}
+  </div>
+
+</section>
+{% endblock %}

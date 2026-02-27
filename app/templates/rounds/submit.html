@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Review Round — Magnolia Analytics{% endblock %}
+
+{% block content %}
+<section class="round-submit">
+  <div class="form-page">
+    <div class="form-page-header">
+      <h1 class="form-page-title">Review your round</h1>
+      <p class="form-page-subtitle">Check everything looks right, then submit to generate your report.</p>
+    </div>
+
+    <!-- Score card -->
+    <div class="scorecard">
+      <table class="scorecard-table">
+        <thead>
+          <tr>
+            <th>Hole</th><th>Par</th><th>Score</th><th>Tee</th><th>GIR</th><th>Putts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for hole in holes %}
+          <tr class="{% if hole.score < hole.par %}row--under{% elif hole.score == hole.par %}row--par{% else %}row--over{% endif %}">
+            <td>{{ hole.hole_number }}</td>
+            <td>{{ hole.par }}</td>
+            <td><strong>{{ hole.score }}</strong></td>
+            <td>{{ hole.tee_shot or '—' }}</td>
+            <td>{{ 'Yes' if hole.gir else 'No' }}</td>
+            <td>{{ hole.putts }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2"><strong>Total</strong></td>
+            <td><strong>{{ holes|sum(attribute='score') }}</strong></td>
+            <td></td>
+            <td>{{ holes|selectattr('gir')|list|length }}/{{ holes|length }}</td>
+            <td>{{ holes|sum(attribute='putts') }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <form method="POST" action="{{ url_for('rounds.submit_round', round_id=round.id) }}">
+      <button type="submit" class="btn btn--gold btn--full">Submit & Generate Report →</button>
+    </form>
+
+    <a href="{{ url_for('rounds.enter_hole', round_id=round.id, hole_number=18) }}"
+       class="btn btn--outline btn--full" style="margin-top: 12px;">← Edit last hole</a>
+
+  </div>
+</section>
+{% endblock %}

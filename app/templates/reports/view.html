@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Round Report — Magnolia Analytics{% endblock %}
+
+{% block content %}
+<section class="report-view">
+  <div class="report-header">
+    <div>
+      <h1 class="report-title">{{ round.date_played.strftime('%d %B %Y') }}</h1>
+      <p class="report-course">{{ round.course.name if round.course else 'Unknown Course' }}</p>
+    </div>
+    <div class="report-meta">
+      <span class="stat-pill">{{ round.total_score }}</span>
+      <span class="stat-pill">{{ round.total_putts }} putts</span>
+      <span class="stat-pill">{{ round.gir_count }}/18 GIR</span>
+    </div>
+  </div>
+
+  <div class="report-body">
+    {{ report.html_content | safe }}
+  </div>
+
+  <div class="report-footer">
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn--outline">← Back to Dashboard</a>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}Magnolia Analytics — Premium Golf Performance Tracking{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-inner">
+    <p class="hero-eyebrow">Golf performance. Refined.</p>
+    <h1 class="hero-title">Know your game<br>like never before.</h1>
+    <p class="hero-subtitle">
+      Log every round in under 5 minutes. Receive a beautiful, AI-powered performance
+      report in your inbox within 30 seconds of finishing your round.
+    </p>
+    <div class="hero-actions">
+      <a href="{{ url_for('auth.register') }}" class="btn btn--gold">Start Tracking Free</a>
+      <a href="{{ url_for('main.pricing') }}" class="btn btn--outline">View Pricing</a>
+    </div>
+  </div>
+</section>
+
+<!-- Feature strip -->
+<section class="features">
+  <div class="features-grid">
+
+    <div class="feature-card">
+      <div class="feature-icon">◆</div>
+      <h3 class="feature-title">Hole-by-hole logging</h3>
+      <p class="feature-body">Tap through 18 holes in under 5 minutes. Smart fields appear and disappear based on your shots.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">◆</div>
+      <h3 class="feature-title">AI-generated reports</h3>
+      <p class="feature-body">Claude analyses every stat and delivers narrative coaching insights tailored to your game.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">◆</div>
+      <h3 class="feature-title">Strokes gained analysis</h3>
+      <p class="feature-body">Understand exactly where you're losing and gaining shots — off the tee, approach, and on the greens.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">◆</div>
+      <h3 class="feature-title">Season trends</h3>
+      <p class="feature-body">See your progress over time with beautiful charts and season-average comparisons in every report.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- Pricing teaser -->
+<section class="pricing-teaser">
+  <div class="pricing-teaser-inner">
+    <h2 class="section-title">Simple, transparent pricing</h2>
+    <div class="plans">
+
+      <div class="plan-card">
+        <div class="plan-tier">Standard</div>
+        <div class="plan-price">£7.99<span>/mo</span></div>
+        <ul class="plan-features">
+          <li>Manual stat entry</li>
+          <li>Full Claude AI reports</li>
+          <li>Email delivery in 30s</li>
+          <li>Season analytics dashboard</li>
+          <li>Putting distance breakdown</li>
+        </ul>
+        <a href="{{ url_for('auth.register') }}" class="btn btn--outline btn--full">Get Started</a>
+      </div>
+
+      <div class="plan-card plan-card--featured">
+        <div class="plan-badge">Most Popular</div>
+        <div class="plan-tier">Premium</div>
+        <div class="plan-price">£12.99<span>/mo</span></div>
+        <ul class="plan-features">
+          <li>Everything in Standard</li>
+          <li>Garmin &amp; hardware sync</li>
+          <li>Automatic round detection</li>
+          <li>Priority report generation</li>
+        </ul>
+        <a href="{{ url_for('auth.register') }}" class="btn btn--gold btn--full">Get Started</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}

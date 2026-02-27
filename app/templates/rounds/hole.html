@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% block title %}Hole {{ hole_number }} — Magnolia Analytics{% endblock %}
+
+{% block content %}
+<section class="hole-entry">
+  <div class="hole-entry-inner">
+
+    <!-- Progress header -->
+    <div class="hole-progress">
+      <div class="hole-progress-bar">
+        <div class="hole-progress-fill" style="width: {{ (hole_number / total_holes * 100)|int }}%"></div>
+      </div>
+      <div class="hole-progress-label">Hole {{ hole_number }} of {{ total_holes }}</div>
+    </div>
+
+    <form method="POST"
+          action="{{ url_for('rounds.enter_hole', round_id=round.id, hole_number=hole_number) }}"
+          id="hole-form"
+          class="hole-form">
+
+      <!-- Par selector -->
+      <div class="field-group">
+        <label class="field-label">Par</label>
+        <div class="tap-group" id="par-group">
+          {% for par_val in [3, 4, 5] %}
+          <button type="button" class="tap-btn {% if (existing and existing.par == par_val) or (not existing and course_par == par_val) or (not existing and not course_par and par_val == 4) %}tap-btn--active{% endif %}"
+                  data-field="par" data-value="{{ par_val }}">{{ par_val }}</button>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="par" id="par-input"
+               value="{{ existing.par if existing else (course_par or 4) }}">
+      </div>
+
+      <!-- Score selector -->
+      <div class="field-group">
+        <label class="field-label">Score</label>
+        <div class="score-stepper">
+          <button type="button" class="stepper-btn" id="score-down">−</button>
+          <span class="stepper-value" id="score-display">
+            {{ existing.score if existing else (course_par or 4) }}
+          </span>
+          <button type="button" class="stepper-btn" id="score-up">+</button>
+        </div>
+        <input type="hidden" name="score" id="score-input"
+               value="{{ existing.score if existing else (course_par or 4) }}">
+      </div>
+
+      <!-- Tee shot (hidden for par 3s) -->
+      <div class="field-group" id="tee-shot-group">
+        <label class="field-label">Tee shot</label>
+        <div class="tap-group">
+          {% for option, label in [('fairway','Fairway'), ('left','Left'), ('right','Right'), ('penalty','Penalty')] %}
+          <button type="button"
+                  class="tap-btn {% if existing and existing.tee_shot == option %}tap-btn--active{% endif %}"
+                  data-field="tee_shot" data-value="{{ option }}">{{ label }}</button>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="tee_shot" id="tee-shot-input"
+               value="{{ existing.tee_shot or '' }}">
+      </div>
+
+      <!-- GIR -->
+      <div class="field-group">
+        <label class="field-label">Green in Regulation?</label>
+        <div class="tap-group tap-group--two">
+          <button type="button"
+                  class="tap-btn tap-btn--half {% if existing and existing.gir %}tap-btn--active{% endif %}"
+                  data-field="gir" data-value="true">Yes</button>
+          <button type="button"
+                  class="tap-btn tap-btn--half {% if existing and not existing.gir %}tap-btn--active{% elif not existing %}tap-btn--active{% endif %}"
+                  data-field="gir" data-value="false">No</button>
+        </div>
+        <input type="hidden" name="gir" id="gir-input"
+               value="{{ 'true' if existing and existing.gir else 'false' }}">
+      </div>
+
+      <!-- Scramble fields (shown only when GIR = No) -->
+      <div id="scramble-fields" class="{{ 'hidden' if existing and existing.gir else '' }}">
+
+        <div class="field-group">
+          <label class="field-label">Miss direction</label>
+          <div class="tap-group">
+            {% for option, label in [('left','Left'), ('right','Right'), ('short','Short'), ('long','Long'), ('bunker','Bunker')] %}
+            <button type="button"
+                    class="tap-btn {% if existing and existing.approach_miss == option %}tap-btn--active{% endif %}"
+                    data-field="approach_miss" data-value="{{ option }}">{{ label }}</button>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="approach_miss" id="approach-miss-input"
+                 value="{{ existing.approach_miss or '' }}">
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Scramble distance</label>
+          <div class="tap-group">
+            {% for option, label in [('fringe','Fringe'), ('0_10','0–10 yds'), ('10_20','10–20 yds'), ('20_40','20–40 yds'), ('40_plus','40+ yds')] %}
+            <button type="button"
+                    class="tap-btn {% if existing and existing.scramble_distance == option %}tap-btn--active{% endif %}"
+                    data-field="scramble_distance" data-value="{{ option }}">{{ label }}</button>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="scramble_distance" id="scramble-distance-input"
+                 value="{{ existing.scramble_distance or '' }}">
+        </div>
+
+        <!-- Sand save (shown only when miss = bunker) -->
+        <div class="field-group" id="sand-save-group"
+             style="{{ 'display:none' if not existing or existing.approach_miss != 'bunker' else '' }}">
+          <label class="field-label">Sand save?</label>
+          <div class="tap-group tap-group--two">
+            <button type="button"
+                    class="tap-btn tap-btn--half {% if existing and existing.sand_save_made %}tap-btn--active{% endif %}"
+                    data-field="sand_save_made" data-value="true">Yes</button>
+            <button type="button"
+                    class="tap-btn tap-btn--half {% if existing and existing.sand_save_made == False %}tap-btn--active{% endif %}"
+                    data-field="sand_save_made" data-value="false">No</button>
+          </div>
+          <input type="hidden" name="sand_save_made" id="sand-save-input"
+                 value="{{ 'true' if existing and existing.sand_save_made else '' }}">
+          <input type="hidden" name="sand_save_attempt" value="true">
+        </div>
+
+      </div>
+
+      <!-- Putts -->
+      <div class="field-group">
+        <label class="field-label">Putts</label>
+        <div class="score-stepper">
+          <button type="button" class="stepper-btn" id="putts-down">−</button>
+          <span class="stepper-value" id="putts-display">{{ existing.putts if existing else 2 }}</span>
+          <button type="button" class="stepper-btn" id="putts-up">+</button>
+        </div>
+        <input type="hidden" name="putts" id="putts-input"
+               value="{{ existing.putts if existing else 2 }}">
+      </div>
+
+      <!-- First putt distance -->
+      <div class="field-group">
+        <label class="field-label">First putt distance (ft)</label>
+        <div class="tap-group">
+          {% for dist in [3, 6, 10, 15, 20, 30, 40] %}
+          <button type="button"
+                  class="tap-btn {% if existing and existing.first_putt_distance == dist %}tap-btn--active{% endif %}"
+                  data-field="first_putt_distance" data-value="{{ dist }}">{{ dist }}'</button>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="first_putt_distance" id="first-putt-input"
+               value="{{ existing.first_putt_distance or '' }}">
+      </div>
+
+      <!-- Penalties -->
+      <div class="field-group">
+        <label class="field-label">Penalty strokes</label>
+        <div class="score-stepper">
+          <button type="button" class="stepper-btn" id="penalties-down">−</button>
+          <span class="stepper-value" id="penalties-display">{{ existing.penalties if existing else 0 }}</span>
+          <button type="button" class="stepper-btn" id="penalties-up">+</button>
+        </div>
+        <input type="hidden" name="penalties" id="penalties-input"
+               value="{{ existing.penalties if existing else 0 }}">
+      </div>
+
+      <!-- Navigation -->
+      <div class="hole-nav">
+        {% if hole_number > 1 %}
+          <a href="{{ url_for('rounds.enter_hole', round_id=round.id, hole_number=hole_number - 1) }}"
+             class="btn btn--outline">← Hole {{ hole_number - 1 }}</a>
+        {% else %}
+          <div></div>
+        {% endif %}
+
+        <button type="submit" class="btn btn--gold">
+          {% if hole_number < total_holes %}Hole {{ hole_number + 1 }} →{% else %}Review Round →{% endif %}
+        </button>
+      </div>
+
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/round_entry.js') }}"></script>
+{% endblock %}

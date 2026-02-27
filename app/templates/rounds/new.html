@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Log a Round — Magnolia Analytics{% endblock %}
+
+{% block content %}
+<section class="round-setup">
+  <div class="form-page">
+    <div class="form-page-header">
+      <h1 class="form-page-title">Log a round</h1>
+      <p class="form-page-subtitle">Set up the basics before entering hole-by-hole stats.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('rounds.new_round') }}" class="setup-form">
+
+      <div class="form-group">
+        <label for="course_id" class="form-label">Course</label>
+        <select id="course_id" name="course_id" class="form-input form-select">
+          <option value="">— Select course —</option>
+          {% for course in courses %}
+            <option value="{{ course.id }}"
+              {% if course.name == current_user.home_course %}selected{% endif %}>
+              {{ course.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="date_played" class="form-label">Date played</label>
+        <input type="date" id="date_played" name="date_played" class="form-input"
+               value="{{ today }}" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="tee_set" class="form-label">Tee set</label>
+          <select id="tee_set" name="tee_set" class="form-input form-select">
+            <option value="White">White</option>
+            <option value="Yellow">Yellow</option>
+            <option value="Red">Red</option>
+            <option value="Blue">Blue</option>
+            <option value="Black">Black</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="holes_played" class="form-label">Holes</label>
+          <select id="holes_played" name="holes_played" class="form-input form-select">
+            <option value="18" selected>18 holes</option>
+            <option value="9">9 holes</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn--gold btn--full">Start Entering Holes →</button>
+
+    </form>
+  </div>
+</section>
+{% endblock %}

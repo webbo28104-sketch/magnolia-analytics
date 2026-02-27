@@ -1,0 +1,30 @@
+from app import db
+from datetime import datetime
+
+
+class Report(db.Model):
+    __tablename__ = 'reports'
+
+    id = db.Column(db.Integer, primary_key=True)
+    round_id = db.Column(db.Integer, db.ForeignKey('rounds.id'), nullable=False, unique=True)
+
+    # The generated HTML email content
+    html_content = db.Column(db.Text, nullable=True)
+
+    # Plain text summary for SMS/push notifications (future)
+    summary_text = db.Column(db.Text, nullable=True)
+
+    # Claude metadata
+    prompt_tokens = db.Column(db.Integer, nullable=True)
+    completion_tokens = db.Column(db.Integer, nullable=True)
+    model_used = db.Column(db.String(100), nullable=True)
+
+    # Status
+    generated_at = db.Column(db.DateTime, nullable=True)
+    emailed_at = db.Column(db.DateTime, nullable=True)
+    email_status = db.Column(db.String(50), nullable=True)  # 'sent', 'failed', 'pending'
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Report round_id={self.round_id} status={self.email_status}>'
