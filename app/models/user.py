@@ -6,7 +6,7 @@ from datetime import datetime
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 
 class User(UserMixin, db.Model):
@@ -21,10 +21,7 @@ class User(UserMixin, db.Model):
     home_course = db.Column(db.String(200), default='Seaford GC')
 
     # Subscription
-    subscription_tier = db.Column(
-        db.Enum('standard', 'premium', name='subscription_tier'),
-        default='standard'
-    )
+    subscription_tier = db.Column(db.String(20), default='standard')
     subscription_active = db.Column(db.Boolean, default=False)
     square_customer_id = db.Column(db.String(255), nullable=True)
     subscription_expires_at = db.Column(db.DateTime, nullable=True)

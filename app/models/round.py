@@ -26,10 +26,7 @@ class Round(db.Model):
     hc_differential = db.Column(db.Float, nullable=True)
 
     # Status
-    status = db.Column(
-        db.Enum('in_progress', 'complete', 'report_sent', name='round_status'),
-        default='in_progress'
-    )
+    status = db.Column(db.String(20), default='in_progress')
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime, nullable=True)

@@ -12,23 +12,14 @@ class Hole(db.Model):
     score = db.Column(db.Integer, nullable=False)
 
     # Tee shot (only meaningful on par 4s and 5s)
-    tee_shot = db.Column(
-        db.Enum('fairway', 'left', 'right', 'penalty', name='tee_shot_result'),
-        nullable=True
-    )
+    tee_shot = db.Column(db.String(20), nullable=True)
 
     # Approach / GIR
     gir = db.Column(db.Boolean, default=False)  # Green In Regulation
 
     # If GIR missed:
-    approach_miss = db.Column(
-        db.Enum('left', 'right', 'short', 'long', 'bunker', name='approach_miss_dir'),
-        nullable=True
-    )
-    scramble_distance = db.Column(
-        db.Enum('fringe', '0_10', '10_20', '20_40', '40_plus', name='scramble_dist'),
-        nullable=True
-    )
+    approach_miss = db.Column(db.String(20), nullable=True)
+    scramble_distance = db.Column(db.String(20), nullable=True)
 
     # Putting
     putts = db.Column(db.Integer, nullable=False, default=2)

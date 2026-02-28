@@ -34,4 +34,13 @@ def create_app(config_name='default'):
     app.register_blueprint(rounds_bp, url_prefix='/rounds')
     app.register_blueprint(reports_bp, url_prefix='/reports')
 
+    # Create all tables on startup (safe to call repeatedly)
+    with app.app_context():
+        from app.models.user import User      # noqa
+        from app.models.course import Course  # noqa
+        from app.models.round import Round    # noqa
+        from app.models.hole import Hole      # noqa
+        from app.models.report import Report  # noqa
+        db.create_all()
+
     return app
