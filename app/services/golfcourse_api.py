@@ -10,7 +10,10 @@ Endpoints used:
 """
 
 import os
-import requests
+import json
+import urllib.request
+import urllib.parse
+import urllib.error
 
 BASE_URL = "https://api.golfcourseapi.com/v1"
 
@@ -20,39 +23,48 @@ class GolfCourseAPIError(Exception):
     pass
 
 
-def _headers():
+def _api_key():
     key = os.getenv("GOLFCOURSE_API_KEY")
     if not key:
         raise GolfCourseAPIError(
             "GOLFCOURSE_API_KEY environment variable is not set."
         )
-    return {"Authorization": f"Key {key}"}
+    return key
 
 
-def _get(path: str, params: dict | None = None) -> dict | list:
-    """Perform a GET request against the API, raise on errors."""
+def _get(path: str, params=None):
+    """Perform a GET request against the API using stdlib urllib."""
     url = f"{BASE_URL}{path}"
+    if params:
+        url = f"{url}?{urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})}"
+
+    req = urllib.request.Request(
+        url,
+        headers={"Authorization": f"Key {_api_key()}"},
+    )
+
     try:
-        resp = requests.get(url, headers=_headers(), params=params, timeout=10)
-    except requests.exceptions.ConnectionError as e:
-        raise GolfCourseAPIError(f"Could not connect to GolfCourseAPI: {e}") from e
-    except requests.exceptions.Timeout:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            body = resp.read().decode("utf-8")
+            status = resp.status
+    except urllib.error.HTTPError as e:
+        status = e.code
+        body = e.read().decode("utf-8", errors="replace")
+        if status == 401:
+            raise GolfCourseAPIError("GolfCourseAPI: invalid or missing API key.")
+        if status == 404:
+            raise GolfCourseAPIError(f"GolfCourseAPI: resource not found at {path}.")
+        if status == 429:
+            raise GolfCourseAPIError("GolfCourseAPI: rate limit exceeded. Try again shortly.")
+        raise GolfCourseAPIError(f"GolfCourseAPI error {status}: {body[:200]}")
+    except urllib.error.URLError as e:
+        raise GolfCourseAPIError(f"Could not connect to GolfCourseAPI: {e.reason}") from e
+    except TimeoutError:
         raise GolfCourseAPIError("GolfCourseAPI request timed out.") from None
 
-    if resp.status_code == 401:
-        raise GolfCourseAPIError("GolfCourseAPI: invalid or missing API key.")
-    if resp.status_code == 404:
-        raise GolfCourseAPIError(f"GolfCourseAPI: resource not found at {path}.")
-    if resp.status_code == 429:
-        raise GolfCourseAPIError("GolfCourseAPI: rate limit exceeded. Try again shortly.")
-    if not resp.ok:
-        raise GolfCourseAPIError(
-            f"GolfCourseAPI error {resp.status_code}: {resp.text[:200]}"
-        )
-
     try:
-        return resp.json()
-    except ValueError as e:
+        return json.loads(body)
+    except json.JSONDecodeError as e:
         raise GolfCourseAPIError(f"GolfCourseAPI returned non-JSON response: {e}") from e
 
 
@@ -60,7 +72,7 @@ def _get(path: str, params: dict | None = None) -> dict | list:
 # Public functions
 # ---------------------------------------------------------------------------
 
-def search_courses(query: str, country: str | None = None) -> list[dict]:
+def search_courses(query: str, country=None):
     """
     Search for courses by name/location text and optional country.
 
@@ -86,7 +98,7 @@ def search_courses(query: str, country: str | None = None) -> list[dict]:
     return [_normalise_course_summary(c) for c in courses]
 
 
-def get_course_details(course_id: int | str) -> dict:
+def get_course_details(course_id):
     """
     Fetch full course detail including tee sets and hole-by-hole data.
 
@@ -209,14 +221,14 @@ def _normalise_hole(raw: dict) -> dict:
 # Utilities
 # ---------------------------------------------------------------------------
 
-def _safe_float(val, default: float | None = None) -> float | None:
+def _safe_float(val, default=None):
     try:
         return float(val) if val is not None else default
     except (TypeError, ValueError):
         return default
 
 
-def _safe_int(val, default: int | None = None) -> int | None:
+def _safe_int(val, default=None):
     try:
         return int(val) if val is not None else default
     except (TypeError, ValueError):
