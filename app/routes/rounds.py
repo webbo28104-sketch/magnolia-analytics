@@ -4,6 +4,8 @@ from app import db
 from app.models.round import Round
 from app.models.hole import Hole
 from app.models.course import Course
+from app.models.tee_set import TeeSet
+from app.models.course_hole import CourseHole
 from app.services.claude_service import generate_report
 from app.services.sendgrid_service import send_report_email
 from datetime import datetime, date
@@ -14,20 +16,32 @@ rounds_bp = Blueprint('rounds', __name__)
 @rounds_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_round():
-    """Start a new round — choose course, date, tee set."""
-    courses = Course.query.order_by(Course.name).all()
-
+    """Start a new round — USGA-style course + tee selector."""
     if request.method == 'POST':
         course_id = request.form.get('course_id')
+        tee_set_id = request.form.get('tee_set_id')
         date_played = request.form.get('date_played', date.today().isoformat())
-        tee_set = request.form.get('tee_set', 'White')
         holes_played = int(request.form.get('holes_played', 18))
+
+        if not course_id or not tee_set_id:
+            flash('Please select a course and tee.', 'error')
+            return redirect(url_for('rounds.new_round'))
+
+        tee = db.session.get(TeeSet, int(tee_set_id))
+        if not tee:
+            flash('Selected tee not found. Please try again.', 'error')
+            return redirect(url_for('rounds.new_round'))
+
+        # Always use the course_id from the tee (avoids stale hidCourseId)
+        course_id = tee.course_id
+        tee_label = tee.name
 
         round_ = Round(
             user_id=current_user.id,
-            course_id=int(course_id) if course_id else None,
+            course_id=course_id,
+            tee_set_id=int(tee_set_id),
             date_played=datetime.strptime(date_played, '%Y-%m-%d').date(),
-            tee_set=tee_set,
+            tee_set=tee_label,
             holes_played=holes_played,
             status='in_progress'
         )
@@ -36,7 +50,7 @@ def new_round():
 
         return redirect(url_for('rounds.enter_hole', round_id=round_.id, hole_number=1))
 
-    return render_template('rounds/new.html', courses=courses, today=date.today().isoformat())
+    return render_template('rounds/new.html', today=date.today().isoformat())
 
 
 @rounds_bp.route('/<int:round_id>/hole/<int:hole_number>', methods=['GET', 'POST'])
@@ -51,9 +65,17 @@ def enter_hole(round_id, hole_number):
     # Get existing data if re-visiting a hole
     existing = Hole.query.filter_by(round_id=round_id, hole_number=hole_number).first()
 
-    # Determine par for this hole
+    # Determine par from the specific tee set's hole data (real API data)
     course_par = None
-    if round_.course and round_.course.par_list:
+    if round_.tee_set_id:
+        ch = CourseHole.query.filter_by(
+            tee_set_id=round_.tee_set_id,
+            hole_number=hole_number
+        ).first()
+        if ch:
+            course_par = ch.par
+    # Fallback: use course-level par distribution
+    if course_par is None and round_.course and round_.course.par_list:
         course_par = round_.course.par_list[hole_number - 1]
 
     if request.method == 'POST':

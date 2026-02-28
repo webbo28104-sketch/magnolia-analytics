@@ -8,11 +8,12 @@ class Round(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
+    tee_set_id = db.Column(db.Integer, db.ForeignKey('tee_sets.id'), nullable=True)
 
     # Round metadata
     date_played = db.Column(db.Date, nullable=False, default=datetime.utcnow().date)
     holes_played = db.Column(db.Integer, default=18)  # 9 or 18
-    tee_set = db.Column(db.String(50), default='White')
+    tee_set = db.Column(db.String(50), default='White')   # human-readable label
 
     # Totals (computed after submission)
     total_score = db.Column(db.Integer, nullable=True)
@@ -51,6 +52,13 @@ class Round(db.Model):
         if self.total_score and self.course:
             return self.total_score - self.course.par
         return None
+
+    def compute_differential(self):
+        """USGA handicap differential: (Score - Course Rating) × 113 / Slope Rating."""
+        if self.total_score and self.tee_set_obj:
+            ts = self.tee_set_obj
+            diff = (self.total_score - ts.course_rating) * 113 / ts.slope_rating
+            self.hc_differential = round(diff, 1)
 
     def __repr__(self):
         return f'<Round {self.id} — {self.date_played}>'

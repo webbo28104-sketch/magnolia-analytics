@@ -27,20 +27,24 @@ def create_app(config_name='default'):
     from app.routes.dashboard import dashboard_bp
     from app.routes.rounds import rounds_bp
     from app.routes.reports import reports_bp
+    from app.routes.courses import courses_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
     app.register_blueprint(rounds_bp, url_prefix='/rounds')
     app.register_blueprint(reports_bp, url_prefix='/reports')
+    app.register_blueprint(courses_bp)
 
     # Create all tables on startup (safe to call repeatedly)
     with app.app_context():
-        from app.models.user import User      # noqa
-        from app.models.course import Course  # noqa
-        from app.models.round import Round    # noqa
-        from app.models.hole import Hole      # noqa
-        from app.models.report import Report  # noqa
+        from app.models.user import User            # noqa
+        from app.models.course import Course        # noqa
+        from app.models.tee_set import TeeSet       # noqa
+        from app.models.course_hole import CourseHole  # noqa
+        from app.models.round import Round          # noqa
+        from app.models.hole import Hole            # noqa
+        from app.models.report import Report        # noqa
         db.create_all()
 
     return app

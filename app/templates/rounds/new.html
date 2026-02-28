@@ -3,56 +3,491 @@
 
 {% block content %}
 <section class="round-setup">
-  <div class="form-page">
+  <div class="course-selector-page">
+
     <div class="form-page-header">
       <h1 class="form-page-title">Log a round</h1>
-      <p class="form-page-subtitle">Set up the basics before entering hole-by-hole stats.</p>
+      <p class="form-page-subtitle">Search for your course, pick your tees, and start logging.</p>
     </div>
 
-    <form method="POST" action="{{ url_for('rounds.new_round') }}" class="setup-form">
+    <!-- STEP 1: Course Finder -->
+    <div id="step-course" class="setup-step active">
+      <div class="step-label">Step 1 of 3 — Select Course</div>
 
+      <!-- Country selector -->
       <div class="form-group">
-        <label for="course_id" class="form-label">Course</label>
-        <select id="course_id" name="course_id" class="form-input form-select">
-          <option value="">— Select course —</option>
-          {% for course in courses %}
-            <option value="{{ course.id }}"
-              {% if course.name == current_user.home_course %}selected{% endif %}>
-              {{ course.name }}
-            </option>
-          {% endfor %}
-        </select>
+        <label class="form-label">Country</label>
+        <div class="country-tabs" id="countryTabs">
+          <button class="ctab active" data-country="England">England</button>
+          <button class="ctab" data-country="Scotland">Scotland</button>
+          <button class="ctab" data-country="Wales">Wales</button>
+          <button class="ctab" data-country="Ireland">Ireland</button>
+          <button class="ctab" data-country="">International</button>
+        </div>
+      </div>
+
+      <!-- Search bar -->
+      <div class="course-search-wrap">
+        <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+          <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M13 13l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <input type="text" id="courseSearch" class="course-search-input"
+               placeholder="Search by course or town name…" autocomplete="off">
+        <span id="searchSpinner" class="search-spinner hidden"></span>
+      </div>
+
+      <!-- Results -->
+      <div class="course-results-wrap">
+        <div id="courseResults" class="course-results">
+          <div class="course-results-hint">Type to search courses worldwide.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Tee + Date -->
+    <div id="step-tee" class="setup-step hidden">
+      <div class="step-label">Step 2 of 3 — Choose Tees &amp; Date</div>
+
+      <div class="selected-course-banner">
+        <div>
+          <div class="banner-name" id="bannerCourseName"></div>
+          <div class="banner-meta" id="bannerCourseMeta"></div>
+        </div>
+        <button class="btn btn--ghost btn--xs" onclick="goBackToCourse()">← Change</button>
       </div>
 
       <div class="form-group">
-        <label for="date_played" class="form-label">Date played</label>
-        <input type="date" id="date_played" name="date_played" class="form-input"
-               value="{{ today }}" required>
+        <label class="form-label">Tee set</label>
+        <div id="teeOptions" class="tee-options">
+          <div class="tee-loading">Loading tee data…</div>
+        </div>
+        <p id="teeError" class="field-error hidden"></p>
       </div>
 
       <div class="form-row">
         <div class="form-group">
-          <label for="tee_set" class="form-label">Tee set</label>
-          <select id="tee_set" name="tee_set" class="form-input form-select">
-            <option value="White">White</option>
-            <option value="Yellow">Yellow</option>
-            <option value="Red">Red</option>
-            <option value="Blue">Blue</option>
-            <option value="Black">Black</option>
-          </select>
+          <label for="date_played" class="form-label">Date played</label>
+          <input type="date" id="date_played" class="form-input" value="{{ today }}" required>
         </div>
         <div class="form-group">
           <label for="holes_played" class="form-label">Holes</label>
-          <select id="holes_played" name="holes_played" class="form-input form-select">
+          <select id="holes_played" class="form-input form-select">
             <option value="18" selected>18 holes</option>
             <option value="9">9 holes</option>
           </select>
         </div>
       </div>
 
-      <button type="submit" class="btn btn--gold btn--full">Start Entering Holes →</button>
+      <button class="btn btn--gold btn--full" onclick="goToReview()" id="btnReview" disabled>
+        Review &amp; Start →
+      </button>
+    </div>
 
-    </form>
+    <!-- STEP 3: Confirm + Submit -->
+    <div id="step-confirm" class="setup-step hidden">
+      <div class="step-label">Step 3 of 3 — Confirm</div>
+
+      <div class="round-summary-card">
+        <div class="summary-row">
+          <span class="summary-key">Course</span>
+          <span class="summary-val" id="summaryCourseName"></span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-key">Tee</span>
+          <span class="summary-val" id="summaryTee"></span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-key">Rating / Slope</span>
+          <span class="summary-val" id="summaryRating"></span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-key">Date</span>
+          <span class="summary-val" id="summaryDate"></span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-key">Holes</span>
+          <span class="summary-val" id="summaryHoles"></span>
+        </div>
+      </div>
+
+      <!-- Hidden form that POSTs to create the round -->
+      <form method="POST" action="{{ url_for('rounds.new_round') }}" id="roundForm">
+        <input type="hidden" name="course_id"    id="hidCourseId">
+        <input type="hidden" name="tee_set_id"   id="hidTeeSetId">
+        <input type="hidden" name="date_played"  id="hidDate">
+        <input type="hidden" name="holes_played" id="hidHoles">
+      </form>
+
+      <div class="confirm-actions">
+        <button class="btn btn--ghost" onclick="goBackToTee()">← Back</button>
+        <button class="btn btn--gold" onclick="submitRound()">Start Entering Holes →</button>
+      </div>
+    </div>
+
   </div>
 </section>
+
+<style>
+/* ── Layout ────────────────────────────────── */
+.course-selector-page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+.setup-step { display: none; }
+.setup-step.active { display: block; }
+
+.step-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1.25rem;
+}
+
+/* ── Country tabs ──────────────────────────── */
+.country-tabs {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+.ctab {
+  flex: 1;
+  padding: .5rem .25rem;
+  font-size: .78rem;
+  font-weight: 500;
+  background: var(--surface);
+  border: none;
+  border-right: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.ctab:last-child { border-right: none; }
+.ctab:hover { background: var(--bg-alt); color: var(--text); }
+.ctab.active { background: var(--green-dark); color: #fff; font-weight: 600; }
+
+/* ── Search ────────────────────────────────── */
+.course-search-wrap { position: relative; margin-bottom: 1rem; }
+.search-icon {
+  position: absolute; left: .85rem; top: 50%;
+  transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;
+}
+.course-search-input {
+  width: 100%; padding: .7rem 1rem .7rem 2.5rem;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text); font-size: .9rem;
+  transition: border-color .2s; box-sizing: border-box;
+}
+.course-search-input:focus { outline: none; border-color: var(--gold); }
+.search-spinner {
+  position: absolute; right: .85rem; top: 50%;
+  transform: translateY(-50%);
+  width: 16px; height: 16px;
+  border: 2px solid var(--border); border-top-color: var(--gold);
+  border-radius: 50%; animation: spin .6s linear infinite;
+}
+.search-spinner.hidden { display: none; }
+@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+/* ── Results ───────────────────────────────── */
+.course-results-wrap {
+  border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; min-height: 100px; max-height: 380px; overflow-y: auto;
+}
+.course-results-hint,
+.course-results-empty,
+.course-results-error {
+  padding: 2rem; text-align: center;
+  color: var(--text-muted); font-size: .875rem;
+}
+.course-results-error { color: #e03131; }
+.course-row {
+  display: grid; grid-template-columns: 1fr auto auto;
+  gap: 1rem; align-items: center;
+  padding: .75rem 1rem; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .12s;
+}
+.course-row:last-child { border-bottom: none; }
+.course-row:hover { background: var(--bg-alt); }
+.course-row-name { font-weight: 600; font-size: .875rem; color: var(--text); }
+.course-row-location { font-size: .75rem; color: var(--text-muted); margin-top: 2px; }
+.course-row-meta { font-size: .75rem; color: var(--text-muted); white-space: nowrap; text-align: right; }
+
+/* ── Selected course banner ────────────────── */
+.selected-course-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: .85rem 1rem; margin-bottom: 1.25rem;
+}
+.banner-name { font-weight: 700; font-size: .95rem; color: var(--text); }
+.banner-meta { font-size: .78rem; color: var(--text-muted); margin-top: 2px; }
+
+/* ── Tee cards ─────────────────────────────── */
+.tee-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: .75rem; margin-top: .5rem;
+}
+.tee-card {
+  border: 2px solid var(--border); border-radius: 8px;
+  padding: .85rem 1rem; cursor: pointer; position: relative;
+  transition: border-color .15s, background .15s;
+}
+.tee-card:hover { border-color: var(--gold); background: var(--bg-alt); }
+.tee-card.selected { border-color: var(--gold); background: rgba(201,168,76,.08); }
+.tee-card-name {
+  font-weight: 700; font-size: .88rem;
+  display: flex; align-items: center; gap: .45rem; margin-bottom: .35rem;
+}
+.tee-dot {
+  width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0;
+}
+.tee-card-rating { font-size: .76rem; color: var(--text-muted); }
+.tee-card-gender {
+  position: absolute; top: .5rem; right: .75rem;
+  font-size: .65rem; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.tee-loading { color: var(--text-muted); font-size: .875rem; padding: .5rem 0; }
+.field-error { color: #e03131; font-size: .8rem; margin-top: .5rem; }
+
+/* ── Summary card ──────────────────────────── */
+.round-summary-card {
+  border: 1px solid var(--border); border-radius: 10px;
+  overflow: hidden; margin-bottom: 1.5rem;
+}
+.summary-row {
+  display: flex; justify-content: space-between;
+  padding: .75rem 1.25rem; border-bottom: 1px solid var(--border); font-size: .875rem;
+}
+.summary-row:last-child { border-bottom: none; }
+.summary-key { color: var(--text-muted); font-weight: 500; }
+.summary-val { font-weight: 600; color: var(--text); }
+
+.confirm-actions { display: flex; gap: 1rem; }
+.btn--xs { padding: .3rem .75rem; font-size: .75rem; }
+</style>
+
+<script>
+(function () {
+  /* ── State ─────────────────────────────────── */
+  let currentCountry = 'England';
+  let selectedCourse = null;   // lightweight API result
+  let selectedTee    = null;   // full tee object with holes[]
+  let searchTimer    = null;
+
+  /* ── Tee colour map ────────────────────────── */
+  const TEE_COLOURS = {
+    white:'#f0f0f0', yellow:'#f5c518', red:'#e03131', blue:'#1971c2',
+    black:'#212529', green:'#2f9e44', orange:'#e8590c', purple:'#7048e8',
+    silver:'#adb5bd', bronze:'#c9a84c', gold:'#c9a84c', pink:'#f06595',
+  };
+  function teeColour(t) {
+    const k = (t.color || t.name || '').toLowerCase().replace(/\s+/g,'');
+    for (const key of Object.keys(TEE_COLOURS)) {
+      if (k.includes(key)) return TEE_COLOURS[key];
+    }
+    return '#888';
+  }
+
+  /* ── Country tabs ───────────────────────────── */
+  document.querySelectorAll('.ctab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentCountry = btn.dataset.country;
+      const q = document.getElementById('courseSearch').value.trim();
+      if (q) doSearch(q);
+    });
+  });
+
+  /* ── Search input ───────────────────────────── */
+  document.getElementById('courseSearch').addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    const q = e.target.value.trim();
+    if (!q) {
+      document.getElementById('courseResults').innerHTML =
+        '<div class="course-results-hint">Type to search courses worldwide.</div>';
+      return;
+    }
+    searchTimer = setTimeout(() => doSearch(q), 400);
+  });
+
+  /* ── Fetch from /api/courses/search ────────── */
+  function doSearch(q) {
+    const spinner = document.getElementById('searchSpinner');
+    spinner.classList.remove('hidden');
+
+    const params = new URLSearchParams({ q });
+    if (currentCountry) params.set('country', currentCountry);
+
+    fetch('/api/courses/search?' + params)
+      .then(r => r.json())
+      .then(data => {
+        spinner.classList.add('hidden');
+        if (data.error) {
+          showResultsMsg('error', data.error);
+        } else {
+          renderResults(data);
+        }
+      })
+      .catch(() => {
+        spinner.classList.add('hidden');
+        showResultsMsg('error', 'Error contacting course database. Please try again.');
+      });
+  }
+
+  function showResultsMsg(type, msg) {
+    document.getElementById('courseResults').innerHTML =
+      `<div class="course-results-${type}">${esc(msg)}</div>`;
+  }
+
+  /* ── Render search results ──────────────────── */
+  function renderResults(courses) {
+    if (!courses.length) {
+      showResultsMsg('empty', 'No courses found — try a different search.');
+      return;
+    }
+    document.getElementById('courseResults').innerHTML = courses.map(c => `
+      <div class="course-row" onclick='handleCourseClick(${JSON.stringify(c)})'>
+        <div>
+          <div class="course-row-name">${esc(c.name)}</div>
+          <div class="course-row-location">${esc(c.city || '')}${c.region ? ', ' + esc(c.region) : ''}</div>
+        </div>
+        <div class="course-row-meta">${esc(c.country || '')}</div>
+        <div class="course-row-meta">Par ${c.par || '—'}</div>
+      </div>`).join('');
+  }
+
+  /* ── Course selected ────────────────────────── */
+  window.handleCourseClick = function(course) {
+    selectedCourse = course;
+    selectedTee = null;
+
+    // Move to step 2
+    document.getElementById('bannerCourseName').textContent = course.name;
+    document.getElementById('bannerCourseMeta').textContent =
+      [course.city, course.region, course.country].filter(Boolean).join(', ');
+
+    goToStep('step-tee');
+
+    // Fetch tees from API (will cache in DB)
+    fetchTees(course.id);
+  };
+
+  window.goBackToCourse = function() {
+    selectedCourse = null;
+    selectedTee = null;
+    document.getElementById('btnReview').disabled = true;
+    goToStep('step-course');
+  };
+
+  /* ── Fetch tees: GET /api/courses/<id>/tees ── */
+  function fetchTees(externalId) {
+    document.getElementById('teeOptions').innerHTML = '<div class="tee-loading">Loading tee data…</div>';
+    document.getElementById('teeError').classList.add('hidden');
+    document.getElementById('btnReview').disabled = true;
+
+    fetch(`/api/courses/${externalId}/tees`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById('teeOptions').innerHTML = '';
+          const err = document.getElementById('teeError');
+          err.textContent = data.error;
+          err.classList.remove('hidden');
+        } else {
+          renderTees(data);
+        }
+      })
+      .catch(() => {
+        document.getElementById('teeOptions').innerHTML = '';
+        const err = document.getElementById('teeError');
+        err.textContent = 'Could not load tee data. Please try again.';
+        err.classList.remove('hidden');
+      });
+  }
+
+  function renderTees(tees) {
+    if (!tees.length) {
+      document.getElementById('teeOptions').innerHTML = '<div class="tee-loading">No tee data available for this course.</div>';
+      return;
+    }
+    document.getElementById('teeOptions').innerHTML = tees.map(t => {
+      const colour = teeColour(t);
+      const gLabel = t.gender === 'W' ? 'Ladies' : t.gender === 'X' ? 'Mixed' : 'Gents';
+      const yards  = t.total_yardage ? ` · ${t.total_yardage}y` : '';
+      return `
+        <div class="tee-card" id="tee-${t.id}" onclick='selectTee(${JSON.stringify(t)})'>
+          <span class="tee-card-gender">${gLabel}</span>
+          <div class="tee-card-name">
+            <span class="tee-dot" style="background:${colour};border:1px solid rgba(0,0,0,.12)"></span>
+            ${esc(t.name)}
+          </div>
+          <div class="tee-card-rating">${t.course_rating} / ${t.slope_rating} slope${yards}</div>
+        </div>`;
+    }).join('');
+  }
+
+  window.selectTee = function(tee) {
+    selectedTee = tee;
+    document.querySelectorAll('.tee-card').forEach(c => c.classList.remove('selected'));
+    const card = document.getElementById('tee-' + tee.id);
+    if (card) card.classList.add('selected');
+    document.getElementById('btnReview').disabled = false;
+  };
+
+  /* ── Step 2 → 3 ─────────────────────────────── */
+  window.goToReview = function() {
+    if (!selectedTee) return;
+    const dateVal  = document.getElementById('date_played').value;
+    const holesVal = document.getElementById('holes_played').value;
+
+    document.getElementById('summaryCourseName').textContent = selectedCourse.name;
+    document.getElementById('summaryTee').textContent        = selectedTee.name;
+    document.getElementById('summaryRating').textContent     = `${selectedTee.course_rating} / ${selectedTee.slope_rating}`;
+    document.getElementById('summaryDate').textContent       = dateVal;
+    document.getElementById('summaryHoles').textContent      = holesVal + ' holes';
+
+    // Pre-fill hidden form (course_id = local DB id stored in tee's course relation)
+    document.getElementById('hidCourseId').value  = selectedTee.id; // we'll resolve via tee FK in backend
+    document.getElementById('hidTeeSetId').value  = selectedTee.id;
+    document.getElementById('hidDate').value       = dateVal;
+    document.getElementById('hidHoles').value      = holesVal;
+
+    goToStep('step-confirm');
+  };
+
+  window.goBackToTee = function() { goToStep('step-tee'); };
+
+  window.submitRound = function() {
+    document.getElementById('roundForm').submit();
+  };
+
+  /* ── Helpers ─────────────────────────────────── */
+  function goToStep(id) {
+    document.querySelectorAll('.setup-step').forEach(s => {
+      s.classList.remove('active');
+      s.classList.add('hidden');
+    });
+    const el = document.getElementById(id);
+    el.classList.remove('hidden');
+    el.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function esc(s) {
+    return String(s||'')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+})();
+</script>
 {% endblock %}
