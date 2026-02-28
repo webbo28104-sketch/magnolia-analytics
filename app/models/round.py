@@ -49,7 +49,12 @@ class Round(db.Model):
         self.fairways_hit = sum(1 for h in fw_holes if h.tee_shot == 'fairway')
 
     def score_vs_par(self):
-        if self.total_score and self.course:
+        if not self.total_score:
+            return None
+        # Prefer tee-specific par (most accurate), fall back to course par
+        if self.tee_set_obj:
+            return self.total_score - self.tee_set_obj.total_par
+        if self.course:
             return self.total_score - self.course.par
         return None
 

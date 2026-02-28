@@ -124,6 +124,7 @@ def submit_round(round_id):
 
     if request.method == 'POST':
         round_.compute_totals()
+        round_.compute_differential()   # USGA handicap differential
         round_.status = 'complete'
         round_.completed_at = datetime.utcnow()
         db.session.commit()

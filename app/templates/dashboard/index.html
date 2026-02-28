@@ -62,7 +62,7 @@
           {% endif %}
         </div>
         <div class="round-putts">{{ round.total_putts or '—' }} putts</div>
-        <div class="round-gir">{{ round.gir_count or '—' }}/18 GIR</div>
+        <div class="round-gir">{{ round.gir_count or '—' }}/{{ round.holes_played }} GIR</div>
         <div class="round-actions">
           {% if round.report and round.report.html_content %}
             <a href="{{ url_for('reports.view_report', round_id=round.id) }}" class="link-gold">View Report →</a>
