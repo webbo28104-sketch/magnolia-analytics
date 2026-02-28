@@ -3,24 +3,92 @@
 
 {% block content %}
 <section class="report-view">
-  <div class="report-header">
+  <div class="report-view-header">
     <div>
-      <h1 class="report-title">{{ round.date_played.strftime('%d %B %Y') }}</h1>
-      <p class="report-course">{{ round.course.name if round.course else 'Unknown Course' }}</p>
+      <p class="report-view-eyebrow">Round Report</p>
+      <h1 class="report-view-title">{{ round.date_played.strftime('%d %B %Y') }}</h1>
+      <p class="report-view-course">{{ round.course.name if round.course else 'Unknown Course' }}</p>
     </div>
-    <div class="report-meta">
+    <div class="report-view-pills">
       <span class="stat-pill">{{ round.total_score }}</span>
       <span class="stat-pill">{{ round.total_putts }} putts</span>
       <span class="stat-pill">{{ round.gir_count }}/18 GIR</span>
     </div>
   </div>
 
-  <div class="report-body">
-    {{ report.html_content | safe }}
+  <div class="report-view-actions">
+    <a href="{{ url_for('reports.view_report_html', round_id=round.id) }}"
+       class="btn btn--gold" target="_blank">
+       Open Full Report ↗
+    </a>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn--outline">
+       ← Dashboard
+    </a>
   </div>
 
-  <div class="report-footer">
-    <a href="{{ url_for('dashboard.index') }}" class="btn btn--outline">← Back to Dashboard</a>
+  <div class="report-preview-frame">
+    <iframe
+      src="{{ url_for('reports.view_report_html', round_id=round.id) }}"
+      class="report-iframe"
+      title="Round Performance Report"
+      scrolling="yes">
+    </iframe>
   </div>
 </section>
+
+<style>
+  .report-view {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+  }
+  .report-view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .report-view-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .report-view-title {
+    font-size: 1.8rem;
+    margin-bottom: 4px;
+  }
+  .report-view-course {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+  .report-view-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .report-view-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .report-preview-frame {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+  }
+  .report-iframe {
+    width: 100%;
+    height: 700px;
+    border: none;
+    display: block;
+  }
+</style>
 {% endblock %}

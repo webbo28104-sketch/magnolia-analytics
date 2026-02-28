@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Pricing — Magnolia Analytics{% endblock %}
+
+{% block content %}
+<section class="pricing-page">
+  <div class="pricing-page-inner">
+
+    <div class="pricing-header">
+      <p class="hero-eyebrow">Simple pricing</p>
+      <h1 class="pricing-title">One subscription.<br>No hidden fees.</h1>
+      <p class="pricing-sub">Everything you need to track, understand, and improve your game.</p>
+    </div>
+
+    <div class="plan-card plan-card--solo">
+      <div class="plan-tier">Standard</div>
+      <div class="plan-price">£7.99<span>/mo</span></div>
+      <ul class="plan-features">
+        <li>Hole-by-hole round logging</li>
+        <li>Personalised performance report delivered in 30 seconds</li>
+        <li>Report emailed directly after every round</li>
+        <li>Strokes gained — Off the Tee, Approach, Around the Greens, Putting</li>
+        <li>Season analytics dashboard</li>
+        <li>Handicap differential tracking</li>
+        <li>Unlimited rounds</li>
+      </ul>
+      <a href="{{ url_for('auth.register') }}" class="btn btn--gold btn--full">Start Tracking</a>
+    </div>
+
+    <div class="pricing-v2-note">
+      <p>Hardware integrations (Garmin, GPS sync) and advanced shot-level analysis
+      are coming in V2. <a href="{{ url_for('auth.register') }}">Join now</a> and you'll be first to know.</p>
+    </div>
+
+  </div>
+</section>
+
+<style>
+  .pricing-page { padding: 80px 24px; }
+  .pricing-page-inner { max-width: 540px; margin: 0 auto; }
+  .pricing-header { text-align: center; margin-bottom: 48px; }
+  .pricing-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    color: var(--green-800);
+    margin-top: 12px;
+    line-height: 1.2;
+  }
+  .pricing-sub {
+    margin-top: 16px;
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  .pricing-v2-note {
+    margin-top: 32px;
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .pricing-v2-note a { color: var(--green-700); font-weight: 500; }
+</style>
+{% endblock %}

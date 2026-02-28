@@ -7,82 +7,189 @@
 <section class="hero">
   <div class="hero-inner">
     <p class="hero-eyebrow">Golf performance. Refined.</p>
-    <h1 class="hero-title">Know your game<br>like never before.</h1>
+    <h1 class="hero-title">Play. Log. Improve.<br>Repeat.</h1>
     <p class="hero-subtitle">
-      Log every round in under 5 minutes. Receive a beautiful, AI-powered performance
-      report in your inbox within 30 seconds of finishing your round.
+      Log your round hole by hole in minutes. Receive a beautiful personalised
+      performance report — delivered to your inbox within 30 seconds of finishing.
     </p>
     <div class="hero-actions">
       <a href="{{ url_for('auth.register') }}" class="btn btn--gold">Start Tracking Free</a>
-      <a href="{{ url_for('main.pricing') }}" class="btn btn--outline">View Pricing</a>
+      <a href="{{ url_for('main.pricing') }}" class="btn btn--outline-light">View Pricing</a>
     </div>
   </div>
 </section>
 
-<!-- Feature strip -->
+<!-- Feedback loop — Atomic Habits -->
+<section class="loop-section">
+  <div class="loop-inner">
+    <p class="section-eyebrow">Build a better practice habit</p>
+    <h2 class="section-title">The Magnolia loop</h2>
+    <p class="section-subtitle">
+      The best golfers don't just play — they reflect. Magnolia builds the feedback
+      loop that turns every round into a coaching session.
+    </p>
+    <div class="loop-steps">
+      <div class="loop-step">
+        <div class="loop-step-num">01</div>
+        <div class="loop-step-label">Play</div>
+        <div class="loop-step-desc">Head out and play your round</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">
+        <div class="loop-step-num">02</div>
+        <div class="loop-step-label">Log</div>
+        <div class="loop-step-desc">Enter each hole in minutes on your phone</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">
+        <div class="loop-step-num">03</div>
+        <div class="loop-step-label">Report</div>
+        <div class="loop-step-desc">Receive your personalised report in 30 seconds</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-step">
+        <div class="loop-step-num">04</div>
+        <div class="loop-step-label">Focus</div>
+        <div class="loop-step-desc">Know exactly what to practise before next time</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Example report preview -->
+<section class="preview-section">
+  <div class="preview-inner">
+    <p class="section-eyebrow">What you get</p>
+    <h2 class="section-title">A report worth reading</h2>
+    <p class="section-subtitle">
+      Every report breaks your round into four areas — Off the Tee, Approach, Around the
+      Greens, and Putting — then tells you exactly where shots are being gained or lost.
+    </p>
+
+    <div class="preview-card">
+      <div class="preview-card-header">
+        <div class="preview-card-title">
+          <span class="preview-logo">Magnolia Analytics</span>
+          <span class="preview-date">Round Report</span>
+        </div>
+        <div class="preview-score-block">
+          <div class="preview-score">78</div>
+          <div class="preview-score-label">+6 over par</div>
+        </div>
+      </div>
+
+      <div class="preview-stats-row">
+        <div class="preview-stat">
+          <div class="preview-stat-value mono">9 / 14</div>
+          <div class="preview-stat-label">Fairways Hit</div>
+        </div>
+        <div class="preview-stat">
+          <div class="preview-stat-value mono">11 / 18</div>
+          <div class="preview-stat-label">Greens in Reg</div>
+        </div>
+        <div class="preview-stat">
+          <div class="preview-stat-value mono">31</div>
+          <div class="preview-stat-label">Total Putts</div>
+        </div>
+        <div class="preview-stat">
+          <div class="preview-stat-value mono">2</div>
+          <div class="preview-stat-label">Penalties</div>
+        </div>
+      </div>
+
+      <div class="preview-sg-section">
+        <div class="preview-sg-title">Strokes Gained vs Scratch</div>
+        <div class="preview-sg-bars">
+          <div class="preview-sg-row">
+            <div class="preview-sg-label">Off the Tee</div>
+            <div class="preview-sg-bar-wrap">
+              <div class="preview-sg-bar preview-sg-bar--pos" style="width: 55%">+0.8</div>
+            </div>
+          </div>
+          <div class="preview-sg-row">
+            <div class="preview-sg-label">Approach</div>
+            <div class="preview-sg-bar-wrap">
+              <div class="preview-sg-bar preview-sg-bar--neg" style="width: 70%">-2.1</div>
+            </div>
+          </div>
+          <div class="preview-sg-row">
+            <div class="preview-sg-label">Around Greens</div>
+            <div class="preview-sg-bar-wrap">
+              <div class="preview-sg-bar preview-sg-bar--neg" style="width: 30%">-0.9</div>
+            </div>
+          </div>
+          <div class="preview-sg-row">
+            <div class="preview-sg-label">Putting</div>
+            <div class="preview-sg-bar-wrap">
+              <div class="preview-sg-bar preview-sg-bar--neg" style="width: 45%">-1.4</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-insight">
+        <div class="preview-insight-label">Key Takeaway</div>
+        <div class="preview-insight-text">
+          "Your ball striking is a genuine strength this season. The focus area
+          is approach shots — a 15-yard distance control drill before your next round
+          could be the difference between bogey and par on long par 4s."
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
 <section class="features">
   <div class="features-grid">
 
     <div class="feature-card">
       <div class="feature-icon">◆</div>
       <h3 class="feature-title">Hole-by-hole logging</h3>
-      <p class="feature-body">Tap through 18 holes in under 5 minutes. Smart fields appear and disappear based on your shots.</p>
+      <p class="feature-body">Tap through all 18 holes in minutes. Smart fields appear and disappear based on your shots — no clutter, no faff.</p>
     </div>
 
     <div class="feature-card">
       <div class="feature-icon">◆</div>
-      <h3 class="feature-title">AI-generated reports</h3>
-      <p class="feature-body">Claude analyses every stat and delivers narrative coaching insights tailored to your game.</p>
+      <h3 class="feature-title">Personalised reports</h3>
+      <p class="feature-body">Every stat from your round is analysed and turned into a narrative coaching report tailored specifically to your game.</p>
     </div>
 
     <div class="feature-card">
       <div class="feature-icon">◆</div>
       <h3 class="feature-title">Strokes gained analysis</h3>
-      <p class="feature-body">Understand exactly where you're losing and gaining shots — off the tee, approach, and on the greens.</p>
+      <p class="feature-body">Understand exactly where you're losing and gaining shots — off the tee, approach, around the greens, and putting.</p>
     </div>
 
     <div class="feature-card">
       <div class="feature-icon">◆</div>
       <h3 class="feature-title">Season trends</h3>
-      <p class="feature-body">See your progress over time with beautiful charts and season-average comparisons in every report.</p>
+      <p class="feature-body">See your progress over time with season-average comparisons in every report. Watch your handicap trend in the right direction.</p>
     </div>
 
   </div>
 </section>
 
-<!-- Pricing teaser -->
+<!-- Single pricing card -->
 <section class="pricing-teaser">
   <div class="pricing-teaser-inner">
+    <p class="section-eyebrow">Pricing</p>
     <h2 class="section-title">Simple, transparent pricing</h2>
-    <div class="plans">
 
-      <div class="plan-card">
-        <div class="plan-tier">Standard</div>
-        <div class="plan-price">£7.99<span>/mo</span></div>
-        <ul class="plan-features">
-          <li>Manual stat entry</li>
-          <li>Full Claude AI reports</li>
-          <li>Email delivery in 30s</li>
-          <li>Season analytics dashboard</li>
-          <li>Putting distance breakdown</li>
-        </ul>
-        <a href="{{ url_for('auth.register') }}" class="btn btn--outline btn--full">Get Started</a>
-      </div>
-
-      <div class="plan-card plan-card--featured">
-        <div class="plan-badge">Most Popular</div>
-        <div class="plan-tier">Premium</div>
-        <div class="plan-price">£12.99<span>/mo</span></div>
-        <ul class="plan-features">
-          <li>Everything in Standard</li>
-          <li>Garmin &amp; hardware sync</li>
-          <li>Automatic round detection</li>
-          <li>Priority report generation</li>
-        </ul>
-        <a href="{{ url_for('auth.register') }}" class="btn btn--gold btn--full">Get Started</a>
-      </div>
-
+    <div class="plan-card plan-card--solo">
+      <div class="plan-tier">Standard</div>
+      <div class="plan-price">£7.99<span>/mo</span></div>
+      <ul class="plan-features">
+        <li>Hole-by-hole round logging</li>
+        <li>Personalised performance report in 30 seconds</li>
+        <li>Email delivery after every round</li>
+        <li>Strokes gained — Off the Tee, Approach, Around the Greens, Putting</li>
+        <li>Season analytics dashboard</li>
+        <li>Unlimited rounds</li>
+      </ul>
+      <a href="{{ url_for('auth.register') }}" class="btn btn--gold btn--full">Get Started</a>
     </div>
+
   </div>
 </section>
 
