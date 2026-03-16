@@ -74,31 +74,23 @@ def _get(path: str, params=None):
 
 def search_courses(query: str, country=None):
     """
-    Search for courses by name/location text and optional country.
-    Country filtering is also applied client-side in the route as a fallback,
-    since we don't know yet which param name the API accepts.
-    """
-    params = {}
-    if query:
-        # Try 'search' — if wrong, the debug endpoint will reveal the right name
-        params["search"] = query
-    if country:
-        # Send country under multiple possible names; API will ignore unknowns
-        params["country"] = country
+    Search for courses by name/location text.
 
-    data = _get("/courses", params=params)
+    Returns a list of lightweight course dicts, each containing at minimum:
+        id, name, city, region/state, country, lat, lng, holes, par
+
+    These are NOT cached — call get_or_cache_course() to persist to DB.
+    """
+    if not query:
+        return []
+
+    data = _get("/search", params={"search_query": query})
 
     # API may return {"courses": [...]} or a plain list
     if isinstance(data, dict):
-        courses = (
-            data.get("courses") or
-            data.get("results") or
-            data.get("data") or
-            data.get("golf_courses") or
-            []
-        )
+        courses = data.get("courses") or data.get("results") or data.get("data") or []
     else:
-        courses = data if isinstance(data, list) else []
+        courses = data
 
     return [_normalise_course_summary(c) for c in courses]
 
