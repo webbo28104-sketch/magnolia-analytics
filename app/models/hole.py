@@ -15,11 +15,17 @@ class Hole(db.Model):
     tee_shot = db.Column(db.String(20), nullable=True)
 
     # Approach / GIR
-    gir = db.Column(db.Boolean, default=False)  # Green In Regulation
+    gir = db.Column(db.Boolean, default=False)  # Green In Regulation — auto-calculated on save
+
+    # Approach shot
+    approach_distance = db.Column(db.Integer, nullable=True)   # yards (always on par 3; on miss for par 4/5)
 
     # If GIR missed:
     approach_miss = db.Column(db.String(20), nullable=True)
     scramble_distance = db.Column(db.String(20), nullable=True)
+
+    # Par 5 second shot
+    second_shot_distance = db.Column(db.Integer, nullable=True)  # yards, par 5s only
 
     # Putting
     putts = db.Column(db.Integer, nullable=False, default=2)

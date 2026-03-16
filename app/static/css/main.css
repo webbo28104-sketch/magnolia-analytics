@@ -1041,3 +1041,50 @@ h1, h2, h3, h4 {
   .form-row { grid-template-columns: 1fr; }
   .hero { padding: 60px 20px; }
 }
+
+/* ── In-progress rounds (Continue Round — Task 11) ── */
+.in-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+.in-progress-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: rgba(201,168,76,.08);
+  border: 1px solid rgba(201,168,76,.35);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+}
+.in-progress-title {
+  font-weight: 600;
+  font-size: .875rem;
+  color: var(--gold);
+}
+.in-progress-meta {
+  font-size: .78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.btn--sm {
+  padding: .35rem .9rem;
+  font-size: .8rem;
+}
+
+/* ── Ghost tap button (e.g. "✕ GIR" clear button) ── */
+.tap-btn--ghost {
+  color: var(--text-muted);
+  border-style: dashed;
+  flex: 0 0 auto;
+  min-width: auto;
+  padding: 12px 14px;
+  font-size: .85rem;
+}
+.tap-btn--ghost:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+  background: var(--bg-alt, #f8f8f8);
+}

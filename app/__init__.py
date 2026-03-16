@@ -46,5 +46,27 @@ def create_app(config_name='default'):
         from app.models.hole import Hole            # noqa
         from app.models.report import Report        # noqa
         db.create_all()
+        _run_column_migrations()
 
     return app
+
+
+def _run_column_migrations():
+    """Safely add columns that were added after initial table creation."""
+    migrations = [
+        ('holes',     'approach_distance',   'INTEGER'),
+        ('holes',     'second_shot_distance', 'INTEGER'),
+        ('tee_sets',  'front_course_rating',  'REAL'),
+        ('tee_sets',  'back_course_rating',   'REAL'),
+        ('tee_sets',  'front_slope_rating',   'INTEGER'),
+        ('tee_sets',  'back_slope_rating',    'INTEGER'),
+        ('rounds',    'nine_hole_selection',  'VARCHAR(10)'),
+    ]
+    for table, column, col_type in migrations:
+        try:
+            db.session.execute(
+                db.text(f'ALTER TABLE {table} ADD COLUMN {column} {col_type}')
+            )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()   # column already exists — fine

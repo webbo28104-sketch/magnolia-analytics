@@ -10,6 +10,7 @@ Endpoints used:
 """
 
 import os
+import re
 import json
 import urllib.request
 import urllib.parse
@@ -144,16 +145,37 @@ def get_course_details(course_id):
 
 def _normalise_course_summary(raw: dict) -> dict:
     """Map raw API course summary to a consistent internal dict."""
+    # Strip API internal IDs in brackets e.g. "Seaford Golf Club (1014898)"
+    def _strip_id(s):
+        return re.sub(r'\s*\(\d+\)', '', s or '').strip()
+
+    club_name   = _strip_id(raw.get("club_name") or raw.get("name") or "")
+    course_name = _strip_id(raw.get("course_name") or "")
+    if club_name and course_name and course_name.lower() not in club_name.lower():
+        name = f"{club_name} — {course_name}"
+    else:
+        name = club_name or course_name or "Unknown"
+
+    # Par may live at course level or be derived from tees
+    par = _safe_int(
+        raw.get("par") or raw.get("par_total") or raw.get("total_par"),
+        72
+    )
+
+    # City may be top-level or nested under a location object
+    location = raw.get("location")
+    city = raw.get("city") or (location.get("city", "") if isinstance(location, dict) else "")
+
     return {
         "id":      raw.get("id") or raw.get("course_id") or raw.get("club_id"),
-        "name":    raw.get("name") or raw.get("course_name") or raw.get("club_name", "Unknown"),
-        "city":    raw.get("city") or raw.get("location", {}).get("city", "") if isinstance(raw.get("location"), dict) else raw.get("city", ""),
+        "name":    name,
+        "city":    city,
         "region":  raw.get("state") or raw.get("region") or raw.get("county") or "",
         "country": raw.get("country") or raw.get("country_name", ""),
         "lat":     _safe_float(raw.get("latitude") or raw.get("lat")),
         "lng":     _safe_float(raw.get("longitude") or raw.get("lng") or raw.get("lon")),
         "holes":   _safe_int(raw.get("holes"), 18),
-        "par":     _safe_int(raw.get("par"), 72),
+        "par":     par,
     }
 
 
@@ -161,15 +183,25 @@ def _normalise_course_detail(raw: dict) -> dict:
     """Map raw API course detail to internal dict including tees + holes."""
     summary = _normalise_course_summary(raw)
 
-    raw_tees = (
+    raw_tees_data = (
         raw.get("tees") or
         raw.get("tee_sets") or
         raw.get("scorecard") or
         []
     )
 
-    tees = [_normalise_tee(t) for t in raw_tees]
-    summary["tees"] = tees
+    # API returns tees as {"male": [...], "female": [...]} — flatten both arrays
+    # and inject the gender so _normalise_tee picks it up correctly.
+    if isinstance(raw_tees_data, dict):
+        raw_tees = []
+        for t in (raw_tees_data.get("male") or []):
+            raw_tees.append({**t, "gender": "M"})
+        for t in (raw_tees_data.get("female") or []):
+            raw_tees.append({**t, "gender": "W"})
+    else:
+        raw_tees = raw_tees_data if isinstance(raw_tees_data, list) else []
+
+    summary["tees"] = [_normalise_tee(t) for t in raw_tees]
     return summary
 
 

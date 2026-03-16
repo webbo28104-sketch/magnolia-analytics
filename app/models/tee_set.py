@@ -1,4 +1,5 @@
 from app import db
+from app.models.course_hole import CourseHole
 
 
 class TeeSet(db.Model):
@@ -16,17 +17,23 @@ class TeeSet(db.Model):
     total_yardage = db.Column(db.Integer, nullable=True)
     total_par = db.Column(db.Integer, default=72)
 
+    # Split-round ratings (populated when API provides them)
+    front_course_rating = db.Column(db.Float, nullable=True)
+    back_course_rating  = db.Column(db.Float, nullable=True)
+    front_slope_rating  = db.Column(db.Integer, nullable=True)
+    back_slope_rating   = db.Column(db.Integer, nullable=True)
+
     # Relationships
     course_holes = db.relationship(
         'CourseHole', backref='tee_set', lazy='dynamic',
-        order_by='CourseHole.hole_number', cascade='all, delete-orphan'
+        order_by=CourseHole.hole_number, cascade='all, delete-orphan'
     )
     rounds = db.relationship('Round', backref='tee_set_obj', lazy='dynamic')
 
     @property
     def par_list(self):
         """Returns list of pars per hole (18 items)."""
-        holes = self.course_holes.order_by('CourseHole.hole_number').all()
+        holes = self.course_holes.order_by(CourseHole.hole_number).all()
         if holes:
             return [h.par for h in holes]
         # Fallback: distribute pars evenly based on total_par

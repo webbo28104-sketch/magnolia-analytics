@@ -44,7 +44,8 @@ class Course(db.Model):
         return ', '.join(parts)
 
     def to_dict(self):
-        tees = self.tee_sets.order_by('TeeSet.gender', 'TeeSet.course_rating').all()
+        from app.models.tee_set import TeeSet
+        tees = self.tee_sets.order_by(TeeSet.gender, TeeSet.course_rating).all()
         return {
             'id': self.id,
             'external_id': self.external_id,

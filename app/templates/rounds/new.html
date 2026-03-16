@@ -14,18 +14,6 @@
     <div id="step-course" class="setup-step active">
       <div class="step-label">Step 1 of 3 — Select Course</div>
 
-      <!-- Country selector -->
-      <div class="form-group">
-        <label class="form-label">Country</label>
-        <div class="country-tabs" id="countryTabs">
-          <button class="ctab active" data-country="England">England</button>
-          <button class="ctab" data-country="Scotland">Scotland</button>
-          <button class="ctab" data-country="Wales">Wales</button>
-          <button class="ctab" data-country="Ireland">Ireland</button>
-          <button class="ctab" data-country="">International</button>
-        </div>
-      </div>
-
       <!-- Search bar -->
       <div class="course-search-wrap">
         <svg class="search-icon" viewBox="0 0 20 20" fill="none">
@@ -79,6 +67,17 @@
         </div>
       </div>
 
+      <!-- Front 9 / Back 9 — only shown for 9-hole rounds -->
+      <div class="form-group hidden" id="nine-hole-group">
+        <label class="form-label">Which 9?</label>
+        <div class="tap-group tap-group--two">
+          <button type="button" class="tap-btn tap-btn--half" id="nine-front-btn"
+                  onclick="selectNine('front')">Front 9 (1–9)</button>
+          <button type="button" class="tap-btn tap-btn--half" id="nine-back-btn"
+                  onclick="selectNine('back')">Back 9 (10–18)</button>
+        </div>
+      </div>
+
       <button class="btn btn--gold btn--full" onclick="goToReview()" id="btnReview" disabled>
         Review &amp; Start →
       </button>
@@ -109,14 +108,19 @@
           <span class="summary-key">Holes</span>
           <span class="summary-val" id="summaryHoles"></span>
         </div>
+        <div class="summary-row hidden" id="summaryNineRow">
+          <span class="summary-key">Course half</span>
+          <span class="summary-val" id="summaryNine"></span>
+        </div>
       </div>
 
       <!-- Hidden form that POSTs to create the round -->
       <form method="POST" action="{{ url_for('rounds.new_round') }}" id="roundForm">
-        <input type="hidden" name="course_id"    id="hidCourseId">
-        <input type="hidden" name="tee_set_id"   id="hidTeeSetId">
-        <input type="hidden" name="date_played"  id="hidDate">
-        <input type="hidden" name="holes_played" id="hidHoles">
+        <input type="hidden" name="course_id"           id="hidCourseId">
+        <input type="hidden" name="tee_set_id"          id="hidTeeSetId">
+        <input type="hidden" name="date_played"         id="hidDate">
+        <input type="hidden" name="holes_played"        id="hidHoles">
+        <input type="hidden" name="nine_hole_selection" id="hidNineHole">
       </form>
 
       <div class="confirm-actions">
@@ -146,31 +150,6 @@
   color: var(--gold);
   margin-bottom: 1.25rem;
 }
-
-/* ── Country tabs ──────────────────────────── */
-.country-tabs {
-  display: flex;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 1.25rem;
-}
-.ctab {
-  flex: 1;
-  padding: .5rem .25rem;
-  font-size: .78rem;
-  font-weight: 500;
-  background: var(--surface);
-  border: none;
-  border-right: 1px solid var(--border);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background .15s, color .15s;
-  white-space: nowrap;
-}
-.ctab:last-child { border-right: none; }
-.ctab:hover { background: var(--bg-alt); color: var(--text); }
-.ctab.active { background: var(--green-dark); color: #fff; font-weight: 600; }
 
 /* ── Search ────────────────────────────────── */
 .course-search-wrap { position: relative; margin-bottom: 1rem; }
@@ -209,7 +188,7 @@
 }
 .course-results-error { color: #e03131; }
 .course-row {
-  display: grid; grid-template-columns: 1fr auto auto;
+  display: grid; grid-template-columns: 1fr auto;
   gap: 1rem; align-items: center;
   padding: .75rem 1rem; border-bottom: 1px solid var(--border);
   cursor: pointer; transition: background .12s;
@@ -278,10 +257,10 @@
 <script>
 (function () {
   /* ── State ─────────────────────────────────── */
-  let currentCountry = 'England';
-  let selectedCourse = null;   // lightweight API result
-  let selectedTee    = null;   // full tee object with holes[]
-  let searchTimer    = null;
+  let selectedCourse      = null;   // lightweight API result
+  let selectedTee         = null;   // full tee object with holes[]
+  let searchTimer         = null;
+  let nineHoleSelection   = null;   // 'front' | 'back' | null
 
   /* ── Tee colour map ────────────────────────── */
   const TEE_COLOURS = {
@@ -297,27 +276,16 @@
     return '#888';
   }
 
-  /* ── Country tabs ───────────────────────────── */
-  document.querySelectorAll('.ctab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentCountry = btn.dataset.country;
-      const q = document.getElementById('courseSearch').value.trim();
-      if (q) doSearch(q);
-    });
-  });
-
   /* ── Search input ───────────────────────────── */
   document.getElementById('courseSearch').addEventListener('input', e => {
     clearTimeout(searchTimer);
     const q = e.target.value.trim();
-    if (!q) {
+    if (q.length < 3) {
       document.getElementById('courseResults').innerHTML =
         '<div class="course-results-hint">Type to search courses worldwide.</div>';
       return;
     }
-    searchTimer = setTimeout(() => doSearch(q), 400);
+    searchTimer = setTimeout(() => doSearch(q), 300);
   });
 
   /* ── Fetch from /api/courses/search ────────── */
@@ -326,7 +294,6 @@
     spinner.classList.remove('hidden');
 
     const params = new URLSearchParams({ q });
-    if (currentCountry) params.set('country', currentCountry);
 
     fetch('/api/courses/search?' + params)
       .then(r => r.json())
@@ -362,7 +329,6 @@
           <div class="course-row-location">${esc(c.city || '')}${c.region ? ', ' + esc(c.region) : ''}</div>
         </div>
         <div class="course-row-meta">${esc(c.country || '')}</div>
-        <div class="course-row-meta">Par ${c.par || '—'}</div>
       </div>`).join('');
   }
 
@@ -431,7 +397,7 @@
             <span class="tee-dot" style="background:${colour};border:1px solid rgba(0,0,0,.12)"></span>
             ${esc(t.name)}
           </div>
-          <div class="tee-card-rating">${t.course_rating} / ${t.slope_rating} slope${yards}</div>
+          <div class="tee-card-rating" id="teeRatingPreview">${t.course_rating} / ${t.slope_rating} slope${yards}</div>
         </div>`;
     }).join('');
   }
@@ -444,23 +410,99 @@
     document.getElementById('btnReview').disabled = false;
   };
 
+  /* ── Holes selector → show/hide Front/Back 9 ── */
+  document.getElementById('holes_played').addEventListener('change', function() {
+    const nineGroup = document.getElementById('nine-hole-group');
+    if (this.value === '9') {
+      nineGroup.classList.remove('hidden');
+    } else {
+      nineGroup.classList.add('hidden');
+      // Reset nine selection when switching back to 18
+      nineHoleSelection = null;
+      document.getElementById('nine-front-btn').classList.remove('tap-btn--active');
+      document.getElementById('nine-back-btn').classList.remove('tap-btn--active');
+      // Reset rating preview back to full-round rating
+      updateNineRatingPreview(null);
+    }
+  });
+
+  /* ── Front / Back 9 selection (Task 6: update displayed rating) ──────────── */
+  window.selectNine = function(choice) {
+    nineHoleSelection = choice;
+    document.getElementById('nine-front-btn').classList.toggle('tap-btn--active', choice === 'front');
+    document.getElementById('nine-back-btn').classList.toggle('tap-btn--active',  choice === 'back');
+    updateNineRatingPreview(choice);
+  };
+
+  function updateNineRatingPreview(choice) {
+    if (!selectedTee) return;
+    const ratingEl = document.getElementById('teeRatingPreview');
+    if (!ratingEl) return;
+
+    let rating, slope;
+    if (choice === 'front') {
+      rating = selectedTee.front_course_rating || (selectedTee.course_rating / 2);
+      slope  = selectedTee.front_slope_rating  || selectedTee.slope_rating;
+    } else if (choice === 'back') {
+      rating = selectedTee.back_course_rating || (selectedTee.course_rating / 2);
+      slope  = selectedTee.back_slope_rating  || selectedTee.slope_rating;
+    } else {
+      rating = selectedTee.course_rating;
+      slope  = selectedTee.slope_rating;
+    }
+    // Round to 1dp for rating
+    rating = Math.round(rating * 10) / 10;
+    ratingEl.textContent = `${rating} / ${slope} slope`;
+  }
+
   /* ── Step 2 → 3 ─────────────────────────────── */
   window.goToReview = function() {
     if (!selectedTee) return;
     const dateVal  = document.getElementById('date_played').value;
     const holesVal = document.getElementById('holes_played').value;
 
+    // Require Front/Back selection for 9-hole rounds
+    if (holesVal === '9' && !nineHoleSelection) {
+      document.getElementById('nine-hole-group').style.outline = '2px solid var(--gold)';
+      return;
+    }
+    document.getElementById('nine-hole-group').style.outline = '';
+
     document.getElementById('summaryCourseName').textContent = selectedCourse.name;
     document.getElementById('summaryTee').textContent        = selectedTee.name;
-    document.getElementById('summaryRating').textContent     = `${selectedTee.course_rating} / ${selectedTee.slope_rating}`;
+
+    // Task 6: show split rating when 9-hole + front/back selected
+    let displayRating = selectedTee.course_rating;
+    let displaySlope  = selectedTee.slope_rating;
+    if (holesVal === '9' && nineHoleSelection) {
+      if (nineHoleSelection === 'front') {
+        displayRating = selectedTee.front_course_rating || Math.round(selectedTee.course_rating / 2 * 10) / 10;
+        displaySlope  = selectedTee.front_slope_rating  || selectedTee.slope_rating;
+      } else {
+        displayRating = selectedTee.back_course_rating  || Math.round(selectedTee.course_rating / 2 * 10) / 10;
+        displaySlope  = selectedTee.back_slope_rating   || selectedTee.slope_rating;
+      }
+    }
+    document.getElementById('summaryRating').textContent = `${displayRating} / ${displaySlope}`;
     document.getElementById('summaryDate').textContent       = dateVal;
     document.getElementById('summaryHoles').textContent      = holesVal + ' holes';
 
-    // Pre-fill hidden form (course_id = local DB id stored in tee's course relation)
-    document.getElementById('hidCourseId').value  = selectedTee.id; // we'll resolve via tee FK in backend
-    document.getElementById('hidTeeSetId').value  = selectedTee.id;
-    document.getElementById('hidDate').value       = dateVal;
-    document.getElementById('hidHoles').value      = holesVal;
+    // Show / populate the "Course half" summary row
+    const nineRow = document.getElementById('summaryNineRow');
+    if (holesVal === '9' && nineHoleSelection) {
+      document.getElementById('summaryNine').textContent =
+        nineHoleSelection === 'front' ? 'Front 9 (holes 1–9)' : 'Back 9 (holes 10–18)';
+      nineRow.classList.remove('hidden');
+    } else {
+      nineRow.classList.add('hidden');
+    }
+
+    // Pre-fill hidden form
+    document.getElementById('hidCourseId').value   = selectedTee.id; // resolved via tee FK in backend
+    document.getElementById('hidTeeSetId').value   = selectedTee.id;
+    document.getElementById('hidDate').value        = dateVal;
+    document.getElementById('hidHoles').value       = holesVal;
+    document.getElementById('hidNineHole').value    = nineHoleSelection || '';
 
     goToStep('step-confirm');
   };

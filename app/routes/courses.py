@@ -13,7 +13,8 @@ GET /api/debug/raw-course/<id>
     → raw API JSON for debugging field mapping (dev only)
 """
 
-from flask import Blueprint, jsonify, request
+import logging
+from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required
 from app import db
 from app.models.course import Course
@@ -51,7 +52,7 @@ def debug_raw_search():
     """
     q = request.args.get('q', 'seaford')
     try:
-        raw = api_get('/courses', params={'search': q})
+        raw = api_get('/search', params={'search_query': q})
     except GolfCourseAPIError as e:
         return jsonify({'error': str(e)}), 502
     return jsonify(raw)
@@ -91,12 +92,41 @@ def search_courses():
     except GolfCourseAPIError as e:
         return jsonify({'error': str(e)}), 502
 
-    # Client-side country filter as fallback (in case the API ignores the param)
+    # Country priority re-sort — matching results float to the top, no results hidden.
+    # UK variants: API may return "United Kingdom" for courses in England/Scotland/Wales.
+    UK_VARIANTS = {'england', 'scotland', 'wales', 'ireland',
+                   'united kingdom', 'uk', 'great britain', 'northern ireland'}
+
     if country and country.lower() not in ('', 'international'):
-        results = [
-            r for r in results
-            if (r.get('country') or '').lower() == country.lower()
-        ]
+        selected_lower = country.lower()
+        match_set = UK_VARIANTS if selected_lower in UK_VARIANTS else {selected_lower}
+    else:
+        match_set = set()
+
+    q_lower = q.lower()
+
+    def _score(r):
+        name    = (r.get('name')    or '').lower()
+        city    = (r.get('city')    or '').lower()
+        region  = (r.get('region')  or '').lower()
+        country_val = (r.get('country') or '').lower()
+
+        # Relevance: 3 = name starts with query, 2 = name contains, 1 = city/region contains
+        if name.startswith(q_lower):
+            relevance = 3
+        elif q_lower in name:
+            relevance = 2
+        elif q_lower in city or q_lower in region:
+            relevance = 1
+        else:
+            relevance = 0
+
+        # Country bonus: 1 if result matches selected country preference
+        country_bonus = 1 if (match_set and country_val in match_set) else 0
+
+        return (country_bonus, relevance)
+
+    results = sorted(results, key=_score, reverse=True)
 
     return jsonify(results)
 
@@ -121,15 +151,22 @@ def get_tees(external_id: str):
         return jsonify([_tee_to_dict(t) for t in tees])
 
     # Not cached — fetch from API
+    current_app.logger.info(f"[tees] Fetching from API for external_id={external_id}")
     try:
         detail = api_detail(external_id)
     except GolfCourseAPIError as e:
+        current_app.logger.error(f"[tees] GolfCourseAPIError for {external_id}: {e}")
         return jsonify({'error': str(e)}), 502
+    except Exception as e:
+        current_app.logger.exception(f"[tees] Unexpected error fetching {external_id}")
+        return jsonify({'error': 'Unexpected error fetching course data.'}), 500
 
     api_tees = detail.get('tees', [])
+    current_app.logger.info(f"[tees] Got {len(api_tees)} tee(s) for {external_id}")
 
     # Require at least one tee — if the API gave us nothing, bail clearly
     if not api_tees:
+        current_app.logger.warning(f"[tees] No tees returned for {external_id}. Raw detail keys: {list(detail.keys())}")
         return jsonify({
             'error': 'No tee data returned by the API for this course.',
             'hint': f'Check /api/debug/raw-course/{external_id} to inspect the raw response.'
@@ -151,6 +188,7 @@ def get_tees(external_id: str):
     db.session.flush()
 
     for tee_data in api_tees:
+        current_app.logger.debug(f"[tees] Persisting tee: {tee_data.get('name')} ({tee_data.get('gender')})")
         ts = TeeSet(
             course_id=course.id,
             name=tee_data['name'],
@@ -175,7 +213,13 @@ def get_tees(external_id: str):
                 stroke_index=hole.get('stroke_index'),
             ))
 
-    db.session.commit()
+    try:
+        db.session.commit()
+        current_app.logger.info(f"[tees] Committed {len(api_tees)} tee(s) for {external_id}")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(f"[tees] DB commit failed for {external_id}")
+        return jsonify({'error': 'Failed to save course data. Please try again.'}), 500
 
     tees = course.tee_sets.all()
     return jsonify([_tee_to_dict(t) for t in tees])
@@ -198,14 +242,19 @@ def get_countries():
 def _tee_to_dict(tee: TeeSet) -> dict:
     holes = tee.course_holes.order_by(CourseHole.hole_number).all()
     return {
-        'id':            tee.id,
-        'name':          tee.name,
-        'color':         tee.color or '',
-        'gender':        tee.gender,
-        'course_rating': tee.course_rating,
-        'slope_rating':  tee.slope_rating,
-        'total_yardage': tee.total_yardage,
-        'total_par':     tee.total_par,
+        'id':                  tee.id,
+        'name':                tee.name,
+        'color':               tee.color or '',
+        'gender':              tee.gender,
+        'course_rating':       tee.course_rating,
+        'slope_rating':        tee.slope_rating,
+        'total_yardage':       tee.total_yardage,
+        'total_par':           tee.total_par,
+        # Split ratings for 9-hole rounds (Task 6)
+        'front_course_rating': tee.front_course_rating,
+        'back_course_rating':  tee.back_course_rating,
+        'front_slope_rating':  tee.front_slope_rating,
+        'back_slope_rating':   tee.back_slope_rating,
         'has_hole_data': len(holes) > 0,
         'holes': [{
             'hole_number':  h.hole_number,

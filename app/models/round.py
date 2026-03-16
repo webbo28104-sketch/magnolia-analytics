@@ -1,5 +1,6 @@
 from app import db
 from datetime import datetime
+from app.models.hole import Hole
 
 
 class Round(db.Model):
@@ -12,8 +13,9 @@ class Round(db.Model):
 
     # Round metadata
     date_played = db.Column(db.Date, nullable=False, default=datetime.utcnow().date)
-    holes_played = db.Column(db.Integer, default=18)  # 9 or 18
-    tee_set = db.Column(db.String(50), default='White')   # human-readable label
+    holes_played = db.Column(db.Integer, default=18)          # 9 or 18
+    nine_hole_selection = db.Column(db.String(10), nullable=True)  # 'front', 'back', or None
+    tee_set = db.Column(db.String(50), default='White')       # human-readable label
 
     # Totals (computed after submission)
     total_score = db.Column(db.Integer, nullable=True)
@@ -34,7 +36,7 @@ class Round(db.Model):
 
     # Relationships
     holes = db.relationship('Hole', backref='round', lazy='dynamic',
-                            order_by='Hole.hole_number', cascade='all, delete-orphan')
+                            order_by=Hole.hole_number, cascade='all, delete-orphan')
     report = db.relationship('Report', backref='round', uselist=False, cascade='all, delete-orphan')
 
     def compute_totals(self):
@@ -59,11 +61,26 @@ class Round(db.Model):
         return None
 
     def compute_differential(self):
-        """USGA handicap differential: (Score - Course Rating) × 113 / Slope Rating."""
-        if self.total_score and self.tee_set_obj:
-            ts = self.tee_set_obj
-            diff = (self.total_score - ts.course_rating) * 113 / ts.slope_rating
-            self.hc_differential = round(diff, 1)
+        """USGA handicap differential: (Score - Course Rating) × 113 / Slope Rating.
+
+        For 9-hole rounds, uses front or back split ratings when available,
+        falling back to half of the full-round rating.
+        """
+        if not (self.total_score and self.tee_set_obj):
+            return
+        ts = self.tee_set_obj
+        if self.holes_played == 9:
+            if self.nine_hole_selection == 'back':
+                rating = ts.back_course_rating  or (ts.course_rating / 2)
+                slope  = ts.back_slope_rating   or ts.slope_rating
+            else:
+                rating = ts.front_course_rating or (ts.course_rating / 2)
+                slope  = ts.front_slope_rating  or ts.slope_rating
+        else:
+            rating = ts.course_rating
+            slope  = ts.slope_rating
+        diff = (self.total_score - rating) * 113 / slope
+        self.hc_differential = round(diff, 1)
 
     def __repr__(self):
         return f'<Round {self.id} — {self.date_played}>'

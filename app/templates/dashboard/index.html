@@ -1,6 +1,63 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard — Magnolia Analytics{% endblock %}
 
+{% block head %}
+<style>
+/* ── Round delete button & inline confirm ─────────────────────────── */
+.round-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #c0b8a8;
+  padding: 4px 5px;
+  border-radius: 4px;
+  line-height: 0;
+  flex-shrink: 0;
+  transition: color .15s;
+  vertical-align: middle;
+}
+.round-delete-btn:hover { color: #e03131; }
+
+.round-delete-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .75rem;
+  background: var(--surface, #fff);
+  border: 1.5px solid #e03131;
+  border-radius: 6px;
+  padding: 4px 10px;
+  white-space: nowrap;
+  color: var(--text, #111);
+  font-weight: 500;
+  vertical-align: middle;
+}
+.round-delete-confirm-yes {
+  background: #e03131;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: .72rem;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.round-delete-confirm-yes:hover { background: #c92a2a; }
+.round-delete-confirm-no {
+  background: none;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: .72rem;
+  cursor: pointer;
+  color: var(--text-muted, #666);
+  line-height: 1.5;
+}
+.round-delete-confirm-no:hover { color: var(--text, #111); }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="dashboard">
 
@@ -12,6 +69,46 @@
     </div>
     <a href="{{ url_for('rounds.new_round') }}" class="btn btn--gold">+ Log Round</a>
   </div>
+
+  <!-- Continue Round banner (Task 11) -->
+  {% if in_progress_rounds %}
+  <div class="in-progress-section">
+    {% for item in in_progress_rounds %}
+    <div class="in-progress-card">
+      <div class="in-progress-info">
+        <div class="in-progress-title">Round in progress</div>
+        <div class="in-progress-meta">
+          {{ item.round.course.name if item.round.course else 'Unknown Course' }}
+          &nbsp;·&nbsp;
+          {{ item.round.date_played.strftime('%d %b') }}
+          &nbsp;·&nbsp;
+          {{ item.holes_done }}/{{ item.round.holes_played }} holes saved
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <a href="{{ item.next_hole_url }}" class="btn btn--gold btn--sm">Continue →</a>
+        <button type="button" class="round-delete-btn"
+                id="delbtn-{{ item.round.id }}"
+                onclick="showDelConfirm('delbtn-{{ item.round.id }}','delconfirm-{{ item.round.id }}')"
+                title="Delete this round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+        </button>
+        <span class="round-delete-confirm" id="delconfirm-{{ item.round.id }}" style="display:none">
+          Delete this round?
+          <form method="POST" action="{{ url_for('rounds.delete_round', round_id=item.round.id) }}" style="display:contents">
+            <button type="submit" class="round-delete-confirm-yes">Delete</button>
+          </form>
+          <button type="button" class="round-delete-confirm-no"
+                  onclick="hideDelConfirm('delbtn-{{ item.round.id }}','delconfirm-{{ item.round.id }}')">Cancel</button>
+        </span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
   <!-- Season stats -->
   {% if stats %}
@@ -63,12 +160,29 @@
         </div>
         <div class="round-putts">{{ round.total_putts or '—' }} putts</div>
         <div class="round-gir">{{ round.gir_count or '—' }}/{{ round.holes_played }} GIR</div>
-        <div class="round-actions">
+        <div class="round-actions" style="display:flex;align-items:center;gap:8px">
           {% if round.report and round.report.html_content %}
             <a href="{{ url_for('reports.view_report', round_id=round.id) }}" class="link-gold">View Report →</a>
           {% else %}
             <span class="badge badge--pending">Report pending</span>
           {% endif %}
+          <button type="button" class="round-delete-btn"
+                  id="delbtn-{{ round.id }}"
+                  onclick="showDelConfirm('delbtn-{{ round.id }}','delconfirm-{{ round.id }}')"
+                  title="Delete this round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+          </button>
+          <span class="round-delete-confirm" id="delconfirm-{{ round.id }}" style="display:none">
+            Delete this round?
+            <form method="POST" action="{{ url_for('rounds.delete_round', round_id=round.id) }}" style="display:contents">
+              <button type="submit" class="round-delete-confirm-yes">Delete</button>
+            </form>
+            <button type="button" class="round-delete-confirm-no"
+                    onclick="hideDelConfirm('delbtn-{{ round.id }}','delconfirm-{{ round.id }}')">Cancel</button>
+          </span>
         </div>
       </div>
       {% endfor %}
@@ -82,4 +196,24 @@
   </div>
 
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showDelConfirm(btnId, confirmId) {
+  // Close any other open confirmations first
+  document.querySelectorAll('.round-delete-confirm').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.round-delete-btn').forEach(el => el.style.display = '');
+  var confirmEl = document.getElementById(confirmId);
+  var btnEl     = document.getElementById(btnId);
+  if (confirmEl) confirmEl.style.display = 'inline-flex';
+  if (btnEl)     btnEl.style.display     = 'none';
+}
+function hideDelConfirm(btnId, confirmId) {
+  var confirmEl = document.getElementById(confirmId);
+  var btnEl     = document.getElementById(btnId);
+  if (confirmEl) confirmEl.style.display = 'none';
+  if (btnEl)     btnEl.style.display     = '';
+}
+</script>
 {% endblock %}
