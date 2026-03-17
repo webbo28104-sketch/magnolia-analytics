@@ -31,6 +31,69 @@
           <div class="course-results-hint">Type to search courses worldwide.</div>
         </div>
       </div>
+
+      <!-- Manual add — shown when search finds nothing -->
+      <div id="manual-course-wrap" style="margin-top:1.25rem">
+        <button type="button" class="manual-toggle-btn" id="manualToggleBtn"
+                onclick="toggleManualForm()">
+          ＋ Can't find your course? Add it manually
+        </button>
+        <div id="manualCourseForm" style="display:none;margin-top:1rem">
+          <div class="manual-form-card">
+            <div class="manual-form-title">Add a missing course</div>
+            <p class="manual-form-note">Your entry is saved locally and used immediately. We'll review it for the main database.</p>
+
+            <div class="form-row" style="margin-bottom:.75rem">
+              <div class="form-group">
+                <label class="form-label">Course name <span style="color:#e03131">*</span></label>
+                <input type="text" id="mc-name" class="form-input" placeholder="e.g. Seaford Golf Club">
+              </div>
+              <div class="form-group">
+                <label class="form-label">City / town</label>
+                <input type="text" id="mc-city" class="form-input" placeholder="e.g. Seaford">
+              </div>
+            </div>
+
+            <div class="form-row" style="margin-bottom:.75rem">
+              <div class="form-group">
+                <label class="form-label">Country</label>
+                <select id="mc-country" class="form-input form-select">
+                  {% for c in ['England','Scotland','Wales','Ireland','USA','Spain','France','Germany',
+                                'Australia','South Africa','Portugal','UAE','New Zealand','Japan',
+                                'Sweden','Denmark','Netherlands','Canada'] %}
+                  <option value="{{ c }}">{{ c }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tee name</label>
+                <input type="text" id="mc-tee-name" class="form-input" placeholder="e.g. White, Yellow">
+              </div>
+            </div>
+
+            <div class="form-row" style="margin-bottom:1rem">
+              <div class="form-group">
+                <label class="form-label">Course rating <span style="color:#e03131">*</span></label>
+                <input type="number" id="mc-rating" class="form-input" placeholder="e.g. 72.4" step="0.1" min="60" max="82">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Slope rating <span style="color:#e03131">*</span></label>
+                <input type="number" id="mc-slope" class="form-input" placeholder="e.g. 130" min="55" max="155">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Course par</label>
+                <input type="number" id="mc-par" class="form-input" placeholder="72" min="60" max="80" value="72">
+              </div>
+            </div>
+
+            <p id="mc-error" class="field-error hidden"></p>
+
+            <button type="button" class="btn btn--gold" onclick="submitManualCourse()">
+              Save &amp; Select This Course →
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- STEP 2: Tee + Date -->
@@ -252,6 +315,38 @@
 
 .confirm-actions { display: flex; gap: 1rem; }
 .btn--xs { padding: .3rem .75rem; font-size: .75rem; }
+/* ── Manual course add ───────────────────────────────────── */
+.manual-toggle-btn {
+  width: 100%;
+  padding: .65rem 1rem;
+  background: none;
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: .82rem;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color .15s, color .15s;
+}
+.manual-toggle-btn:hover { border-color: var(--gold); color: var(--text); }
+.manual-form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem 1.25rem 1rem;
+}
+.manual-form-title {
+  font-weight: 700;
+  font-size: .9rem;
+  color: var(--text);
+  margin-bottom: .35rem;
+}
+.manual-form-note {
+  font-size: .78rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
 </style>
 
 <script>
@@ -261,6 +356,10 @@
   let selectedTee         = null;   // full tee object with holes[]
   let searchTimer         = null;
   let nineHoleSelection   = null;   // 'front' | 'back' | null
+
+
+  // Home country seeded from user profile — prioritises results without hiding others
+  const HOME_COUNTRY = {{ (current_user.home_country or '') | tojson }};
 
   /* ── Tee colour map ────────────────────────── */
   const TEE_COLOURS = {
@@ -294,6 +393,8 @@
     spinner.classList.remove('hidden');
 
     const params = new URLSearchParams({ q });
+
+    if (HOME_COUNTRY) params.set('country', HOME_COUNTRY);
 
     fetch('/api/courses/search?' + params)
       .then(r => r.json())
@@ -530,6 +631,63 @@
       .replace(/&/g,'&amp;').replace(/</g,'&lt;')
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+
+  /* ── Manual course ───────────────────────────────────────────── */
+  window.toggleManualForm = function() {
+    const form = document.getElementById('manualCourseForm');
+    const btn  = document.getElementById('manualToggleBtn');
+    const open = form.style.display === 'none';
+    form.style.display = open ? 'block' : 'none';
+    btn.textContent    = open
+      ? '✕ Cancel manual entry'
+      : '＋ Can’t find your course? Add it manually';
+  };
+
+  window.submitManualCourse = function() {
+    const name   = document.getElementById('mc-name').value.trim();
+    const city   = document.getElementById('mc-city').value.trim();
+    const country = document.getElementById('mc-country').value;
+    const teeName = document.getElementById('mc-tee-name').value.trim() || 'Standard';
+    const rating = parseFloat(document.getElementById('mc-rating').value);
+    const slope  = parseInt(document.getElementById('mc-slope').value);
+    const par    = parseInt(document.getElementById('mc-par').value) || 72;
+    const errEl  = document.getElementById('mc-error');
+
+    errEl.classList.add('hidden');
+    errEl.textContent = '';
+
+    if (!name)        { errEl.textContent = 'Course name is required.'; errEl.classList.remove('hidden'); return; }
+    if (isNaN(rating)){ errEl.textContent = 'Enter a valid course rating.'; errEl.classList.remove('hidden'); return; }
+    if (isNaN(slope)) { errEl.textContent = 'Enter a valid slope rating.'; errEl.classList.remove('hidden'); return; }
+
+    fetch('/api/courses/manual', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name, city, country, tee_name: teeName, course_rating: rating, slope_rating: slope, total_par: par })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        errEl.textContent = data.error;
+        errEl.classList.remove('hidden');
+        return;
+      }
+      // Select this course + tee and advance to step 2
+      selectedCourse = data.course;
+      selectedTee = null;
+      document.getElementById('bannerCourseName').textContent = data.course.name;
+      document.getElementById('bannerCourseMeta').textContent =
+        [data.course.city, data.course.country].filter(Boolean).join(', ');
+      goToStep('step-tee');
+      // Render the single tee directly (skip fetchTees)
+      renderTees([data.tee]);
+      selectTee(data.tee);
+    })
+    .catch(() => {
+      errEl.textContent = 'Could not save course. Please try again.';
+      errEl.classList.remove('hidden');
+    });
+  };
 })();
 </script>
 {% endblock %}
