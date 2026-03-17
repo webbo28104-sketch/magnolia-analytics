@@ -100,7 +100,6 @@ def send_report_email(round_) -> bool:
     if success:
         report.emailed_at = datetime.utcnow()
         report.email_status = 'sent'
-        round_.status = 'report_sent'
         db.session.commit()
 
     return success
