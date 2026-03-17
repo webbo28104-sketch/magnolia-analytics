@@ -269,14 +269,14 @@ def generate_report(round_) -> Report:
             import anthropic
             client = anthropic.Anthropic(api_key=api_key)
             message = client.messages.create(
-                model='claude-opus-4-5-20251101',
+                model='claude-sonnet-4-6',
                 max_tokens=8192,
                 messages=[{'role': 'user', 'content': _build_prompt(round_)}]
             )
             html_content = message.content[0].text
             prompt_tokens = message.usage.input_tokens
             completion_tokens = message.usage.output_tokens
-            model_used = 'claude-opus-4-5-20251101'
+            model_used = 'claude-sonnet-4-6'
         except Exception as e:
             html_content = None
             model_used = f'placeholder (error: {str(e)[:60]})'
