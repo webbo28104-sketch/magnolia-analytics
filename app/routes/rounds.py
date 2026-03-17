@@ -13,6 +13,45 @@ from datetime import datetime, date
 rounds_bp = Blueprint('rounds', __name__)
 
 
+# ---------------------------------------------------------------------------
+# USGA World Handicap System — differentials-to-use lookup table
+# ---------------------------------------------------------------------------
+_WHS_TABLE = {
+    3: 1,  4: 1,  5: 1,
+    6: 2,  7: 2,  8: 2,
+    9: 3,  10: 3, 11: 3,
+    12: 4, 13: 4, 14: 4,
+    15: 5, 16: 5,
+    17: 6, 18: 6,
+    19: 7,
+}
+
+
+def _recalculate_handicap(user):
+    """Recalculate user.handicap_index using WHS (best N of last 20 diffs × 0.96)."""
+    rounds = (
+        Round.query
+        .filter_by(user_id=user.id, status='complete')
+        .filter(Round.hc_differential.isnot(None))
+        .order_by(Round.date_played.desc())
+        .limit(20)
+        .all()
+    )
+    count = len(rounds)
+    if count < 3:
+        return  # Need at least 3 rounds
+    n_to_use = _WHS_TABLE.get(count, 8)   # 20+ rounds -> use best 8
+    diffs = sorted(r.hc_differential for r in rounds)
+    best  = diffs[:n_to_use]
+    new_index = round(sum(best) / n_to_use * 0.96, 1)
+    user.handicap_index = new_index
+    db.session.commit()
+    current_app.logger.info(
+        f"[handicap] {user.email} -> {new_index} "
+        f"(best {n_to_use} of {count} diffs)"
+    )
+
+
 @rounds_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_round():
@@ -67,7 +106,7 @@ def enter_hole(round_id, hole_number):
     if hole_number < 1 or hole_number > round_.holes_played:
         return redirect(url_for('rounds.enter_hole', round_id=round_.id, hole_number=1))
 
-    # For back-9 rounds, sequential entry 1–9 maps to course holes 10–18
+    # For back-9 rounds, sequential entry 1-9 maps to course holes 10-18
     if round_.nine_hole_selection == 'back' and round_.holes_played == 9:
         actual_hole_number = hole_number + 9
     else:
@@ -117,7 +156,8 @@ def enter_hole(round_id, hole_number):
 
         hole.putts = int(data.get('putts', 2))
         hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
-        hole.sand_save_attempt = (hole.approach_miss == 'bunker')  # auto-derived
+        hole.sand_save_attempt = bool(data.get('sand_save_attempt') == 'true') if data.get('sand_save_attempt') else None
+        hole.sand_save_made = data.get('sand_save_made') == 'true' if data.get('sand_save_made') else None
         hole.penalties = int(data.get('penalties', 0))
 
         db.session.commit()
@@ -128,14 +168,14 @@ def enter_hole(round_id, hole_number):
         else:
             return redirect(url_for('rounds.submit_round', round_id=round_id))
 
-    # Previous hole score for progress indicator (Task 10)
+    # Previous hole score for progress indicator
     prev_actual = (actual_hole_number - 1) if actual_hole_number > 1 else None
     prev_hole = Hole.query.filter_by(round_id=round_id, hole_number=prev_actual).first() if prev_actual else None
 
     return render_template('rounds/hole.html',
                            round=round_,
-                           hole_number=hole_number,           # sequential (1–9/18) for URLs
-                           display_hole_number=actual_hole_number,  # actual course hole for labels
+                           hole_number=hole_number,
+                           display_hole_number=actual_hole_number,
                            existing=existing,
                            course_par=course_par,
                            course_yardage=course_yardage,
@@ -165,6 +205,12 @@ def submit_round(round_id):
 
         db.session.commit()
         current_app.logger.info(f"[submit_round] Round {round_id} committed as complete")
+
+        # Recalculate handicap index from latest round history (non-fatal)
+        try:
+            _recalculate_handicap(current_user)
+        except Exception as e:
+            current_app.logger.exception(f"[submit_round] Handicap recalc failed: {e}")
 
         # Trigger report generation — failure must never roll back the round save
         try:
