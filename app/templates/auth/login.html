@@ -24,19 +24,18 @@
       </div>
 
       <div class="form-group form-group--inline">
-        <label class="checkbox-label">
+        <label class="form-label form-label--checkbox">
           <input type="checkbox" name="remember_me">
-          <span>Remember me</span>
+          Remember me
         </label>
+        <a href="{{ url_for('auth.forgot_password') }}" class="auth-link--muted">Forgot your password?</a>
       </div>
 
       <button type="submit" class="btn btn--gold btn--full">Sign In</button>
-
     </form>
 
     <p class="auth-footer">
-      Don't have an account?
-      <a href="{{ url_for('auth.register') }}">Get started</a>
+      Don't have an account? <a href="{{ url_for('auth.register') }}">Get started</a>
     </p>
   </div>
 </section>
