@@ -506,26 +506,7 @@
                  value="{{ existing.scramble_distance or '' }}">
         </div>
 
-        <!-- Sand save (revealed when miss = bunker) -->
-        <div class="he-reveal{% if init_miss == 'bunker' %} is-visible{% endif %}" id="sand-save-reveal">
-          <div class="he-reveal-inner">
-            <div class="he-field">
-              <label class="he-label">Sand save attempt?</label>
-              <div class="he-pills">
-                <button type="button"
-                        class="he-pill{% if existing and existing.sand_save_made %} is-active{% endif %}"
-                        data-field="sand_save_made" data-value="true">Yes</button>
-                <button type="button"
-                        class="he-pill{% if existing and existing.sand_save_made == False and existing.sand_save_attempt %} is-active{% endif %}"
-                        data-field="sand_save_made" data-value="false">No</button>
-              </div>
-              <input type="hidden" name="sand_save_made" id="sand-save-input"
-                     value="{{ 'true' if existing and existing.sand_save_made else '' }}">
-              <input type="hidden" name="sand_save_attempt" id="sand-save-attempt-input"
-                     value="{{ 'true' if existing and existing.sand_save_attempt else '' }}">
-            </div>
-          </div>
-        </div>
+        
 
       </div>
     </div>
