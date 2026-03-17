@@ -117,8 +117,7 @@ def enter_hole(round_id, hole_number):
 
         hole.putts = int(data.get('putts', 2))
         hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
-        hole.sand_save_attempt = bool(data.get('sand_save_attempt') == 'true') if data.get('sand_save_attempt') else None
-        hole.sand_save_made = data.get('sand_save_made') == 'true' if data.get('sand_save_made') else None
+        hole.sand_save_attempt = (hole.approach_miss == 'bunker')  # auto-derived
         hole.penalties = int(data.get('penalties', 0))
 
         db.session.commit()
