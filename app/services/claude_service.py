@@ -36,7 +36,7 @@ def _build_prompt(round_) -> str:
     score_vs_par = round_.score_vs_par()
     score_label = f'+{score_vs_par}' if score_vs_par and score_vs_par > 0 else str(score_vs_par or 'E')
     fw_pct = round(round_.fairways_hit / round_.fairways_available * 100) if round_.fairways_available else 0
-    gir_pct = round(round_.gir_count / 18 * 100)
+    gir_pct = round((round_.gir_count or 0) / max(round_.holes_played or 18, 1) * 100)
 
     prompt = f"""You are the performance analysis engine for Magnolia Analytics — a premium golf tracking platform used by serious amateur golfers.
 
@@ -96,10 +96,10 @@ def _placeholder_report(round_) -> str:
     score_label = f'+{score_vs_par}' if score_vs_par and score_vs_par > 0 else (str(score_vs_par) if score_vs_par is not None else 'E')
     course_name = round_.course.name if round_.course else 'Unknown Course'
     fw_pct = round(round_.fairways_hit / round_.fairways_available * 100) if round_.fairways_available else 0
-    gir_pct = round(round_.gir_count / 18 * 100)
+    gir_pct = round((round_.gir_count or 0) / max(round_.holes_played or 18, 1) * 100)
     date_str = round_.date_played.strftime('%d %B %Y')
     user = round_.golfer
-    putts_per_hole = round(round_.total_putts / 18, 1)
+    putts_per_hole = round((round_.total_putts or 0) / max(round_.holes_played or 18, 1), 1)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
