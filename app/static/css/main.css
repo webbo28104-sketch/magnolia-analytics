@@ -1139,3 +1139,112 @@ h1, h2, h3, h4 {
   color: var(--text-muted);
   line-height: 1.6;
    }
+
+
+/* ── Glossary page ── */
+.glossary-hero {
+  background: var(--green-800);
+  padding: 64px 24px 48px;
+  text-align: center;
+}
+.glossary-title {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 4vw, 3rem);
+  color: var(--white);
+  margin-bottom: 16px;
+}
+.glossary-subtitle {
+  font-size: 1rem;
+  color: #a8c5b5;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+.glossary-page {
+  padding: 64px 0 80px;
+}
+.glossary-section {
+  max-width: 1080px;
+  margin: 0 auto 64px;
+}
+.glossary-section-title {
+  font-size: 1.5rem;
+  color: var(--green-800);
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--gold);
+}
+.glossary-section-intro {
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin-bottom: 28px;
+  max-width: 780px;
+}
+.glossary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+.glossary-term {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+.glossary-term-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.glossary-term-name {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--green-800);
+}
+.glossary-term-abbr {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  background: var(--green-800);
+  color: var(--gold);
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+.glossary-term-def {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+/* Score grid */
+.glossary-grid--scores {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+.glossary-term--score {
+  text-align: center;
+  padding: 28px 20px;
+}
+.glossary-score-badge {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+.glossary-term--eagle .glossary-score-badge { color: var(--gold); }
+.glossary-term--eagle { border-color: var(--gold); }
+.glossary-term--birdie .glossary-score-badge { color: var(--green-700); }
+.glossary-term--par .glossary-score-badge { color: var(--text-muted); }
+.glossary-term--bogey .glossary-score-badge { color: #a07800; }
+.glossary-term--double .glossary-score-badge { color: var(--error); }
+.glossary-term--score .glossary-term-name {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+@media (max-width: 640px) {
+  .glossary-grid { grid-template-columns: 1fr; }
+  .glossary-grid--scores { grid-template-columns: repeat(2, 1fr); }
+}
