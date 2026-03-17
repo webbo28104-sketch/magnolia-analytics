@@ -68,10 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
-  // ── Approach miss → show/hide scramble reveal + sand save reveal ───────────
+  // ── Approach miss → show/hide scramble reveal ───────────
   function handleApproachMissChange(missValue) {
     const scrambleReveal  = document.getElementById('scramble-reveal');
-    const sandSaveReveal  = document.getElementById('sand-save-reveal');
 
     reveal(scrambleReveal, !!missValue);
 
@@ -80,12 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (missValue === 'bunker') {
-      reveal(sandSaveReveal, true);
-      const attemptInput = document.getElementById('sand-save-attempt-input');
-      if (attemptInput) attemptInput.value = 'true';
     } else {
-      reveal(sandSaveReveal, false);
-      clearSandSave();
     }
   }
 
@@ -103,8 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const secondShotReveal = document.getElementById('second-shot-reveal');
   reveal(secondShotReveal, initPar === 5);
 
-  // Approach miss — apply to scramble/sand save (Jinja already sets is-visible on reveal
-  // elements from server data, but we still run JS logic for sand save sub-reveal)
+  // Approach miss — applies to scramble reveal (Jinja sets is-visible from server data)
   const missInput = document.getElementById('approach-miss-input');
   const initMiss  = missInput ? missInput.value : '';
   if (initMiss) {
@@ -195,19 +188,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (distInput) distInput.value = '';
     if (exactEl)   exactEl.value = '';
     if (pillsEl)   pillsEl.querySelectorAll('.he-pill').forEach(b => b.classList.remove('is-active'));
-    clearSandSave();
   }
 
-  function clearSandSave() {
-    const sandInput    = document.getElementById('sand-save-input');
-    const attemptInput = document.getElementById('sand-save-attempt-input');
-    if (sandInput)    sandInput.value = '';
-    if (attemptInput) attemptInput.value = '';
-    // Deactivate sand save pills
-    const sandSaveReveal = document.getElementById('sand-save-reveal');
-    if (sandSaveReveal) {
-      sandSaveReveal.querySelectorAll('.he-pill').forEach(b => b.classList.remove('is-active'));
-    }
   }
 
 
