@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% block title %}Golf Glossary — Magnolia Analytics{% endblock %}
+
+{% block content %}
+<section class="glossary-hero">
+  <div class="container">
+    <p class="section-eyebrow">Reference</p>
+    <h1 class="glossary-title">Golf Lingo & Stats Explained</h1>
+    <p class="glossary-subtitle">Everything you need to understand your Magnolia Analytics reports — from classic scoring terms to advanced strokes gained metrics.</p>
+  </div>
+</section>
+
+<div class="glossary-page">
+  <div class="container">
+
+    <!-- Strokes Gained -->
+    <div class="glossary-section">
+      <h2 class="glossary-section-title">Strokes Gained</h2>
+      <p class="glossary-section-intro">Strokes Gained (SG) is the gold standard for measuring golf performance. It compares your shots to a benchmark — in Magnolia, that benchmark is scratch (0 handicap) play. A score of 0 means you performed exactly at scratch level. Positive = better than scratch. Negative = worse than scratch.</p>
+
+      <div class="glossary-grid">
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Strokes Gained: Off the Tee</span>
+            <span class="glossary-term-abbr">SG: OTT</span>
+          </div>
+          <p class="glossary-term-def">Measures how well you drive the ball relative to scratch. A positive value means your tee shots leave you in a better position than average — closer to the hole and in the fairway more often.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Strokes Gained: Approach</span>
+            <span class="glossary-term-abbr">SG: APP</span>
+          </div>
+          <p class="glossary-term-def">Measures the quality of your approach shots into the green. The most impactful category for most amateur golfers — gaining here means hitting greens closer to the pin and from better distances.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Strokes Gained: Around the Greens</span>
+            <span class="glossary-term-abbr">SG: ARG</span>
+          </div>
+          <p class="glossary-term-def">Covers all short game shots taken from off the green — chips, pitches, flops, and bunker shots. A strong short game can save many strokes when the approach misses.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Strokes Gained: Putting</span>
+            <span class="glossary-term-abbr">SG: PUTT</span>
+          </div>
+          <p class="glossary-term-def">Measures putting performance relative to scratch, taking into account the distance of each putt. Holing a 20-footer gains more strokes than making a 3-footer — because the baseline expectation differs.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scoring Terms -->
+    <div class="glossary-section">
+      <h2 class="glossary-section-title">Scoring Terms</h2>
+
+      <div class="glossary-grid glossary-grid--scores">
+        <div class="glossary-term glossary-term--score glossary-term--eagle">
+          <div class="glossary-score-badge">−2</div>
+          <div class="glossary-term-name">Eagle</div>
+          <p class="glossary-term-def">Two strokes under par on a hole. Rare and exciting — usually a holed approach on a par 4, or reaching a par 5 green in two.</p>
+        </div>
+
+        <div class="glossary-term glossary-term--score glossary-term--birdie">
+          <div class="glossary-score-badge">−1</div>
+          <div class="glossary-term-name">Birdie</div>
+          <p class="glossary-term-def">One stroke under par. The target score for better players on most holes — and a cause for celebration at any level.</p>
+        </div>
+
+        <div class="glossary-term glossary-term--score glossary-term--par">
+          <div class="glossary-score-badge">E</div>
+          <div class="glossary-term-name">Par</div>
+          <p class="glossary-term-def">The expected score for a scratch golfer on a given hole or round. Most holes are par 3, 4, or 5. A round of 72 on a par 72 course is an even-par round.</p>
+        </div>
+
+        <div class="glossary-term glossary-term--score glossary-term--bogey">
+          <div class="glossary-score-badge">+1</div>
+          <div class="glossary-term-name">Bogey</div>
+          <p class="glossary-term-def">One stroke over par. The most common score for amateur golfers. Bogey golf (one over per hole) typically equates to around an 18 handicap.</p>
+        </div>
+
+        <div class="glossary-term glossary-term--score glossary-term--double">
+          <div class="glossary-score-badge">+2</div>
+          <div class="glossary-term-name">Double Bogey</div>
+          <p class="glossary-term-def">Two strokes over par. Often the result of a penalty, a missed short game shot, or a three-putt. Limiting doubles is one of the fastest ways to lower your score.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Stats -->
+    <div class="glossary-section">
+      <h2 class="glossary-section-title">Key Statistics</h2>
+
+      <div class="glossary-grid">
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Greens in Regulation</span>
+            <span class="glossary-term-abbr">GIR</span>
+          </div>
+          <p class="glossary-term-def">You hit a green in regulation when your ball is on the putting surface in par minus 2 strokes — meaning you have two putts left to make par. On a par 4, that means reaching the green in 2. On a par 3, in 1. GIR % is one of the strongest predictors of scoring.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Fairway Hit</span>
+            <span class="glossary-term-abbr">FIR</span>
+          </div>
+          <p class="glossary-term-def">A tee shot that lands in the fairway on par 4s and par 5s. Hitting more fairways generally leads to better approach shots and more GIRs. Only par 4s and 5s count — par 3s don't have fairways to track.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Scrambling</span>
+          </div>
+          <p class="glossary-term-def">The percentage of times you make par or better after missing the green in regulation. A 50%+ scramble rate is considered strong for amateurs. Scrambling well can mask a weak approach game and save a round.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Sand Save</span>
+          </div>
+          <p class="glossary-term-def">Making par or better after your ball finishes in a greenside bunker. Recorded as a percentage of attempts. Tour average is around 50%. A great sand save keeps the round moving — a poor one can unravel a hole.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Penalty Strokes</span>
+          </div>
+          <p class="glossary-term-def">Extra strokes added for rule violations — out of bounds, water hazards, unplayable lies, and lost balls. Reducing penalties is often the quickest win for higher handicap golfers, as each penalty typically costs two shots (the penalty plus a lost scoring opportunity).</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Putts per Round</span>
+          </div>
+          <p class="glossary-term-def">The total number of putts taken in a round. Tour average is around 29. High putts per round (32+) usually signal a putting or lag putting issue. However, this stat can be misleading — fewer GIRs mean shorter putts, which inflates the apparent putting performance.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Course Terminology -->
+    <div class="glossary-section">
+      <h2 class="glossary-section-title">Course & Handicap Terms</h2>
+
+      <div class="glossary-grid">
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Handicap Index</span>
+          </div>
+          <p class="glossary-term-def">A portable measure of your playing ability, calculated from your recent rounds. A lower handicap means a stronger player. It allows golfers of different abilities to compete fairly. Your handicap index is used alongside the course's Slope Rating to calculate your Course Handicap for each round.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Course Rating</span>
+          </div>
+          <p class="glossary-term-def">The expected score for a scratch golfer (0 handicap) playing that course in normal conditions. A course with a rating of 71.4 is expected to produce a score of 71.4 from a scratch player. Used together with Slope Rating to calculate handicap adjustments.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Slope Rating</span>
+          </div>
+          <p class="glossary-term-def">Measures how much harder a course is for a bogey golfer compared to a scratch golfer. The scale runs from 55 to 155, with 113 as average. A higher slope means the course punishes less-skilled players more severely. It directly affects how many strokes a higher handicapper receives.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Scratch Golfer</span>
+          </div>
+          <p class="glossary-term-def">A golfer with a handicap index of 0 — someone expected to shoot around par on most courses. Magnolia Analytics uses scratch as the benchmark for Strokes Gained calculations, so your SG values show how your game compares to this standard.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
