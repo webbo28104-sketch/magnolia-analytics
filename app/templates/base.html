@@ -30,6 +30,7 @@
           <a href="{{ url_for('dashboard.index') }}" class="nav-link">Dashboard</a>
           <a href="{{ url_for('main.glossary') }}" class="nav-link">Glossary</a>
           <a href="{{ url_for('rounds.new_round') }}" class="nav-link nav-link--cta">Log Round</a>
+          <a href="{{ url_for('profile.index') }}" class="nav-link nav-link--muted">Profile</a>
           <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link--muted">Sign Out</a>
         {% else %}
           <a href="{{ url_for('main.glossary') }}" class="nav-link">Glossary</a>
