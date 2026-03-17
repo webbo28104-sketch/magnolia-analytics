@@ -28,9 +28,11 @@
       <div class="nav-links">
         {% if current_user.is_authenticated %}
           <a href="{{ url_for('dashboard.index') }}" class="nav-link">Dashboard</a>
+          <a href="{{ url_for('main.glossary') }}" class="nav-link">Glossary</a>
           <a href="{{ url_for('rounds.new_round') }}" class="nav-link nav-link--cta">Log Round</a>
           <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link--muted">Sign Out</a>
         {% else %}
+          <a href="{{ url_for('main.glossary') }}" class="nav-link">Glossary</a>
           <a href="{{ url_for('auth.login') }}" class="nav-link">Sign In</a>
           <a href="{{ url_for('auth.register') }}" class="nav-link nav-link--cta">Get Started</a>
         {% endif %}
