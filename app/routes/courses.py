@@ -2,20 +2,20 @@
 Course API routes.
 
 GET /api/courses/search?country=England&q=seaford
-    → calls GolfCourseAPI, applies client-side country filter as fallback
+    -> calls GolfCourseAPI, applies client-side country filter as fallback
 
 GET /api/courses/<external_id>/tees
-    → checks local DB; if not cached, fetches + stores; returns tees
-    → tees are returned even if no hole data (graceful fallback)
+    -> checks local DB; if not cached, fetches + stores; returns tees
+    -> tees are returned even if no hole data (graceful fallback)
 
 GET /api/debug/raw-search?q=seaford
 GET /api/debug/raw-course/<id>
-    → raw API JSON for debugging field mapping (dev only)
+    -> raw API JSON for debugging field mapping (dev only)
 """
 
 import logging
 from flask import Blueprint, jsonify, request, current_app
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app import db
 from app.models.course import Course
 from app.models.tee_set import TeeSet
@@ -226,6 +226,71 @@ def get_tees(external_id: str):
 
 
 # ---------------------------------------------------------------------------
+# Manual course add (when course not found in API)
+# ---------------------------------------------------------------------------
+
+@courses_bp.route('/api/courses/manual', methods=['POST'])
+@login_required
+def add_manual_course():
+    """
+    Create a course + single tee set from user-supplied data.
+    Returns the new tee dict so the frontend can proceed straight to step 2.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+
+    name          = (data.get('name') or '').strip()
+    city          = (data.get('city') or '').strip()
+    country       = (data.get('country') or '').strip()
+    tee_name      = (data.get('tee_name') or 'Standard').strip()
+    course_rating = data.get('course_rating')
+    slope_rating  = data.get('slope_rating')
+    total_par     = data.get('total_par', 72)
+
+    if not name:
+        return jsonify({'error': 'Course name is required.'}), 400
+    if not course_rating or not slope_rating:
+        return jsonify({'error': 'Course rating and slope are required.'}), 400
+
+    try:
+        course_rating = float(course_rating)
+        slope_rating  = int(slope_rating)
+        total_par     = int(total_par)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid rating or slope value.'}), 400
+
+    import time
+    course = Course(
+        external_id=f'manual_{current_user.id}_{int(time.time())}',
+        name=name,
+        country=country,
+        city=city,
+        holes=18,
+        par=total_par,
+    )
+    db.session.add(course)
+    db.session.flush()
+
+    ts = TeeSet(
+        course_id=course.id,
+        name=tee_name,
+        color='',
+        gender='M',
+        course_rating=course_rating,
+        slope_rating=slope_rating,
+        total_par=total_par,
+    )
+    db.session.add(ts)
+    db.session.commit()
+
+    current_app.logger.info(
+        f"[manual_course] Created '{name}' (course {course.id}, tee {ts.id}) "
+        f"by user {current_user.id}"
+    )
+    return jsonify({'course': {'id': course.external_id, 'name': name, 'city': city, 'country': country},
+                    'tee': _tee_to_dict(ts)})
+
+
+# ---------------------------------------------------------------------------
 # Countries list
 # ---------------------------------------------------------------------------
 
@@ -250,7 +315,7 @@ def _tee_to_dict(tee: TeeSet) -> dict:
         'slope_rating':        tee.slope_rating,
         'total_yardage':       tee.total_yardage,
         'total_par':           tee.total_par,
-        # Split ratings for 9-hole rounds (Task 6)
+        # Split ratings for 9-hole rounds
         'front_course_rating': tee.front_course_rating,
         'back_course_rating':  tee.back_course_rating,
         'front_slope_rating':  tee.front_slope_rating,
