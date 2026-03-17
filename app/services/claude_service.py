@@ -281,7 +281,13 @@ def generate_report(round_) -> Report:
             html_content = None
             model_used = f'placeholder (error: {str(e)[:60]})'
 
-    if not html_content:
+        try:
+            html_content = _placeholder_report(round_)
+        except Exception as _ph_err:
+            import traceback
+            print(f"[REPORT ERROR] _placeholder_report failed: {_ph_err}", flush=True)
+            print(traceback.format_exc(), flush=True)
+            html_content = '<html><body><h1>Performance Report</h1><p>Your round data has been saved. Full report generation encountered an issue — please contact support.</p></body></html>'
         html_content = _placeholder_report(round_)
 
     # Upsert report record
