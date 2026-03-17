@@ -18,7 +18,8 @@ class User(UserMixin, db.Model):
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     handicap_index = db.Column(db.Float, default=0.0)
-    home_course = db.Column(db.String(200), default='Seaford GC')
+   home_course    = db.Column(db.String(200), default='')
+    home_country   = db.Column(db.String(100), default='England')
 
     # Subscription
     subscription_tier = db.Column(db.String(20), default='standard')
