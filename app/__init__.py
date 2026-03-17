@@ -13,22 +13,22 @@ login_manager.login_message_category = 'info'
 
 
 def create_app(config_name='default'):
-        app = Flask(__name__)
-        app.config.from_object(config[config_name])
+    app = Flask(__name__)
+    app.config.from_object(config[config_name])
 
     # Init extensions
-        db.init_app(app)
-        migrate.init_app(app, db)
-        login_manager.init_app(app)
+    db.init_app(app)
+    migrate.init_app(app, db)
+    login_manager.init_app(app)
 
     # Register blueprints
-        from app.routes.main import main_bp
-        from app.routes.auth import auth_bp
-        from app.routes.dashboard import dashboard_bp
-        from app.routes.rounds import rounds_bp
-        from app.routes.reports import reports_bp
-        from app.routes.courses import courses_bp
-        from app.routes.profile import profile_bp
+    from app.routes.main import main_bp
+    from app.routes.auth import auth_bp
+    from app.routes.dashboard import dashboard_bp
+    from app.routes.rounds import rounds_bp
+    from app.routes.reports import reports_bp
+    from app.routes.courses import courses_bp
+    from app.routes.profile import profile_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -40,7 +40,7 @@ def create_app(config_name='default'):
 
     # Create all tables on startup (safe to call repeatedly)
     with app.app_context():
-                from app.models.user import User            # noqa
+        from app.models.user import User            # noqa
         from app.models.course import Course        # noqa
         from app.models.tee_set import TeeSet       # noqa
         from app.models.course_hole import CourseHole  # noqa
@@ -54,22 +54,22 @@ def create_app(config_name='default'):
 
 
 def _run_column_migrations():
-        """Safely add columns that were added after initial table creation."""
-        migrations = [
-            ('holes',     'approach_distance',   'INTEGER'),
-            ('holes',     'second_shot_distance', 'INTEGER'),
-            ('tee_sets',  'front_course_rating',  'REAL'),
-            ('tee_sets',  'back_course_rating',   'REAL'),
-            ('tee_sets',  'front_slope_rating',   'INTEGER'),
-            ('tee_sets',  'back_slope_rating',    'INTEGER'),
-            ('rounds',    'nine_hole_selection',  'VARCHAR(10)'),
-            ('users',     'home_country',          'VARCHAR(100)'),
-        ]
-        for table, column, col_type in migrations:
-                    try:
-                                    db.session.execute(
-                                                        db.text(f'ALTER TABLE {table} ADD COLUMN {column} {col_type}')
-                                    )
-                                    db.session.commit()
-except Exception:
+    """Safely add columns that were added after initial table creation."""
+    migrations = [
+        ('holes',     'approach_distance',   'INTEGER'),
+        ('holes',     'second_shot_distance', 'INTEGER'),
+        ('tee_sets',  'front_course_rating',  'REAL'),
+        ('tee_sets',  'back_course_rating',   'REAL'),
+        ('tee_sets',  'front_slope_rating',   'INTEGER'),
+        ('tee_sets',  'back_slope_rating',    'INTEGER'),
+        ('rounds',    'nine_hole_selection',  'VARCHAR(10)'),
+        ('users',     'home_country',          'VARCHAR(100)'),
+    ]
+    for table, column, col_type in migrations:
+        try:
+            db.session.execute(
+                db.text(f'ALTER TABLE {table} ADD COLUMN {column} {col_type}')
+            )
+            db.session.commit()
+        except Exception:
             db.session.rollback()   # column already exists — fine
