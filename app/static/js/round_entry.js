@@ -190,7 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pillsEl)   pillsEl.querySelectorAll('.he-pill').forEach(b => b.classList.remove('is-active'));
   }
 
-  }
 
 
   // ── Score vs par live label ────────────────────────────────────────────────
