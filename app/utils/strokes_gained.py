@@ -93,3 +93,140 @@ def strokes_gained_off_tee(holes) -> float:
             elif hole.tee_shot == 'penalty':
                 sg -= 0.7
     return round(sg, 2)
+
+
+# ---------------------------------------------------------------------------
+# Approach distance → expected strokes to hole out (from fairway/rough)
+# TODO: replace with full Broadie distance-to-hole lookup tables
+# These are rough amateur-baseline estimates only.
+# ---------------------------------------------------------------------------
+_APPROACH_BASELINES = {
+    # distance (yds): expected strokes remaining from that distance
+    30:  2.80,
+    50:  2.90,
+    75:  2.95,
+    100: 3.05,
+    125: 3.15,
+    150: 3.25,
+    175: 3.40,
+    200: 3.55,
+    225: 3.70,
+    250: 3.85,
+}
+
+
+def _expected_strokes_approach(distance_yds: int) -> float:
+    """Linear-interpolate expected strokes from approach distance (yards)."""
+    keys = sorted(_APPROACH_BASELINES.keys())
+    if distance_yds <= keys[0]:
+        return _APPROACH_BASELINES[keys[0]]
+    if distance_yds >= keys[-1]:
+        return _APPROACH_BASELINES[keys[-1]]
+    for i in range(len(keys) - 1):
+        if keys[i] <= distance_yds <= keys[i + 1]:
+            t = (distance_yds - keys[i]) / (keys[i + 1] - keys[i])
+            return _APPROACH_BASELINES[keys[i]] + t * (
+                _APPROACH_BASELINES[keys[i + 1]] - _APPROACH_BASELINES[keys[i]]
+            )
+    return 3.2
+
+
+def strokes_gained_approach(holes) -> float:
+    """
+    Estimate SG Approach to the Green.
+
+    Method:
+    - Par 3s: use approach_distance (tee-to-green distance) and compare
+      expected strokes from that distance vs. actual score after the tee shot
+      (i.e. score minus 1 tee shot = strokes used from that distance).
+    - Par 4/5 GIR: approach_distance gives distance of the approach shot;
+      SG = expected_from(distance) - putts  (we know they holed it in putts).
+    - Par 4/5 GIR missed: penalise — they needed extra strokes to get on green.
+
+    TODO: replace with Broadie's full shot-level expected-strokes model once
+    course-level yardage data is consistently available.
+    """
+    sg = 0.0
+    eligible = 0
+
+    for hole in holes:
+        dist = hole.approach_distance
+
+        if hole.par == 3 and dist:
+            # On a par 3, the tee shot IS the approach shot
+            exp = _expected_strokes_approach(dist)
+            # Strokes used from that distance = total score - 1 (the tee shot)
+            # SG approach = expected - actual strokes used from approach lie
+            strokes_used = hole.score - 1
+            sg += exp - strokes_used
+            eligible += 1
+
+        elif hole.par in (4, 5):
+            if hole.gir and dist:
+                # Approach found the green — compare expected from that distance
+                exp = _expected_strokes_approach(dist)
+                strokes_used = hole.putts  # they got on in regulation, putts remain
+                sg += exp - strokes_used
+                eligible += 1
+            elif not hole.gir:
+                # Missed GIR — simple penalty model
+                # TODO: refine with distance from green after the approach
+                if hole.approach_miss == 'bunker':
+                    sg -= 0.4
+                elif hole.approach_miss in ('left', 'right', 'short', 'long'):
+                    sg -= 0.3
+                else:
+                    sg -= 0.25
+                eligible += 1
+
+    return round(sg, 2)
+
+
+def strokes_gained_around_green(holes) -> float:
+    """
+    Estimate SG Around the Green (chip/pitch/bunker play).
+
+    Applies only to holes where GIR was missed and the player had a
+    short-game shot to play before putting.
+
+    Method:
+    - Good scramble (par or better despite GIR miss): positive SG
+    - Bunker save made: bonus
+    - Bunker save missed: penalty
+    - Failed scramble (bogey+): scaled penalty based on severity
+
+    TODO: replace with Broadie's around-green expected-strokes model using
+    scramble_distance data once that field is more consistently populated.
+    """
+    sg = 0.0
+
+    for hole in holes:
+        if hole.gir:
+            continue  # Around-green only applies to GIR misses
+
+        score_diff = hole.score - hole.par  # vs par on this hole
+
+        # Sand save contribution
+        if hole.sand_save_attempt:
+            if hole.sand_save_made:
+                sg += 0.5   # saved from bunker — significantly above average
+            else:
+                sg -= 0.3   # failed bunker escape — below average
+
+        elif score_diff <= 0:
+            # Scrambled for par or better without a bunker — strong short game
+            sg += 0.4
+
+        elif score_diff == 1:
+            # Bogey — average around the green for an amateur on a GIR miss
+            sg += 0.0
+
+        elif score_diff == 2:
+            # Double — below average short game
+            sg -= 0.4
+
+        else:
+            # Triple or worse
+            sg -= 0.7
+
+    return round(sg, 2)
