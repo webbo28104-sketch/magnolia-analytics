@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magnolia Analytics — Round Report · {{ round.date_played.strftime('%d %B %Y') }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --forest:       #1a2e1a;
+  --forest-mid:   #213021;
+  --forest-light: #2d492d;
+  --forest-pale:  #3a5c3a;
+  --gold:         #c9a84c;
+  --gold-light:   #dfc07a;
+  --gold-pale:    #f0dba8;
+  --gold-dim:     rgba(201,168,76,0.11);
+  --gold-glow:    rgba(201,168,76,0.055);
+  --cream:        #f5f0e8;
+  --cream-dim:    rgba(245,240,232,0.65);
+  --cream-faint:  rgba(245,240,232,0.35);
+  --cream-ghost:  rgba(245,240,232,0.12);
+  --border:       rgba(201,168,76,0.16);
+  --border-mid:   rgba(201,168,76,0.3);
+  --red-soft:     #e8a090;
+  --green-soft:   #7ecf9e;
+  --green-mid:    #4a9e6b;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--forest);
+  color: var(--cream);
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 110% 45% at 50% -8%, rgba(201,168,76,0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(201,168,76,0.04) 0%, transparent 50%),
+    repeating-linear-gradient(0deg, transparent, transparent 72px, rgba(255,255,255,0.009) 72px, rgba(255,255,255,0.009) 73px),
+    repeating-linear-gradient(90deg, transparent, transparent 72px, rgba(255,255,255,0.006) 72px, rgba(255,255,255,0.006) 73px);
+  pointer-events: none; z-index: 0;
+}
+.page { position: relative; z-index: 1; max-width: 880px; margin: 0 auto; padding: 0 28px 100px; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+@keyframes barIn  { from { width:0%; } to { width:var(--w); } }
+.fu { animation: fadeUp 0.65s ease forwards; opacity: 0; }
+.d1{animation-delay:.05s} .d2{animation-delay:.15s} .d3{animation-delay:.25s}
+.d4{animation-delay:.35s} .d5{animation-delay:.45s} .d6{animation-delay:.55s}
+.d7{animation-delay:.65s} .d8{animation-delay:.75s} .d9{animation-delay:.85s}
+.masthead { padding: 44px 0 0; display:flex; align-items:center; justify-content:space-between; }
+.brand-line { font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--gold); opacity:.7; }
+.back-link  { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--cream-faint); text-decoration:none; transition:color .2s; }
+.back-link:hover { color:var(--gold); }
+.hero {
+  padding: 32px 0 38px;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 24px;
+}
+.hero-eyebrow { font-size:9px; letter-spacing:.22em; text-transform:uppercase; color:var(--gold); opacity:.6; margin-bottom:10px; }
+.hero-title   { font-family:'Playfair Display',serif; font-size:clamp(26px,4.5vw,44px); font-weight:400; line-height:1.1; }
+.hero-title em { font-style:italic; color:var(--gold); display:block; }
+.hero-meta { display:flex; gap:28px; margin-top:18px; flex-wrap:wrap; }
+.hm-val   { font-size:12px; font-weight:500; letter-spacing:.04em; }
+.hm-label { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--cream-faint); margin-top:2px; }
+.hero-right { text-align:right; }
+.hero-gross {
+  font-family:'Playfair Display',serif;
+  font-size:clamp(60px,9vw,96px);
+  font-weight:600; line-height:1; color:var(--gold); letter-spacing:-.03em;
+  position:relative;
+}
+.hero-gross::before {
+  position:absolute; right:calc(100% - 12px); bottom:2px;
+  font-size:clamp(30px,5vw,52px); font-family:'Playfair Display',serif;
+  font-weight:700; font-style:italic;
+  color:rgba(201,168,76,0.065); white-space:nowrap;
+  pointer-events:none; letter-spacing:-.02em; line-height:1;
+}
+.hero-vspar { font-family:'Playfair Display',serif; font-size:21px; color:var(--gold-light); font-weight:500; margin-top:4px; }
+.hero-gross-label { font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--cream-faint); margin-top:3px; }
+.context-banner {
+  display:grid; grid-template-columns:1fr 1fr 1fr;
+  gap:1px; background:var(--border);
+  border:1px solid var(--border); border-radius:4px;
+  overflow:hidden; margin-top:28px;
+}
+.ctx-block { background:var(--forest-mid); padding:12px 16px; display:flex; align-items:flex-start; gap:10px; }
+.ctx-icon  { font-size:14px; margin-top:1px; flex-shrink:0; }
+.ctx-label { font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:3px; }
+.ctx-val   { font-size:11px; color:var(--cream); line-height:1.35; font-family:'DM Sans',sans-serif; }
+.ctx-val strong { color:var(--gold-light); }
+.sec-label   { font-size:9px; letter-spacing:.25em; text-transform:uppercase; color:var(--gold); opacity:.65; margin-bottom:14px; margin-top:40px; }
+.sec-divider { height:1px; background:var(--border); margin-top:38px; }
+.sum-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.sum-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:16px 14px 14px; position:relative; overflow:hidden; }
+.sum-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); opacity:.45; }
+.sum-card-lbl { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:9px; }
+.sum-card-val { font-family:'Playfair Display',serif; font-size:30px; font-weight:500; line-height:1; }
+.sum-card-sub { font-size:10px; color:var(--cream-faint); margin-top:5px; letter-spacing:.04em; }
+.c-gold { color:var(--gold-light); } .c-red { color:var(--red-soft); } .c-grn { color:var(--green-soft); }
+.split-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.split-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:16px 18px; }
+.split-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
+.split-title { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--cream-faint); }
+.split-score { font-family:'Playfair Display',serif; font-size:26px; font-weight:500; }
+.split-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid rgba(201,168,76,0.07); font-size:10px; }
+.split-row:last-child { border-bottom:none; }
+.split-key { color:var(--cream-faint); } .split-v { color:var(--cream); }
+.sc-wrap { overflow-x:auto; }
+.sc { width:100%; border-collapse:collapse; font-size:11px; }
+.sc thead th { font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:var(--cream-faint); padding:6px 7px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap; }
+.sc thead th:first-child { text-align:left; padding-left:0; }
+.sc tbody tr { border-bottom:1px solid rgba(201,168,76,0.065); transition:background .15s; }
+.sc tbody tr:hover { background:var(--gold-glow); }
+.sc td { padding:6px 7px; text-align:center; color:var(--cream-dim); vertical-align:middle; }
+.sc td:first-child { text-align:left; padding-left:0; font-weight:500; color:var(--cream); font-size:11px; }
+.par-c { color:var(--cream-faint); font-size:11px; }
+.sp { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; font-size:11px; font-weight:500; }
+.sp-b2 { background:rgba(74,158,107,0.3); color:#5fcf8a; border:1px solid rgba(74,158,107,0.5); }
+.sp-b1 { background:rgba(74,158,107,0.18); color:var(--green-soft); border:1px solid rgba(74,158,107,0.32); }
+.sp-p  { background:transparent; color:var(--cream-dim); border:1px solid rgba(245,240,232,0.14); }
+.sp-bo { background:rgba(201,168,76,0.11); color:var(--gold-light); border:1px solid rgba(201,168,76,0.22); }
+.sp-d  { background:rgba(232,160,144,0.18); color:var(--red-soft); border:1px solid rgba(232,160,144,0.32); }
+.td { display:inline-block; width:8px; height:8px; border-radius:50%; }
+.td-f { background:var(--green-mid); } .td-l { background:var(--red-soft); }
+.td-r { background:var(--gold); }     .td-p { background:#c0392b; }
+.td-p3{ background:rgba(245,240,232,0.18); border:1px solid rgba(245,240,232,0.28); }
+.gir-y { color:var(--green-soft); font-size:11px; } .gir-n { color:rgba(245,240,232,0.22); font-size:11px; }
+.putt-v { font-family:'Playfair Display',serif; font-size:14px; }
+.p1 { color:var(--green-soft); } .p2 { color:var(--cream-dim); } .p3 { color:var(--red-soft); }
+.sc .sub-row td { background:var(--gold-dim); font-weight:500; color:var(--cream); padding:7px 7px; border-top:1px solid var(--border-mid); border-bottom:1px solid var(--border-mid); font-size:10px; }
+.sc .tot-row td { background:rgba(201,168,76,0.16); font-family:'Playfair Display',serif; font-size:13px; font-weight:600; color:var(--gold-light); padding:9px 7px; border-top:1px solid var(--border-mid); }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.a-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:20px 18px; }
+.a-card-title { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); opacity:.65; margin-bottom:16px; }
+.bar-row { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+.bar-lbl { font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--cream-faint); width:56px; flex-shrink:0; }
+.bar-track { flex:1; height:4px; background:rgba(245,240,232,0.07); border-radius:2px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:2px; width:0%; animation:barIn 1s cubic-bezier(.4,0,.2,1) .6s forwards; }
+.bf-grn { background:var(--green-mid); } .bf-red { background:var(--red-soft); }
+.bf-gld { background:var(--gold); }     .bf-lgld { background:var(--gold-light); }
+.bar-pct { font-size:10px; color:var(--cream-faint); width:36px; text-align:right; flex-shrink:0; }
+.disp-vis { display:flex; gap:3px; height:44px; margin-bottom:14px; border-radius:3px; overflow:hidden; }
+.dv-seg { display:flex; align-items:center; justify-content:center; flex-direction:column; gap:2px; }
+.dv-l { background:rgba(232,160,144,0.22); color:var(--red-soft); flex:1; border-radius:30x 0 0 3px; font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
+.dv-f { background:rgba(74,158,107,0.2); color:var(--green-soft); border-radius:0; font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
+.dv-r { background:rgba(201,168,76,0.17); color:var(--gold-light); flex:1; border-radius:0 3px 3px 0; font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
+.dv-n { font-family:'Playfair Display',serif; font-size:18px; font-weight:500; line-height:1; }
+.stat-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(201,168,76,0.07); }
+.stat-row:last-child { border-bottom:none; }
+.sk { font-size:10px; color:var(--cream-faint); letter-spacing:.06em; } .sv { font-size:10px; color:var(--cream); font-weight:500; }
+.insight { font-size:10px; font-family:'DM Sans',sans-serif; line-height:1.58; color:rgba(245,240,232,0.42); margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+.insight strong { color:var(--gold-light); }
+.sg-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
+.sg-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:14px 12px; text-align:center; }
+.sg-cat { font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:9px; }
+.sg-val { font-family:'Playfair Display',serif; font-size:26px; font-weight:500; line-height:1; }
+.sg-sub { font-size:9px; color:var(--cream-faint); margin-top:4px; }
+.sg-pos { color:var(--green-soft); } .sg-neg { color:var(--red-soft); } .sg-neu { color:var(--cream-dim); }
+.sg-bars { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:18px 20px; }
+.sg-br { display:flex; align-items:center; gap:12px; margin-bottom:11px; }
+.sg-br:last-child { margin-bottom:0; }
+.sg-bc { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--cream-faint); width:84px; flex-shrink:0; }
+.sg-bt { flex:1; height:5px; background:rgba(245,240,232,0.07); border-radius:3px; position:relative; }
+.sg-bz { position:absolute; left:50%; top:-3px; bottom:-3px; width:1px; background:rgba(245,240,232,0.18); }
+.sg-bf { position:absolute; top:0; height:100%; border-radius:3px; }
+.sg-bf.p { background:var(--green-mid); right:50%; }
+.sg-bf.n { background:var(--red-soft); left:50%; }
+.sg-bn { font-family:'Playfair Display',serif; font-size:13px; width:40px; text-align:right; flex-shrink:0; }
+.sg-bn.p { color:var(--green-soft); } .sg-bn.n { color:var(--red-soft); }
+.pd-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:14px; }
+.pd-cell { background:rgba(245,240,232,0.04); border:1px solid var(--border); border-radius:3px; padding:8px 4px 6px; text-align:center; }
+.pd-rng { font-size:8px; letter-spacing:.06em; color:var(--cream-faint); margin-bottom:5px; }
+.pd-n   { font-family:'Playfair Display',serif; font-size:18px; color:var(--cream); line-height:1; }
+.pd-lbl { font-size:8px; color:var(--cream-faint); margin-top:3px; }
+.ai-block { background:linear-gradient(135deg,var(--forest-mid) 0%,rgba(201,168,76,0.05) 100%); border:1px solid var(--border-mid); border-radius:4px; padding:28px 26px; position:relative; overflow:hidden; }
+.ai-block::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+.ai-eyebrow { font-size:9px; letter-spacing:.22em; text-transform:uppercase; color:var(--gold); opacity:.7; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.ai-eyebrow::after { content:''; flex:1; height:1px; background:var(--border); }
+.ai-body { font-family:'Playfair Display',serif; font-style:italic; font-size:15px; line-height:1.78; color:rgba(245,240,232,0.5); letter-spacing:.01em; }
+.ai-body p + p { margin-top:1.1em; }
+.ai-cta { margin-top:18px; padding-top:16px; border-top:1px solid var(--border); font-size:10px; letter-spacing:.1em; color:var(--gold); opacity:.55; }
+.pri-list { display:flex; flex-direction:column; gap:9px; }
+.pri-item { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:14px 16px; display:flex; align-items:flex-start; gap:14px; }
+.pri-n { font-family:'Playfair Display',serif; font-size:22px; font-weight:500; color:var(--gold); opacity:.3; line-height:1; flex-shrink:0; width:22px; }
+.pri-title { font-size:11px; font-weight:500; letter-spacing:.04em; margin-bottom:4px; }
+.pri-desc  { font-size:10px; color:rgba(245,240,232,0.42); line-height:1.55; font-family:'DM Sans',sans-serif; }
+.mini-pair { display:flex; gap:8px; margin-top:12px; }
+.mini-c { flex:1; background:var(--gold-dim); border:1px solid var(--border); border-radius:3px; padding:8px; text-align:center; }
+.mini-lbl { font-size:8px; letter-spacing:.14em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:4px; }
+.mini-val { font-family:'Playfair Display',serif; font-size:17px; line-height:1; }
+.mini-sub { font-size:8px; color:var(--cream-faint); margin-top:2px; }
+.rpt-footer { margin-top:56px; padding-top:18px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.ft-brand { font-family:'Playfair Display',serif; font-size:13px; color:var(--gold); opacity:.55; }
+.ft-meta  { font-size:9px; letter-spacing:.14em; color:rgba(245,240,232,0.22); }
+/* Glossary tooltips */
+.mg-tip { position:relative; display:inline; cursor:help; border-bottom:1px dotted rgba(201,168,76,0.35); }
+.mg-tip-icon { font-size:9px; color:var(--gold); opacity:.55; margin-left:2px; vertical-align:super; }
+.mg-pop { display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:var(--forest-light); border:1px solid var(--border-mid); border-radius:4px; padding:9px 12px; font-size:10px; color:var(--cream-dim); font-family:'DM Sans',sans-serif; line-height:1.5; width:220px; z-index:999; pointer-events:none; white-space:normal; }
+.mg-tip:hover .mg-pop { display:block; }
+@media(max-width:640px){
+  .sum-grid,.sg-cards{grid-template-columns:repeat(2,1fr);}
+  .two-col,.split-grid{grid-template-columns:1fr;}
+  .hero{grid-template-columns:1fr;}
+  .hero-right{text-align:left;}
+  .context-banner{grid-template-columns:1fr;}
+  .pd-grid{grid-template-columns:repeat(3,1fr);}
+}
+</style>
+{# Dynamic watermark text for hero::before #}
+<style>.hero-gross::before { content: '{{ course_name_upper }}'; }</style>
+</head>
+<body>
+
+{# ── Derived template variables ── #}
+{% set fw_pct     = (round.fairways_hit / round.fairways_available * 100) | round | int if round.fairways_available else 0 %}
+{% set gir_pct    = (round.gir_count / round.holes_played * 100) | round | int %}
+{% set putts_ph   = (round.total_putts / round.holes_played) | round(2) %}
+
+{# tee shot dispersion counts #}
+{% set disp_left   = tee_gir.get('left',    {}).get('attempts', 0) %}
+{% set disp_fw     = tee_gir.get('fairway', {}).get('attempts', 0) %}
+{% set disp_right  = tee_gir.get('right',   {}).get('attempts', 0) %}
+{% set disp_pen    = tee_gir.get('penalty', {}).get('attempts', 0) %}
+
+{# miss direction total #}
+{% set miss_total  = miss_dirs.values() | sum %}
+
+{# one-putt / three-putt hole numbers #}
+{% set one_putt_holes  = holes_data | selectattr('putts', 'equalto', 1) | map(attribute='hole_number') | list %}
+{% set three_putt_holes = holes_data | selectattr('putts', 'ge', 3) | map(attribute='hole_number') | list %}
+{% set avg_fpd_holes   = holes_data | selectattr('first_putt_distance') | list %}
+{% set avg_fpd = (avg_fpd_holes | map(attribute='first_putt_distance') | sum / avg_fpd_holes | length) | round | int if avg_fpd_holes else 0 %}
+
+{# SG bar width macro — scale 5 matches original visual proportions #}
+{% macro sgw(val) %}{{ [[((val | abs) / 5 * 100) | round | int, 0] | max, 100] | min }}{% endmacro %}
+{% macro sgcls(val) %}{% if val >= 0 %}p{% else %}n{% endif %}{% endmacro %}
+{% macro sgncls(val) %}{% if val >= 0 %}sg-pos{% else %}sg-neg{% endif %}{% endmacro %}
+{% macro sgfmt(val) %}{% if val > 0 %}+{% endif %}{{ val | round(1) }}{% endmacro %}
+
+{# colour class for score vs par #}
+{% macro svp_cls(diff) %}{% if diff <= -2 %}c-grn{% elif diff < 0 %}c-grn{% elif diff == 0 %}c-gold{% else %}c-red{% endif %}{% endmacro %}
+
+<div class="page">
+
+  <!-- MASTHEAD -->
+  <div class="masthead fu d1">
+    <span class="brand-line">Magnolia Analytics · Round Report</span>
+    <a href="{{ url_for('dashboard.index') }}" class="back-link">← Dashboard</a>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero fu d2">
+    <div>
+      <div class="hero-eyebrow">Round Report · {{ round.date_played.strftime('%d %B %Y') }}</div>
+      <div class="hero-title">
+        Round at<br>
+        <em>{{ course_name }}</em>
+      </div>
+      <div class="hero-meta">
+        <div><div class="hm-val">{{ round.date_played.strftime('%d %B %Y') }}</div><div class="hm-label">Date Played</div></div>
+        <div><div class="hm-val">{{ user.full_name }}</div><div class="hm-label">Golfer</div></div>
+        <div><div class="hm-val">{{ user.handicap_index }}</div><div class="hm-label">Handicap</div></div>
+        <div><div class="hm-val">Par {{ par }}</div><div class="hm-label">Course Par</div></div>
+        <div><div class="hm-val">{{ round.holes_played }} Holes</div><div class="hm-label">Format</div></div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hero-gross">{{ round.total_score }}</div>
+      <div class="hero-gross-label">Gross Score</div>
+      <div class="hero-vspar">{{ score_vs_par_label }} to par</div>
+    </div>
+  </div>
+
+  <!-- CONTEXT BANNER -->
+  <div class="context-banner fu d3">
+    <div class="ctx-block">
+      <div class="ctx-icon">🌬</div>
+      <div>
+        <div class="ctx-label">Conditions · {{ course_name }}</div>
+        <div class="ctx-val">
+          {% if weather %}
+            <strong>{{ weather.condition }}</strong> · {{ weather.temp_c }}°C · Wind {{ weather.wind_kph }} km/h
+            {%- if weather.precip_mm > 0 %} · {{ weather.precip_mm }}mm rain{% endif %}
+          {% else %}
+            <strong>Weather data unavailable</strong> for this date and location.
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="ctx-block">
+      <div class="ctx-icon">📅</div>
+      <div>
+        <div class="ctx-label">Calendar Context</div>
+        <div class="ctx-val">
+          {% if calendar_ctx.notable %}<strong>{{ calendar_ctx.notable }}</strong>. {% endif %}
+          {% if calendar_ctx.bank_holiday %}{{ calendar_ctx.bank_holiday }}. {% endif %}
+          {% if calendar_ctx.golf_event %}<strong>{{ calendar_ctx.golf_event }}</strong>.{% endif %}
+          {% if not calendar_ctx.notable and not calendar_ctx.bank_holiday and not calendar_ctx.golf_event %}
+            A {{ calendar_ctx.season | lower }} round on the calendar.
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="ctx-block">
+      <div class="ctx-icon">📊</div>
+      <div>
+        <div class="ctx-label">Season Standing</div>
+        <div class="ctx-val">
+          <strong>{{ calendar_ctx.season }}</strong>.
+          HC Index: <strong>{{ user.handicap_index }}</strong>.
+          {{ gir_pct }}% GIR this round.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROUND SUMMARY -->
+  <div class="sec-label fu d3">Round Summary</div>
+  <div class="sum-grid fu d3">
+    <div class="sum-card">
+      <div class="sum-card-lbl">Score vs Par</div>
+      <div class="sum-card-val {{ svp_cls(score_vs_par) }}">{{ score_vs_par_label }}</div>
+      <div class="sum-card-sub">{{ round.total_score }} gross · par {{ par }}</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-card-lbl">
+        <span class="mg-tip">Fairways Hit (FIR)<span class="mg-tip-icon">ⓘ</span>
+          <span class="mg-pop">Fairway in Regulation — tee shot lands in the fairway on a par-4 or par-5. Measured against all driveable holes (par-4s and par-5s).</span>
+        </span>
+      </div>
+      <div class="sum-card-val">{{ round.fairways_hit }}/{{ round.fairways_available }}</div>
+      <div class="sum-card-sub">{{ fw_pct }}% of available</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-card-lbl">
+        <span class="mg-tip">Greens in Reg (GIR)<span class="mg-tip-icon">ⓘ</span>
+          <span class="mg-pop">Green In Regulation — reaching the putting surface in par minus 2 strokes. A par-4 means on the green in 2 or fewer shots. Tour average is ~65%; scratch golfer ~60–65%.</span>
+        </span>
+      </div>
+      <div class="sum-card-val">{{ round.gir_count }}/18</div>
+      <div class="sum-card-sub">{{ gir_pct }}%</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-card-lbl">Total Putts</div>
+      <div class="sum-card-val">{{ round.total_putts }}</div>
+      <div class="sum-card-sub">{{ putts_ph }} avg · {{ three_putt_holes | length }} three-putt{{ 's' if three_putt_holes | length != 1 }}</div>
+    </div>
+  </div>
+
+  <!-- FRONT / BACK SPLIT -->
+  <div class="sec-divider"></div>
+  <div class="sec-label fu d4">Front vs Back</div>
+  <div class="split-grid fu d4">
+    {% if split.front %}
+    <div class="split-card">
+      <div class="split-head">
+        <span class="split-title">Front Nine</span>
+        <span class="split-score {{ svp_cls(split.front.score_vs_par) }}">
+          {{ split.front.score }}&nbsp;<span style="font-size:14px;color:var(--cream-faint)">{{ split.front.score_label }}</span>
+        </span>
+      </div>
+      <div>
+        <div class="split-row"><span class="split-key">Par</span><span class="split-v">{{ split.front.par }}</span></div>
+        <div class="split-row"><span class="split-key">GIR</span><span class="split-v">{{ split.front.gir }}/9 ({{ (split.front.gir / 9 * 100) | round | int }}%)</span></div>
+        {% set front_fw_holes = holes_data | selectattr('hole_number', 'le', 9) | selectattr('par', 'in', [4, 5]) | list %}
+        {% set front_fw_hit   = front_fw_holes | selectattr('tee_shot', 'equalto', 'fairway') | list | length %}
+        <div class="split-row"><span class="split-key">Fairways</span><span class="split-v">{{ front_fw_hit }}/{{ front_fw_holes | length }}{% if front_fw_holes %} ({{ (front_fw_hit / front_fw_holes | length * 100) | round | int }}%){% endif %}</span></div>
+        <div class="split-row"><span class="split-key">Putts</span><span class="split-v">{{ split.front.putts }}</span></div>
+        {% set front_birdies = holes_data | selectattr('hole_number','le',9) | selectattr('score_vs_par','lt',0) | list | length %}
+        {% set front_bogeys  = holes_data | selectattr('hole_number','le',9) | selectattr('score_vs_par','gt',0) | list | length %}
+        <div class="split-row"><span class="split-key">Birdies / Bogeys</span><span class="split-v">{{ front_birdies }} / {{ front_bogeys }}</span></div>
+      </div>
+    </div>
+    {% endif %}
+    {% if split.back %}
+    <div class="split-card">
+      <div class="split-head">
+        <span class="split-title">Back Nine</span>
+        <span class="split-score {{ svp_cls(split.back.score_vs_par) }}">
+          {{ split.back.score }}&nbsp;<span style="font-size:14px;color:var(--cream-faint)">{{ split.back.score_label }}</span>
+        </span>
+      </div>
+      <div>
+        <div class="split-row"><span class="split-key">Par</span><span class="split-v">{{ split.back.par }}</span></div>
+        <div class="split-row"><span class="split-key">G!R</span><span class="split-v">{{ split.back.gir }}/9 ({{ (split.back.gir / 9 * 100) | round | int }}%)</span></div>
+        {% set back_fw_holes = holes_data | selectattr('hole_number', 'gt', 9) | selectattr('par', 'in', [4, 5]) | list %}
+        {% set back_fw_hit   = back_fw_holes | selectattr('tee_shot', 'equalto', 'fairway') | list | length %}
+        <div class="split-row"><span class="split-key">Fairways</span><span class="split-v">{{ back_fw_hit }}/{{ back_fw_holes | length }}{% if back_fw_holes %} ({{ (back_fw_hit / back_fw_holes | length * 100) | round | int }}%){% endif %}</span></div>
+        <div class="split-row"><span class="split-key">Putts</span><span class="split-v">{{ split.back.putts }}</span></div>
+        {% set back_birdies = holes_data | selectattr('hole_number','gt',9) | selectattr('score_vs_par','lt',0) | list | length %}
+        {% set back_bogeys  = holes_data | selectattr('hole_number','gt',9) | selectattr('score_vs_par','gt',0) | list | length %}
+        <div class="split-row"><span class="split-key">Birdies / Bogeys</span>
+          <span class="split-v {{ 'c-grn' if back_birdies > back_bogeys else 'c-red' if back_bogeys > back_birdies }}">{{ back_birdies }} / {{ back_bogeys }}</span>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- SCORECARD -->
+  <div class="sec-divider"></div>
+  <div class="sec-label fu d4">Hole by Hole</div>
+  <div class="sc-wrap fu d4">
+    <table class="sc">
+      <thead>
+        <tr>
+          <th>Hole</th><th>Par</th><th>Yds</th><th>Score</th>
+          <th>Tee</th><th>GIR</th><th>Putts</th><th>1st Putt</th><th>App Dist</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in holes_data %}
+        {# Score span class #}
+        {% if h.score_vs_par <= -2 %}{% set sc = 'sp-b2' %}
+        {% elif h.score_vs_par == -1 %}{% set sc = 'sp-b1' %}
+        {% elif h.score_vs_par == 0 %}{% set sc = 'sp-p' %}
+        {% elif h.score_vs_par == 1 %}{% set sc = 'sp-bo' %}
+        {% else %}{% set sc = 'sp-d' %}{% endif %}
+        {# Tee shot dot class #}
+        {% if h.par == 3 %}{% set tc = 'td-p3' %}
+        {% elif h.tee_shot == 'fairway' %}{% set tc = 'td-f' %}
+        {% elif h.tee_shot == 'left' %}{% set tc = 'td-l' %}
+        {% elif h.tee_shot == 'right' %}{% set tc = 'td-r' %}
+        {% elif h.tee_shot == 'penalty' %}{% set tc = 'td-p' %}
+        {% else %}{% set tc = 'td-p3' %}{% endif %}
+        {# Putt colour #}
+        {% if h.putts == 1 %}{% set pc = 'p1' %}
+        {% elif h.putts == 2 %}{% set pc = 'p2' %}
+        {% else %}{% set pc = 'p3' %}{% endif %}
+        <tr>
+          <td>{{ h.hole_number }}</td>
+          <td class="par-c">{{ h.par }}</td>
+          <td>{{ h.yardage if h.yardage else '—' }}</td>
+          <td><span class="sp {{ sc }}">{{ h.score }}</span></td>
+          <td><span class="td {{ tc }}"></span></td>
+          <td><span class="{{ 'gir-y' if h.gir else 'gir-n' }}">{{ '✓' if h.gir else '✕' }}</span></td>
+          <td><span class="putt-v {{ pc }}">{{ h.putts }}</span></td>
+          <td>{{ h.first_putt_distance ~ 'ft' if h.first_putt_distance else '—' }}</td>
+          <td>{{ h.approach_distance ~ 'y' if h.approach_distance else '—' }}</td>
+        </tr>
+        {% if h.hole_number == 9 and split.front %}
+        <tr class="sub-row">
+          <td colspan="3">Front 9</td>
+          <td>{{ split.front.score }}</td>
+          <td colspan="2">{{ split.front.gir }}/9 GIR</td>
+          <td>{{ split.front.putts }}</td>
+          <td colspan="2">{{ split.front.score_label }} vs par {{ split.front.par }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        {% if split.back %}
+        <tr class="sub-row">
+          <td colspan="3">Back 9</td>
+          <td>{{ split.back.score }}</td>
+          <td colspan="2">{{ split.back.gir }}/9 GIR</td>
+          <td>{{ split.back.putts }}</td>
+          <td colspan="2">{{ split.back.score_label }} vs par {{ split.back.par }}</td>
+        </tr>
+        {% endif %}
+        <tr class="tot-row">
+          <td colspan="3">Total</td>
+          <td>{{ round.total_score }}</td>
+          <td colspan="2">{{ round.gir_count }}/18 GIR</td>
+          <td>{{ round.total_putts }}</td>
+          <td colspan="2">{{ score_vs_par_label }} vs par {{ par }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- OFF THE TEE -->
+  <div class="sec-divider"></div>
+  <div class="sec-label fu d5">Off the Tee</div>
+  <div class="two-col fu d5">
+    <div class="a-card">
+      <div class="a-card-title">Tee Shot Dispersion · {{ round.fairways_available }} Driveable Holes</div>
+      <div class="disp-vis">
+        <div class="dv-seg dv-l" style="flex:{{ [disp_left + 0.3, 0.3] | max }};"><span class="dv-n">{{ disp_left }}</span><span>Left</span></div>
+        <div class="dv-seg dv-f" style="flex:{{ [disp_fw + 0.3, 1] | max }};"><span class="dv-n">{{ disp_fw }}</span><span>Fairway</span></div>
+        <div class="dv-seg dv-r" style="flex:{{ [disp_right + 0.3, 0.3] | max }};"><span class="dv-n">{{ disp_right }}</span><span>Right</span></div>
+      </div>
+      {% if round.fairways_available %}
+      <div class="bar-row"><span class="bar-lbl">Fairway</span><div class="bar-track"><div class="bar-fill bf-grn" style="--w:{{ fw_pct }}%;"></div></div><span class="bar-pct">{{ fw_pct }}%</span></div>
+      {% set left_pct  = (disp_left  / round.fairways_available * 100) | round | int %}
+      {% set right_pct = (disp_right / round.fairways_available * 100) | round | int %}
+      {% set pen_pct   = (disp_pen   / round.fairways_available * 100) | round | int %}
+      <div class="bar-row"><span class="bar-lbl">Left</span><div class="bar-track"><div class="bar-fill bf-red" style="--w:{{ left_pct }}%;"></div></div><span class="bar-pct">{{ left_pct }}%</span></div>
+      <div class="bar-row"><span class="bar-lbl">Right</span><div class="bar-track"><div class="bar-fill bf-gld" style="--w:{{ right_pct }}%;"></div></div><span class="bar-pct">{{ right_pct }}%</span></div>
+      {% if disp_pen %}
+      <div class="bar-row"><span class="bar-lbl">Penalty</span><div class="bar-track"><div class="bar-fill bf-red" style="--w:{{ pen_pct }}%;"></div></div><span class="bar-pct">{{ pen_pct }}%</span></div>
+      {% endif %}
+      {% endif %}
+      <div class="insight">
+        {% if disp_right > disp_left and disp_right > disp_fw %}
+          <strong>Right-biased driving</strong> — {{ disp_right }} of {{ round.fairways_available }} tee shots missed right. Rough lies from the right tend to demand longer approaches.
+        {% elif disp_left > disp_right and disp_left > disp_fw %}
+          <strong>Left-biased driving</strong> — {{ disp_left }} of {{ round.fairways_available }} tee shots missed left.
+        {% elif disp_fw >= round.fairways_available * 0.5 %}
+          <strong>Solid driving accuracy</strong> — {{ fw_pct }}% fairways hit is above the amateur average of ~40%.
+        {% else %}
+          Driving accuracy at {{ fw_pct }}%. Track across multiple rounds to identify shape tendencies.
+        {% endif %}
+      </div>
+    </div>
+    <div class="a-card">
+      <div class="a-card-title">Driving Impact on Scoring</div>
+      <div class="mini-pair" style="margin-top:0; margin-bottom:14px;">
+        {% set gir_from_fir = tee_gir.get('fairway', {}) %}
+        {% set rough_girs = (tee_gir.get('left',{}).get('girs',0) + tee_gir.get('right',{}).get('girs',0)) %}
+        {% set rough_att  = (tee_gir.get('left',{}).get('attempts',0) + tee_gir.get('right',{}).get('attempts',0)) %}
+        <div class="mini-c">
+          <div class="mini-lbl">GIR from FIR</div>
+          <div class="mini-val c-grn">{{ gir_from_fir.get('girs',0) }}/{{ gir_from_fir.get('attempts',0) }}</div>
+          <div class="mini-sub">{{ gir_from_fir.get('gir_pct',0) }}%</div>
+        </div>
+        <div class="mini-c">
+          <div class="mini-lbl">GIR from Rough</div>
+          <div class="mini-val c-gold" style="color:var(--gold-light);">{{ rough_girs }}/{{ rough_att }}</div>
+          <div class="mini-sub">{{ (rough_girs / rough_att * 100) | round | int if rough_att else 0 }}%</div>
+        </div>
+        {% set bogeys_from_rough = holes_data | selectattr('tee_shot', 'in', ['left','right']) | selectattr('score_vs_par','gt',0) | list | length %}
+        <div class="mini-c">
+          <div class="mini-lbl">Bogeys from Rough</div>
+          <div class="mini-val c-red">{{ bogeys_from_rough }}</div>
+          <div class="mini-sub">{{ (bogeys_from_rough / rough_att * 100) | round | int if rough_att else 0 }}%</div>
+        </div>
+      </div>
+      {% set par3_holes = holes_data | selectattr('par','equalto',3) | list %}
+      {% set par3_gir   = par3_holes | selectattr('gir') | list | length %}
+      <div class="stat-row"><span class="sk">Par 3 performance</span><span class="sv">{{ par3_gir }}/{{ par3_holes | length }} GIR</span></div>
+      {% set penalty_holes = holes_data | selectattr('penalties','gt',0) | map(attribute='hole_number') | list %}
+      {% if penalty_holes %}
+      <div class="stat-row"><span class="sk">Penalty holes</span><span class="sv">H{{ penalty_holes | join(', H') }}</span></div>
+      {% endif %}
+      <div class="stat-row">
+        <span class="sk">SG Off the Tee</span>
+        <span class="sv {{ 'c-grn' if sg_data.sg_off_tee >= 0 else 'c-red' }}">{{ sgfmt(sg_data.sg_off_tee) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPROACH -->
+  <div class="sec-divider"></div>
+  <div class="sec-label fu d5">Approach Play</div>
+  <div class="two-col fu d5">
+    <div class="a-card">
+      <div class="a-card-title">Miss Direction · {{ (holes_data | selectattr('gir', 'equalto', false) | list) | length }} Missed Greens</div>
+      {% if miss_dirs %}
+      <div style="display:grid; grid-template-columns:repeat({{ [miss_dirs | length, 4] | min }},1fr); gap:7px; margin-bottom:14px;">
+        {% for dir, cnt in miss_dirs.items() | sort(attribute='1', reverse=True) %}
+        <div class="pd-cell">
+          <div class="pd-rng">{{ dir | title }}</div>
+          <div class="pd-n {% if cnt == miss_dirs.values() | max %}c-red{% endif %}">{{ cnt }}</div>
+          <div class="pd-lbl">{{ (cnt / miss_total * 100) | round | int }}%</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% for dir, cnt in miss_dirs.items() | sort(attribute='1', reverse=True) %}
+      {% set miss_pct = (cnt / miss_total * 100) | round | int %}
+      <div class="bar-row">
+        <span class="bar-lbl" style="width:48px;">{{ dir | title }}</span>
+        <div class="bar-track"><div class="bar-fill {{ 'bf-red' if dir == 'short' else 'bf-gld' if dir == 'bunker' else 'bf-lgld' }}" style="--w:{{ miss_pct }}%;"></div></div>
+        <span class="bar-pct">{{ miss_pct }}%</span>
+      </div>
+      {% endfor %}
+      {% if miss_dirs.get('short', 0) == miss_dirs.values() | max %}
+      <div class="insight"><strong>Short is the dominant miss.</strong> This often signals club selection rather than technique — particularly in a headwind. Taking one extra club from 150–175y may convert GIR misses into GIRs.</div>
+      {% elif miss_dirs.get('right', 0) == miss_dirs.values() | max or miss_dirs.get('left', 0) == miss_dirs.values() | max %}
+      <div class="insight">Lateral miss pattern detected. Check alignment at address — a consistent miss direction usually has a setup root cause.</div>
+      {% endif %}
+      {% else %}
+      <div class="insight">All greens hit in regulation — no approach miss data to display.</div>
+      {% endif %}
+    </div>
+    <div class="a-card">
+      <div class="a-card-title">Approach by Distance Band</div>
+      {% if approach_bds %}
+        {% for band in approach_bds %}
+        <div class="stat-row">
+          <span class="sk">{{ band.label }}</span>
+          <span class="sv">{{ band.attempts }} hole{{ 's' if band.attempts != 1 }} · {{ band.girs }} GIR ({{ band.gir_pct }}%)</span>
+        </div>
+        {% endfor %}
+        {% set best_band = approach_bds | sort(attribute='gir_pct', reverse=True) | first %}
+        {% set worst_band = approach_bds | sort(attribute='gir_pct') | first %}
+        <div class="insight">
+          <strong>{{ best_band.label }} = {{ best_band.gir_pct }}% GIR</strong> — your strongest approach distance.
+          {% if worst_band.label != best_band.label %}
+          The <strong>{{ worst_band.label }}</strong> band drops to {{ worst_band.gir_pct }}% — target this range in practice.
+          {% endif %}
+        </div>
+      {% else %}
+        <div style="color:var(--cream-faint); font-size:10px;">No approach distance data recorded for this round.</div>
+      {% endif %}
+      <div class="stat-row" style="margin-top:12px;">
+        <span class="sk">
+          <span class="mg-tip">SG Approach<span class="mg-tip-icon">ⓘ</span>
+            <span class="mg-pop">Strokes Gained: Approach — measures how many strokes your approach shots gain or lose compared to an average amateur golfer, based on distance to the hole and lie.</span>
+          </span>
+        </span>
+        <span class="sv {{ 'c-grn' if sg_data.sg_approach >= 0 else 'c-red' }}">{{ sgfmt(sg_data.sg_approach) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- AROUND THE GREEN -->
+  <div class="sec-divider"></div>
+  <div class="sec-label fu d6">Around the Green</div>
+  <div class="two-col fu d6">
+    <div class="a-card">
+      <div class="a-card-title">Scramble · {{ scramble.attempts }} Missed Greens</div>
+      {% set sand_attempt_holes = holes_data | selectattr('sand_save_attempt') | list %}
+      {% set sand_saves = sand_attempt_holes | selectattr('sand_save_made') | list | length %}
+      <div class="stat-row"><span class="sk">Up-and-downs made</span>
+        <span class="sv {{ 'c-grn' if scramble.save_pct and scramble.save_pct >= 50 else 'c-red' if scramble.save_pct and scramble.save_pct < 30 }}">
+          {{ scramble.saves }}/{{ scramble.attempts }}{% if scramble.save_pct is not none %} ({{ scramble.save_pct }}%){% endif %}
+        </span>
+      </div>
+      {% if sand_attempt_holes %}
+      <div class="stat-row"><span class="sk">Sand saves</span>
+        <span class="sv {{ 'c-grn' if sand_saves > 0 else 'c-red' }}">{{ sand_saves }}/{{ sand_attempt_holes | length }}</span>
+      </div>
+      {% else %}
+      <div class="stat-row"><span class="sk">Sand save attempts</span><span class="sv">0</span></div>
+      {% endif %}
+      {% set double_plus = holes_data | selectattr('gir','equalto',false) | selectattr('score_vs_par','ge',2) | map(attribute='hole_number') | list %}
+      {% if double_plus %}
+      <div class="stat-row"><span class="sk">Doubles+ from GIR miss</span><span class="sv c-red">H{{ double_plus | join(', H') }}</span></div>
+      {% endif %}
+      <div class="stat-row">
+        <span class="sk">
+          <span class="mg-tip">SG Around Green<span class="mg-tip-icon">ⓘ</span>
+            <span class="mg-pop">Strokes Gained: Around the Green — measures performance on shots within ~30 yards of the green (chips, pitches, bunker shots) versus the amateur baseline.</span>
+          </span>
+        </span>
+        <span class="sv {{ 'c-grn' if sg_data.sg_atg >= 0 else 'c-red' }}">{{ sgfmt(sg_data.sg_atg) }}</span>
+      </div>
+      {% if scramble.save_pct is not none %}
+      <div class="insight">
+        {% if scramble.save_pct >= 50 %}
+        <strong>Good scrambling</strong> — {{ scramble.save_pct }}% conversion rate is above the amateur average of ~30–40%.
+        {% else %}
+        Scramble rate at {{ scramble.save_pct }}%. With {{ scramble.attempts }} opportunities, converting one more per round would be worth roughly one stroke.
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="a-card">
+      <div class="a-card-title">Short Game Context</div>
+      {% set gir_miss_holes = holes_data | selectattr('gir','equalto',false) | list %}
+      {% if gir_miss_holes %}
+        {% set avg_putts_after_miss = (gir_miss_holes | map(attribute='putts') | sum / gir_miss_holes | length) | round(2) %}
+        <div class="stat-row"><span class="sk">Avg putts after GIR miss</span><span class="sv">{{ avg_putts_after_miss }}</span></div>
+      {% endif %}
+      <div class="stat-row"><span class="sk">GIR rate</span><span class="sv">{{ gir_pct }}%</span></div>
+      <div class="stat-row"><span class="sk">Scramble rate</span><span class="sv">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}%</span></div>
+      {% set best_scramble = holes_data | selectattr('gir','equalto',false) | selectattr('score_vs_par','equalto',0) | map(attribute='hole_number') | list %}
+      {% if best_scramble %}
+      <div class="stat-row"><span class="sk">Par saves (scramble)</span><span class="sv c-grn">H{{ best_scramble | join(', H') }}</span></div>
+      {% endif %}
+      <div class="insight">
+        Around the green performance most directly impacts bogey avoidance. With {{ scramble.attempts }} GIR misses, each additional conversion is worth one shot.
+      </div>
+    </div>
+  </div>
+
+  <!-- PUTTING -->
+  <div class="sec-divider"></div>
+  <div class="sec-label fu d6">Putting</div>
+  <div class="two-col fu d6">
+    <div class="a-card">
+      <div class="a-card-title">Putt Distribution</div>
+      <div class="stat-row"><span class="sk">1-Putts</span>
+        <span class="sv c-grn">{{ putt_dist[1] }}{% if one_putt_holes %} (H{{ one_putt_holes | join(', H') }}){% endif %}</span>
+      </div>
+      <div class="stat-row"><span class="sk">2-Putts</span><span class="sv">{{ putt_dist[2] }}</span></div>
+      <div class="stat-row"><span class="sk">3-Putts</span>
+        <span class="sv {{ 'c-red' if putt_dist[3] > 0 }}">
+          {{ putt_dist[3] }}{% if three_putt_holes %} (H{{ three_putt_holes | join(', H') }}){% endif %}
+        </span>
+      </div>
+      {% if putt_dist['4+'] > 0 %}
+      <div class="stat-row"><span class="sk">4+ Putts</span><span class="sv c-red">{{ putt_dist['4+'] }}</span></div>
+      {% endif %}
+      <div class="stat-row"><span class="sk">Total Putts</span><span class="sv">{{ round.total_putts }}</span></div>
+      <div class="stat-row"><span class="sk">Avg per hole</span><span class="sv">{{ putts_ph }}</span></div>
+      <div class="stat-row"><span class="sk">Avg 1st putt distance</span><span class="sv">{{ avg_fpd }}ft</span></div>
+      <div class="stat-row">
+        <span class="sk">
+          <span class="mg-tip">SG Putting<span class="mg-tip-icon">ⓘ</span>
+            <span class="mg-pop">Strokes Gained: Putting — how many strokes your putting gained or lost versus the amateur baseline, calculated from first-putt distances. Positive = fewer putts than average.</span>
+          </span>
+        </span>
+        <span class="sv {{ 'c-grn' if sg_data.sg_putting.total >= 0 else 'c-red' }}">{{ sgfmt(sg_data.sg_putting.total) }}</span>
+      </div>
+    </div>
+    <div class="a-card">
+      <div class="a-card-title">First Putt Distance Profile</div>
+      {% if first_putt %}
+      <div class="pd-grid" style="grid-template-columns:repeat({{ [first_putt | length, 4] | min }},1fr);">
+        {% for band in first_putt %}
+        <div class="pd-cell">
+          <div class="pd-rng">{{ band.label }}</div>
+          <div class="pd-n {{ 'c-grn' if band.make_pct >= 60 else 'c-red' if band.make_pct < 20 }}">{{ band.attempts }}</div>
+          <div class="pd-lbl">{{ band.make_pct }}% make</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% for band in first_putt %}
+      <div class="bar-row">
+        <span class="bar-lbl" style="width:56px;">{{ band.label }}</span>
+        <div class="bar-track">
+          <div class="bar-fill {{ 'bf-grn' if band.make_pct >= 50 else 'bf-gld' if band.make_pct >= 25 else 'bf-red' }}" style="--w:{{ (band.attempts / round.holes_played * 100) | round | int }}%;"></div>
+        </div>
+        <span class="bar-pct">{{ band.attempts }} holes</span>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div style="color:var(--cream-faint); font-size:10px;">No first-putt distance data recorded for this round.</div>
+      {% endif %}
+      {% if sg_data.sg_putting.bands %}
+      <div class="insight">
+        {% set worst_band = sg_data.sg_putting.bands.items() | list | sort(attribute='1.sg') | first %}
+        {% if worst_band %}Most strokes lost in the <strong>{{ worst_band[0] }}</strong> band.{% endif %}
+        {% if three_putt_holes %}Three-putt on H{{ three_putt_holes | join(', H') }} — lag putting pace is the key fix.{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- STROKES GAINED -->
+  <div class="sec-divider"></div>
+  <div class="sec-label fu d7">
+    <span class="mg-tip">Strokes Gained<span class="mg-tip-icon">ⓘ</span>
+      <span class="mg-pop">Strokes Gained (SG) measures performance in each area relative to an amateur baseline. Positive = gained strokes on the field; negative = lost strokes. Based on Broadie's model. Values here are estimates from your shot data.</span>
+    </span>
+    &nbsp;vs Amateur Baseline
+  </div>
+  <div class="sg-cards fu d7">
+    <div class="sg-card">
+      <div class="sg-cat">
+        <span class="mg-tip">SG: Off the Tee<span class="mg-tip-icon">ⓘ</span>
+          <span class="mg-pop">Measures tee-shot performance on par-4s and par-5s. Based on fairway/rough/penalty outcome vs. expected amateur baseline.</span>
+        </span>
+      </div>
+      <div class="sg-val {{ sgncls(sg_data.sg_off_tee) }}">{{ sgfmt(sg_data.sg_off_tee) }}</div>
+      <div class="sg-sub">{{ fw_pct }}% fairways</div>
+    </div>
+    <div class="sg-card">
+      <div class="sg-cat">
+        <span class="mg-tip">SG: Approach<span class="mg-tip-icon">ⓘ</span>
+          <span class="mg-pop">Measures approach shot performance. Based on GIR rate and approach distance versus expected strokes to hole out from that distance.</span>
+        </span>
+      </div>
+      <div class="sg-val {{ sgncls(sg_data.sg_approach) }}">{{ sgfmt(sg_data.sg_approach) }}</div>
+      <div class="sg-sub">{{ gir_pct }}% GIR</div>
+    </div>
+    <div class="sg-card">
+      <div class="sg-cat">
+        <span class="mg-tip">SG: Around Green<span class="mg-tip-icon">ⓘ</span>
+          <span class="mg-pop">Measures short-game performance on chips, pitches, and bunker shots (within ~30 yards of the green). Based on scramble rate and sand-save percentage.</span>
+        </span>
+      </div>
+      <div class="sg-val {{ sgncls(sg_data.sg_atg) }}">{{ sgfmt(sg_data.sg_atg) }}</div>
+      <div class="sg-sub">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% scramble</div>
+    </div>
+    <div class="sg-card">
+      <div class="sg-cat">
+        <span class="mg-tip">SG: Putting<span class="mg-tip-icon">ⓘ</span>
+          <span class="mg-pop">Measures putting performance from first-putt distances versus expected putts to hole out from those distances, compared to the amateur baseline.</span>
+        </span>
+      </div>
+      <div class="sg-val {{ sgncls(sg_data.sg_putting.total) }}">{{ sgfmt(sg_data.sg_putting.total) }}</div>
+      <div class="sg-sub">{{ round.total_putts }} total putts</div>
+    </div>
+  </div>
+  <div class="sg-bars fu d7">
+    {% set sg_rows = [
+      ('Off Tee',      sg_data.sg_off_tee),
+      ('Approach',     sg_data.sg_approach),
+      ('Around Green', sg_data.sg_atg),
+      ('Putting',      sg_data.sg_putting.total),
+    ] %}
+    {% for label, val in sg_rows %}
+    {% set w = [[((val | abs) / 5 * 100) | round | int, 0] | max, 100] | min %}
+    {% set cls = 'p' if val >= 0 else 'n' %}
+    <div class="sg-br">
+      <span class="sg-bc">{{ label }}</span>
+      <div class="sg-bt">
+        <div class="sg-bz"></div>
+        <div class="sg-bf {{ cls }}" style="width:{{ w }}%;"></div>
+      </div>
+      <span class="sg-bn {{ cls }}">{{ sgfmt(val) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="insight fu d7" style="margin-top:12px; padding:12px 16px; background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px;">
+    <strong>Key insight:</strong>
+    {% set sg_vals = {'Off the Tee': sg_data.sg_off_tee, 'Approach': sg_data.sg_approach, 'Around the Green': sg_data.sg_atg, 'Putting': sg_data.sg_putting.total} %}
+    {% set best_cat  = sg_vals | dictsort(by='value') | last %}
+    {% set worst_cat = sg_vals | dictsort(by='value') | first %}
+    Strongest area: <strong>{{ best_cat[0] }}</strong> ({{ sgfmt(best_cat[1]) }}).
+    Most strokes lost: <strong>{{ worst_cat[0] }}</strong> ({{ sgfmt(worst_cat[1]) }}).
+    Total SG: <span class="{{ 'c-grn' if sg_data.sg_total >= 0 else 'c-red' }}"><strong>{{ sgfmt(sg_data.sg_total) }}</strong></span>.
+    {% if worst_cat[0] == 'Off the Tee' %}This is primarily a <strong>driving accuracy</strong> issue — improving tee shots unlocks better approach distances across the board.
+    {% elif worst_cat[0] == 'Approach' %}Approach play is the biggest opportunity — better distance control into greens will directly lower scores.
+    {% elif worst_cat[0] == 'Around the Green' %}Short game is the priority — one more scramble conversion per round is worth a full shot.
+    {% else %}Putting is the focus — pace control and first-putt distance reduction will have the highest immediate impact.{% endif %}
+  </div>
+
+  <!-- AI NARRATIVE -->
+  <div class="sec-divider"></div>
+  <div class="sec-label fu d7">Coaching Analysis</div>
+  <div class="ai-block fu d7">
+    <div class="ai-eyebrow">AI-Generated · Powered by Claude</div>
+    <div class="ai-body">
+      {% if narrative and narrative != 'Your round data has been saved. Add your Anthropic API key to activate the personalised coaching narrative.' %}
+        {% for para in narrative.split('\n\n') %}
+          {% if para.strip() %}<p>{{ para.strip() }}</p>{% endif %}
+        {% endfor %}
+      {% else %}
+        <p>{{ narrative }}</p>
+      {% endif %}
+    </div>
+    {% if not narrative or 'API key' in narrative %}
+    <div class="ai-cta">⚙ Set ANTHROPIC_API_KEY in Railway environment variables to activate →</div>
+    {% endif %}
+  </div>
+
+  <!-- PRACTICE PRIORITIES -->
+  <div class="sec-divider"></div>
+  <div class="sec-label fu d8">Practice Priorities</div>
+  <div class="pri-list fu d8">
+    {# Priority 1 — weakest SG category #}
+    <div class="pri-item">
+      <div class="pri-n">1</div>
+      <div>
+        {% if weakest_sg == 'Off the Tee' %}
+        <div class="pri-title">Tee Shot Consistency</div>
+        <div class="pri-desc">With {{ fw_pct }}% fairways hit this round, tee shot accuracy is the highest-leverage improvement. One session on tee shot shape — whether a committed draw or improved alignment — could recover the {{ round.fairways_available - round.fairways_hit }} missed fairways and shorten approach distances across the board.</div>
+        {% elif weakest_sg == 'Approach' %}
+        <div class="pri-title">Approach Distance Control</div>
+        <div class="pri-desc">{{ gir_pct }}% GIR this round. Target your most common approach distance — practice half-shots and three-quarter shots into your 150–175y range. Better distance control from this band converts GIR misses directly into GIRs and shorter putts.</div>
+        {% elif weakest_sg == 'Around the Green' %}
+        <div class="pri-title">Short Game — Scramble Rate</div>
+        <div class="pri-desc">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% scramble rate from {{ scramble.attempts }} attempts. Spend 15 minutes per session on bump-and-run technique from 10–20y — the most common scramble distance in UK golf. One additional conversion per round is a free stroke.</div>
+        {% else %}
+        <div class="pri-title">Lag Putting — Distance Control</div>
+        <div class="pri-desc">{{ round.total_putts }} putts this round, {{ avg_fpd }}ft average first putt.
+          {% if three_putt_holes %}Three-putt on H{{ three_putt_holes | join(', H') }}.{% endif %}
+          Ten minutes per session on putts from 20–35ft, focusing on pace rather than line. Lag putting improvement reduces blow-up holes without requiring technical swing changes.</div>
+        {% endif %}
+      </div>
+    </div>
+    {# Priority 2 — approach or GIR-based #}
+    <div class="pri-item">
+      <div class="pri-n">2</div>
+      <div>
+        {% if weakest_sg != 'Approach' %}
+        <div class="pri-title">Approach Zone — {{ gir_pct }}% GIR Rate</div>
+        <div class="pri-desc">
+          {% if approach_bds %}
+            {% set worst_app = approach_bds | sort(attribute='gir_pct') | first %}
+            The <strong>{{ worst_app.label }}</strong> band produced {{ worst_app.gir_pct }}% GIR — your weakest approach distance. Spend range time at this specific yardage focusing on trajectory control.
+          {% else %}
+            GIR rate at {{ gir_pct }}% — practice targeted approach sessions at your most common distances.
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="pri-title">Tee Shot Shape Under Pressure</div>
+        <div class="pri-desc">Even with solid approach stats, better tee shots create shorter, easier approaches. Commit to a pre-shot routine that reinforces your target shape on every tee shot — this consistency compounds over a round.</div>
+        {% endif %}
+      </div>
+    </div>
+    {# Priority 3 — putting or short game #}
+    <div class="pri-item">
+      <div class="pri-n">3</div>
+      <div>
+        {% if weakest_sg != 'Putting' %}
+        <div class="pri-title">Putting Routine — Short Range</div>
+        <div class="pri-desc">{{ putt_dist[1] }} one-putt{{ 's' if putt_dist[1] != 1 }} this round from inside 13ft.
+          {% if one_putt_holes %}Strong short-range converting on H{{ one_putt_holes | join(', H') }}.{% endif %}
+          Maintain this with a focused 5-minute pre-round routine from 4–6ft — hold the stroke rather than jabbing at it.</div>
+        {% else %}
+        <div class="pri-title">Scramble — Up-and-Down Conversion</div>
+        <div class="pri-desc">{{ scramble.save_pct if scramble.save_pct is not none else 'Limited' }}% scramble rate from {{ scramble.attempts }} misses. Practice chip-to-putt sequences: chip, then immediately putt out without resetting. Building the mental routine of "finish the hole" sharpens scramble conversion under pressure.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="rpt-footer fu d9">
+    <div class="ft-brand">Magnolia Analytics</div>
+    <div class="ft-meta">Round Report · {{ round.date_played.strftime('%d %B %Y') }} · {{ course_name }} · v2.0</div>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.bar-fill').forEach(el => {
+    const w = el.style.getPropertyValue('--w');
+    el.style.width = '0%';
+    setTimeout(() => {
+      el.style.transition = 'width 1.1s cubic-bezier(.4,0,.2,1)';
+      el.style.width = w;
+    }, 550);
+  });
+  // Animate SG bars (set via inline style width, not --w)
+  document.querySelectorAll('.sg-bf').forEach(el => {
+    const target = el.style.width;
+    el.style.width = '0%';
+    setTimeout(() => {
+      el.style.transition = 'width 1.1s cubic-bezier(.4,0,.2,1)';
+      el.style.width = target;
+    }, 700);
+  });
+});
+</script>
+</body>
+</html>
