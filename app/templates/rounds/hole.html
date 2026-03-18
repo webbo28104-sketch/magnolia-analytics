@@ -327,6 +327,21 @@
     background: linear-gradient(transparent, var(--he-cream) 30%);
     pointer-events: none; /* transparent gradient zone must not block taps */
   }
+  .he-skip-btn {
+    display: block;
+    text-align: center;
+    padding: .5rem 1rem;
+    margin-bottom: .5rem;
+    background: transparent;
+    border: 1.5px solid rgba(201,168,76,.55);
+    border-radius: 10px;
+    color: var(--he-gold);
+    font-size: .82rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background .15s, border-color .15s;
+  }
+  .he-skip-btn:hover { background: rgba(201,168,76,.1); border-color: var(--he-gold); }
   .he-next-btn {
     display: block;
     width: 100%;
@@ -558,6 +573,10 @@
 
   <!-- ── Sticky next button ─────────────────────────────────────────── -->
   <div class="he-next-wrap">
+    {% if is_edit %}
+    <a href="{{ url_for('rounds.submit_round', round_id=round.id) }}"
+       class="he-skip-btn">Skip to Submit →</a>
+    {% endif %}
     <button type="submit" form="hole-form" class="he-next-btn">
       {% if hole_number < total_holes %}Hole {{ display_hole_number + 1 }} →{% else %}Review Round →{% endif %}
     </button>
