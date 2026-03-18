@@ -124,66 +124,66 @@
   </div>
   {% endif %}
 
-  <!-- Season stats (18-hole) -->
+  <!-- Season stats -->
   {% if stats %}
-  <p class="stats-note">18-hole rounds · {{ stats.rounds_in_set }} of {{ stats.rounds_played }} total</p>
+  <div class="section">
+    <h2 class="section-title">18-Hole Rounds</h2>
+    <p class="stats-note">{{ stats.rounds_played }} round{{ 's' if stats.rounds_played != 1 }} this season</p>
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-value">{{ stats.rounds_played }}</div>
-      <div class="stat-label">Rounds this season</div>
-    </div>
-    <div class="stat-card">
       <div class="stat-value">{{ stats.avg_score or '—' }}</div>
-      <div class="stat-label">Avg score (18)</div>
+      <div class="stat-label">Avg Score</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">
-        {%- if stats.best_vs_par is not none -%}
-          {%- if stats.best_vs_par > 0 -%}+{{ stats.best_vs_par }}{%- elif stats.best_vs_par == 0 -%}E{%- else -%}{{ stats.best_vs_par }}{%- endif -%}
-        {%- else -%}—{%- endif -%}
-      </div>
-      <div class="stat-label">Best vs par</div>
+      <div class="stat-value">{%- if stats.best_vs_par is not none -%}{%- if stats.best_vs_par > 0 -%}+{{ stats.best_vs_par }}{%- elif stats.best_vs_par == 0 -%}E{%- else -%}{{ stats.best_vs_par }}{%- endif -%}{%- else -%}—{%- endif -%}</div>
+      <div class="stat-label">Best vs Par</div>
     </div>
     <div class="stat-card">
       <div class="stat-value">{{ stats.avg_putts or '—' }}</div>
-      <div class="stat-label">Avg putts</div>
+      <div class="stat-label">Avg Putts</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">{{ stats.avg_gir or '—' }}</div>
-      <div class="stat-label">Avg GIR</div>
+      <div class="stat-value">{{ stats.avg_gir_pct ~ '%' if stats.avg_gir_pct is not none else '—' }}</div>
+      <div class="stat-label">Avg GIR%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.avg_scramble_pct ~ '%' if stats.avg_scramble_pct is not none else '—' }}</div>
+      <div class="stat-label">Avg Scramble%</div>
     </div>
   </div>
+  </div>
+  {% endif %}
 
   {% if stats_9 %}
-  <h3 class="section-subtitle" style="margin-top:1.75rem;margin-bottom:0.5rem">9-hole rounds</h3>
-  <p class="stats-note">{{ stats_9.rounds_in_set }} round{{ 's' if stats_9.rounds_in_set != 1 }}</p>
+  <div class="section">
+    <h2 class="section-title">9-Hole Rounds</h2>
+    <p class="stats-note">{{ stats_9.rounds_played }} round{{ 's' if stats_9.rounds_played != 1 }} this season</p>
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-value">{{ stats_9.avg_score or '—' }}</div>
-      <div class="stat-label">Avg score (9)</div>
+      <div class="stat-label">Avg Score</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">
-        {%- if stats_9.best_vs_par is not none -%}
-          {%- if stats_9.best_vs_par > 0 -%}+{{ stats_9.best_vs_par }}{%- elif stats_9.best_vs_par == 0 -%}E{%- else -%}{{ stats_9.best_vs_par }}{%- endif -%}
-        {%- else -%}—{%- endif -%}
-      </div>
-      <div class="stat-label">Best vs par</div>
+      <div class="stat-value">{%- if stats_9.best_vs_par is not none -%}{%- if stats_9.best_vs_par > 0 -%}+{{ stats_9.best_vs_par }}{%- elif stats_9.best_vs_par == 0 -%}E{%- else -%}{{ stats_9.best_vs_par }}{%- endif -%}{%- else -%}—{%- endif -%}</div>
+      <div class="stat-label">Best vs Par</div>
     </div>
     <div class="stat-card">
       <div class="stat-value">{{ stats_9.avg_putts or '—' }}</div>
-      <div class="stat-label">Avg putts</div>
+      <div class="stat-label">Avg Putts</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">{{ stats_9.avg_gir or '—' }}</div>
-      <div class="stat-label">Avg GIR</div>
+      <div class="stat-value">{{ stats_9.avg_gir_pct ~ '%' if stats_9.avg_gir_pct is not none else '—' }}</div>
+      <div class="stat-label">Avg GIR%</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats_9.avg_scramble_pct ~ '%' if stats_9.avg_scramble_pct is not none else '—' }}</div>
+      <div class="stat-label">Avg Scramble%</div>
+    </div>
+  </div>
   </div>
   {% endif %}
 
-  {% endif %}
-
-  <!-- Recent rounds -->
+    <!-- Recent rounds -->
   <div class="section">
     <h2 class="section-title">Recent rounds</h2>
 
