@@ -26,8 +26,8 @@ def index():
     rounds_18 = [r for r in all_complete if r.holes_played == 18]
     rounds_9  = [r for r in all_complete if r.holes_played == 9]
 
-    stats   = _compute_season_stats(rounds_18, total_rounds=len(all_complete))
-    stats_9 = _compute_season_stats(rounds_9) if rounds_9 else None
+    stats   = _compute_season_stats(rounds_18) if rounds_18 else None
+    stats_9 = _compute_season_stats(rounds_9)  if rounds_9  else None
 
     # In-progress rounds — find the next unplayed hole for each
     in_progress = (
@@ -45,13 +45,11 @@ def index():
             hole_range = range(1, 10)
         else:
             hole_range = range(1, 19)
-        # Find first unsaved hole; map back to sequential URL number
         next_seq = None
         for i, actual in enumerate(hole_range, start=1):
             if actual not in saved_holes:
                 next_seq = i
                 break
-        # All holes done but not submitted → send to review
         if next_seq is None:
             next_seq = r.holes_played
         in_progress_rounds.append({
@@ -67,20 +65,31 @@ def index():
                            in_progress_rounds=in_progress_rounds)
 
 
-def _compute_season_stats(rounds, total_rounds=None):
+def _compute_season_stats(rounds):
     if not rounds:
-        return {}
+        return None
 
     scores  = [r.total_score for r in rounds if r.total_score]
     putts   = [r.total_putts for r in rounds if r.total_putts]
-    girs    = [r.gir_count   for r in rounds if r.gir_count is not None]
     vs_pars = [v for v in (r.score_vs_par() for r in rounds) if v is not None]
 
+    # GIR% — per-round percentage then averaged
+    gir_pcts = [
+        r.gir_count / r.holes_played * 100
+        for r in rounds
+        if r.gir_count is not None and r.holes_played
+    ]
+
+    # Scramble% — missed GIR holes where par or better was still made
+    all_holes = [h for r in rounds for h in r.holes.all()]
+    missed_gir = [h for h in all_holes if not h.gir]
+    scrambled  = [h for h in missed_gir if h.score <= h.par]
+
     return {
-        'rounds_played': total_rounds if total_rounds is not None else len(rounds),
-        'rounds_in_set': len(rounds),
-        'avg_score':   round(sum(scores) / len(scores), 1) if scores else None,
-        'best_vs_par': min(vs_pars) if vs_pars else None,
-        'avg_putts':   round(sum(putts)  / len(putts),  1) if putts  else None,
-        'avg_gir':     round(sum(girs)   / len(girs),   1) if girs   else None,
+        'rounds_played':     len(rounds),
+        'avg_score':         round(sum(scores)   / len(scores),   1) if scores   else None,
+        'best_vs_par':       min(vs_pars)                            if vs_pars  else None,
+        'avg_putts':         round(sum(putts)    / len(putts),    1) if putts    else None,
+        'avg_gir_pct':       round(sum(gir_pcts) / len(gir_pcts), 1) if gir_pcts else None,
+        'avg_scramble_pct':  round(100 * len(scrambled) / len(missed_gir), 1) if missed_gir else None,
     }
