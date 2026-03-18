@@ -18,7 +18,7 @@
   .em-page {
     max-width: 480px;
     margin: 0 auto;
-    padding: 1.5rem 1rem 5rem;
+    padding: 0 1rem 5rem;
     font-family: 'DM Sans', system-ui, sans-serif;
   }
 
@@ -26,39 +26,37 @@
     background: var(--he-green);
     color: #fff;
     text-align: center;
-    padding: 1.25rem 1rem;
+    padding: 1.1rem 1rem;
     margin: 0 -1rem 1.75rem;
     box-shadow: 0 2px 8px rgba(0,0,0,.25);
   }
-
-  .em-header h1 { margin: 0; font-size: 1.15rem; font-weight: 600; }
-  .em-header p  { margin: 0.25rem 0 0; font-size: 0.82rem; color: rgba(255,255,255,.7); }
+  .em-header h1 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+  .em-header p  { margin: .2rem 0 0; font-size: .8rem; color: rgba(255,255,255,.7); }
 
   .em-card {
     background: var(--he-surface);
     border: 1px solid var(--he-border);
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 1.25rem 1.25rem 1rem;
     margin-bottom: 1rem;
   }
 
-  .em-field { margin-bottom: 1.25rem; }
-  .em-field:last-child { margin-bottom: 0; }
-
-  .em-label {
+  .form-label {
     display: block;
-    font-size: 0.8rem;
+    font-size: .8rem;
     font-weight: 600;
     letter-spacing: .04em;
     text-transform: uppercase;
     color: var(--he-muted);
-    margin-bottom: 0.4rem;
+    margin-bottom: .4rem;
   }
+  .form-group { margin-bottom: 1.1rem; }
+  .form-group:last-child { margin-bottom: 0; }
 
-  .em-input {
+  .form-input {
     width: 100%;
     box-sizing: border-box;
-    padding: 0.6rem 0.75rem;
+    padding: .6rem .75rem;
     border: 1.5px solid var(--he-border);
     border-radius: 8px;
     font-size: 1rem;
@@ -67,26 +65,44 @@
     color: #1a1a1a;
     transition: border-color .15s;
   }
-  .em-input:focus {
-    outline: none;
-    border-color: var(--he-gold);
-  }
+  .form-input:focus { outline: none; border-color: var(--he-gold); }
 
-  .em-submit {
-    display: block;
-    width: 100%;
-    padding: 0.85rem;
+  /* Tee cards */
+  .tee-options { display: flex; flex-direction: column; gap: .6rem; }
+  .tee-card {
+    border: 2px solid var(--he-border); border-radius: 8px;
+    padding: .85rem 1rem; cursor: pointer; position: relative;
+    transition: border-color .15s, background .15s;
+    background: #fff;
+  }
+  .tee-card:hover  { border-color: var(--he-gold); background: var(--he-cream); }
+  .tee-card.selected { border-color: var(--he-gold); background: rgba(201,168,76,.08); }
+  .tee-card-name {
+    font-weight: 700; font-size: .88rem;
+    display: flex; align-items: center; gap: .45rem; margin-bottom: .35rem;
+  }
+  .tee-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .tee-card-rating { font-size: .76rem; color: var(--he-muted); }
+  .tee-card-gender {
+    position: absolute; top: .5rem; right: .75rem;
+    font-size: .65rem; font-weight: 600; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--he-muted);
+  }
+  .tee-loading { color: var(--he-muted); font-size: .875rem; padding: .5rem 0; }
+  .field-error  { color: #e03131; font-size: .8rem; margin-top: .5rem; }
+
+  .btn-gold {
+    display: block; width: 100%;
+    padding: .85rem;
     background: var(--he-gold);
     color: var(--he-green);
-    border: none;
-    border-radius: 10px;
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 1.5rem;
+    border: none; border-radius: 10px;
+    font-size: 1rem; font-weight: 700;
+    cursor: pointer; margin-top: 1.5rem;
     transition: opacity .15s;
   }
-  .em-submit:hover { opacity: .88; }
+  .btn-gold:hover    { opacity: .88; }
+  .btn-gold:disabled { opacity: .45; cursor: not-allowed; }
 </style>
 {% endblock %}
 
@@ -94,25 +110,136 @@
 <div class="em-page">
   <div class="em-header">
     <h1>Edit Round Details</h1>
-    <p>Update date and tee before re-entering scores</p>
+    <p>{{ round.course.name if round.course else 'Unknown course' }}</p>
   </div>
 
-  <form method="POST">
+  <form method="POST" id="meta-form">
+    <input type="hidden" name="tee_set_id" id="tee_set_id_field"
+           value="{{ current_tee_id or '' }}">
+
+    <!-- Date -->
     <div class="em-card">
-      <div class="em-field">
-        <label class="em-label" for="date_played">Date played</label>
-        <input class="em-input" type="date" id="date_played" name="date_played"
+      <div class="form-group">
+        <label class="form-label" for="date_played">Date played</label>
+        <input class="form-input" type="date" id="date_played" name="date_played"
                value="{{ round.date_played.strftime('%Y-%m-%d') if round.date_played else '' }}">
-      </div>
-      <div class="em-field">
-        <label class="em-label" for="tee_set">Tee</label>
-        <input class="em-input" type="text" id="tee_set" name="tee_set"
-               value="{{ round.tee_set or '' }}"
-               placeholder="e.g. White, Yellow, Red">
       </div>
     </div>
 
-    <button type="submit" class="em-submit">Continue to holes →</button>
+    <!-- Tee selection -->
+    <div class="em-card">
+      <div class="form-group">
+        <label class="form-label">Tee set</label>
+        {% if course_external_id %}
+          <div id="teeOptions" class="tee-options">
+            <div class="tee-loading">Loading tee data…</div>
+          </div>
+          <p id="teeError" class="field-error" style="display:none"></p>
+          <input type="hidden" name="tee_set" id="tee_set_label"
+                 value="{{ round.tee_set or '' }}">
+        {% else %}
+          <input class="form-input" type="text" name="tee_set"
+                 value="{{ round.tee_set or '' }}"
+                 placeholder="e.g. White, Yellow, Red">
+        {% endif %}
+      </div>
+    </div>
+
+    <button type="submit" class="btn-gold" id="btnSubmit"
+            {% if course_external_id %}disabled{% endif %}>
+      Continue to holes →
+    </button>
   </form>
 </div>
+
+{% if course_external_id %}
+<script>
+(function () {
+  const EXTERNAL_ID    = {{ course_external_id | tojson }};
+  const CURRENT_TEE_ID = {{ current_tee_id | tojson if current_tee_id else 'null' }};
+
+  const TEE_COLOURS = {
+    white:'#f0f0f0', yellow:'#f5c518', red:'#e03131', blue:'#1971c2',
+    black:'#212529', green:'#2f9e44', orange:'#e8590c', purple:'#7048e8',
+    silver:'#adb5bd', bronze:'#c9a84c', gold:'#c9a84c', pink:'#f06595',
+  };
+
+  function teeColour(t) {
+    const k = (t.color || t.name || '').toLowerCase().replace(/\s+/g, '');
+    for (const key of Object.keys(TEE_COLOURS)) {
+      if (k.includes(key)) return TEE_COLOURS[key];
+    }
+    return '#888';
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  window.selectTee = function (tee) {
+    document.querySelectorAll('.tee-card').forEach(c => c.classList.remove('selected'));
+    const card = document.getElementById('etee-' + tee.id);
+    if (card) card.classList.add('selected');
+    document.getElementById('tee_set_id_field').value = tee.id;
+    document.getElementById('tee_set_label').value    = tee.name;
+    document.getElementById('btnSubmit').disabled = false;
+  };
+
+  function renderTees(tees) {
+    if (!tees.length) {
+      document.getElementById('teeOptions').innerHTML =
+        '<div class="tee-loading">No tee data available for this course.</div>';
+      document.getElementById('btnSubmit').disabled = false;
+      return;
+    }
+    document.getElementById('teeOptions').innerHTML = tees.map(t => {
+      const colour = teeColour(t);
+      const gLabel = t.gender === 'W' ? 'Ladies' : t.gender === 'X' ? 'Mixed' : 'Gents';
+      const yards  = t.total_yardage ? ` · ${t.total_yardage}y` : '';
+      return `<div class="tee-card" id="etee-${t.id}"
+              onclick='selectTee(${JSON.stringify(t)})'>
+          <span class="tee-card-gender">${gLabel}</span>
+          <div class="tee-card-name">
+            <span class="tee-dot"
+                  style="background:${colour};border:1px solid rgba(0,0,0,.12)"></span>
+            ${esc(t.name)}
+          </div>
+          <div class="tee-card-rating">
+            ${t.course_rating} / ${t.slope_rating} slope${yards}
+          </div>
+        </div>`;
+    }).join('');
+
+    // Pre-select current tee
+    const pre = tees.find(t => t.id === CURRENT_TEE_ID);
+    if (pre) selectTee(pre);
+    else     document.getElementById('btnSubmit').disabled = false;
+  }
+
+  // Load on page init
+  fetch('/api/courses/' + EXTERNAL_ID + '/tees')
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        const err = document.getElementById('teeError');
+        err.textContent = data.error;
+        err.style.display = '';
+        document.getElementById('teeOptions').innerHTML = '';
+        document.getElementById('btnSubmit').disabled = false;
+      } else {
+        renderTees(data);
+      }
+    })
+    .catch(() => {
+      document.getElementById('teeOptions').innerHTML = '';
+      const err = document.getElementById('teeError');
+      err.textContent = 'Could not load tee data — you can still continue.';
+      err.style.display = '';
+      document.getElementById('btnSubmit').disabled = false;
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}
