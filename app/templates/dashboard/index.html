@@ -68,6 +68,7 @@
       vertical-align: middle;
     }
     .round-edit-btn:hover { color: #c9a84c; }
+  .stats-note { font-size: 0.78rem; color: var(--color-text-muted, #888); margin: 0.15rem 0 0.6rem; }
 </style>
 {% endblock %}
 
@@ -123,8 +124,9 @@
   </div>
   {% endif %}
 
-  <!-- Season stats -->
+  <!-- Season stats (18-hole) -->
   {% if stats %}
+  <p class="stats-note">18-hole rounds · {{ stats.rounds_in_set }} of {{ stats.rounds_played }} total</p>
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-value">{{ stats.rounds_played }}</div>
@@ -132,11 +134,15 @@
     </div>
     <div class="stat-card">
       <div class="stat-value">{{ stats.avg_score or '—' }}</div>
-      <div class="stat-label">Avg score</div>
+      <div class="stat-label">Avg score (18)</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">{{ stats.best_score or '—' }}</div>
-      <div class="stat-label">Best score</div>
+      <div class="stat-value">
+        {%- if stats.best_vs_par is not none -%}
+          {%- if stats.best_vs_par > 0 -%}+{{ stats.best_vs_par }}{%- elif stats.best_vs_par == 0 -%}E{%- else -%}{{ stats.best_vs_par }}{%- endif -%}
+        {%- else -%}—{%- endif -%}
+      </div>
+      <div class="stat-label">Best vs par</div>
     </div>
     <div class="stat-card">
       <div class="stat-value">{{ stats.avg_putts or '—' }}</div>
@@ -147,6 +153,34 @@
       <div class="stat-label">Avg GIR</div>
     </div>
   </div>
+
+  {% if stats_9 %}
+  <h3 class="section-subtitle" style="margin-top:1.75rem;margin-bottom:0.5rem">9-hole rounds</h3>
+  <p class="stats-note">{{ stats_9.rounds_in_set }} round{{ 's' if stats_9.rounds_in_set != 1 }}</p>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">{{ stats_9.avg_score or '—' }}</div>
+      <div class="stat-label">Avg score (9)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">
+        {%- if stats_9.best_vs_par is not none -%}
+          {%- if stats_9.best_vs_par > 0 -%}+{{ stats_9.best_vs_par }}{%- elif stats_9.best_vs_par == 0 -%}E{%- else -%}{{ stats_9.best_vs_par }}{%- endif -%}
+        {%- else -%}—{%- endif -%}
+      </div>
+      <div class="stat-label">Best vs par</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats_9.avg_putts or '—' }}</div>
+      <div class="stat-label">Avg putts</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats_9.avg_gir or '—' }}</div>
+      <div class="stat-label">Avg GIR</div>
+    </div>
+  </div>
+  {% endif %}
+
   {% endif %}
 
   <!-- Recent rounds -->
