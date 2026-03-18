@@ -172,6 +172,7 @@ def enter_hole(round_id, hole_number):
     prev_actual = (actual_hole_number - 1) if actual_hole_number > 1 else None
     prev_hole = Hole.query.filter_by(round_id=round_id, hole_number=prev_actual).first() if prev_actual else None
 
+    is_edit = round_.holes.count() >= round_.holes_played
     return render_template('rounds/hole.html',
                            round=round_,
                            hole_number=hole_number,
@@ -180,7 +181,8 @@ def enter_hole(round_id, hole_number):
                            course_par=course_par,
                            course_yardage=course_yardage,
                            total_holes=round_.holes_played,
-                           prev_hole=prev_hole)
+                           prev_hole=prev_hole,
+                           is_edit=is_edit)
 
 
 @rounds_bp.route('/<int:round_id>/submit', methods=['GET', 'POST'])
@@ -245,13 +247,23 @@ def edit_round_meta(round_id):
     if request.method == 'POST':
         date_str = request.form.get('date_played', '').strip()
         tee_label = request.form.get('tee_set', '').strip()
+        tee_set_id_str = request.form.get('tee_set_id', '').strip()
         if date_str:
             round_.date_played = datetime.strptime(date_str, '%Y-%m-%d').date()
         if tee_label:
             round_.tee_set = tee_label
+        if tee_set_id_str:
+            try:
+                round_.tee_set_id = int(tee_set_id_str)
+            except ValueError:
+                pass
         db.session.commit()
         return redirect(url_for('rounds.enter_hole', round_id=round_id, hole_number=1))
-    return render_template('rounds/edit_meta.html', round=round_)
+    course_external_id = round_.course.external_id if round_.course else None
+    return render_template('rounds/edit_meta.html',
+                           round=round_,
+                           course_external_id=course_external_id,
+                           current_tee_id=round_.tee_set_id)
 
 
 @rounds_bp.route('/<int:round_id>/delete', methods=['POST'])
