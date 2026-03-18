@@ -6,17 +6,24 @@ Fetches historical hourly weather for the course location on the date played,
 then picks the midday (12:00) snapshot as representative of the round.
 
 Result is cached in Report.weather_json so we only call the API once per round.
+A sentinel value of "null" is stored when the fetch fails or the course has no
+coordinates — this prevents retrying on every page load.
 """
 
 import json
+import logging
 import urllib.request
 import urllib.parse
 from datetime import date as date_type
 
+logger = logging.getLogger(__name__)
+
+# Sentinel stored in weather_json when weather is unavailable — prevents
+# re-fetching on every page load for courses without lat/lng.
+_WEATHER_UNAVAILABLE = 'null'
 
 # ---------------------------------------------------------------------------
 # WMO Weather Interpretation Codes → human-readable label
-# https://open-meteo.com/en/docs#weathervariables
 # ---------------------------------------------------------------------------
 _WMO_CONDITIONS = {
     0:  'Clear sky',
@@ -63,53 +70,59 @@ def fetch_weather(lat: float, lng: float, date_played: date_type) -> dict | None
 
     Return dict shape:
         {
-            "temp_c":    float,   # temperature at 12:00
-            "wind_kph":  float,   # wind speed at 12:00
-            "precip_mm": float,   # precipitation at 12:00
-            "condition": str,     # human-readable WMO label
+            "temp_c":    float,
+            "wind_kph":  float,
+            "precip_mm": float,
+            "condition": str,
         }
     """
     if lat is None or lng is None:
+        logger.warning('fetch_weather: lat/lng not available, skipping')
         return None
 
     date_str = date_played.strftime('%Y-%m-%d')
 
     params = urllib.parse.urlencode({
-        'latitude':            lat,
-        'longitude':           lng,
-        'start_date':          date_str,
-        'end_date':            date_str,
-        'hourly':              'temperature_2m,precipitation,windspeed_10m,weathercode',
-        'wind_speed_unit':     'kmh',
-        'timezone':            'auto',
+        'latitude':        lat,
+        'longitude':       lng,
+        'start_date':      date_str,
+        'end_date':        date_str,
+        'hourly':          'temperature_2m,precipitation,windspeed_10m,weathercode',
+        'wind_speed_unit': 'kmh',
+        'timezone':        'auto',
     })
     url = f'https://archive-api.open-meteo.com/v1/archive?{params}'
 
     try:
         req = urllib.request.Request(url, headers={'User-Agent': 'MagnoliaAnalytics/1.0'})
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
 
         hourly = data.get('hourly', {})
         times  = hourly.get('time', [])
 
-        # Find the 12:00 slot (or closest available)
-        target = date_str + 'T12:00'
-        idx = next((i for i, t in enumerate(times) if t == target), None)
-        if idx is None and times:
-            idx = len(times) // 2   # fallback: midpoint of the day
-
-        if idx is None:
+        if not times:
+            logger.warning('fetch_weather: API returned no time data for %s', date_str)
             return None
 
-        return {
-            'temp_c':    round(hourly['temperature_2m'][idx], 1),
-            'wind_kph':  round(hourly['windspeed_10m'][idx], 1),
-            'precip_mm': round(hourly['precipitation'][idx], 1),
+        target = date_str + 'T12:00'
+        idx    = next((i for i, t in enumerate(times) if t == target), None)
+        if idx is None:
+            idx = len(times) // 2   # fallback: midpoint of the day
+            logger.info('fetch_weather: 12:00 slot not found, using idx=%d', idx)
+
+        weather = {
+            'temp_c':    round(float(hourly['temperature_2m'][idx]), 1),
+            'wind_kph':  round(float(hourly['windspeed_10m'][idx]), 1),
+            'precip_mm': round(float(hourly['precipitation'][idx]), 1),
             'condition': _wmo_label(hourly['weathercode'][idx]),
         }
+        logger.info('fetch_weather: success — %s', weather)
+        return weather
 
-    except Exception:
+    except Exception as exc:
+        logger.warning('fetch_weather: failed for lat=%s lng=%s date=%s — %s',
+                       lat, lng, date_str, exc)
         return None
 
 
@@ -117,33 +130,55 @@ def get_round_weather(round_) -> dict | None:
     """
     Return weather dict for the given round.
 
-    Checks Report.weather_json first (cached). If empty, fetches from
-    Open-Meteo and persists the result back to the report row.
+    Checks Report.weather_json first (cached). If the sentinel 'null' is
+    stored, the course has no coordinates and we skip the fetch.
+    If empty, fetches from Open-Meteo and persists the result (or sentinel).
 
-    Callers must commit the DB session after calling this function if they
-    want the cache to persist (the route handler does this).
+    Callers must commit the DB session after calling this function.
     """
-    from app import db  # avoid circular import at module level
-
     report = round_.report
     course = round_.course
 
-    # --- serve from cache if available ---
+    # --- serve from cache ---
     if report and report.weather_json:
+        if report.weather_json == _WEATHER_UNAVAILABLE:
+            return None   # cached miss — don't retry
         try:
             return json.loads(report.weather_json)
         except (json.JSONDecodeError, TypeError):
-            pass  # corrupted cache — fall through and re-fetch
+            pass  # corrupted — fall through and re-fetch
 
-    # --- fetch from API ---
-    if not course or course.lat is None or course.lng is None:
+    # --- check for coordinates ---
+    lat = getattr(course, 'lat', None) if course else None
+    lng = getattr(course, 'lng', None) if course else None
+
+    if not course:
+        logger.warning('get_round_weather: round %s has no course', round_.id)
+        _cache_sentinel(report)
         return None
 
-    weather = fetch_weather(course.lat, course.lng, round_.date_played)
+    if lat is None or lng is None:
+        logger.warning(
+            'get_round_weather: course "%s" has no lat/lng — weather unavailable',
+            course.name,
+        )
+        _cache_sentinel(report)
+        return None
 
-    # --- cache result on the report row ---
-    if weather and report:
-        report.weather_json = json.dumps(weather)
-        # Caller is responsible for db.session.commit()
+    # --- fetch from API ---
+    weather = fetch_weather(lat, lng, round_.date_played)
+
+    # --- cache result (or sentinel on failure) ---
+    if report:
+        if weather:
+            report.weather_json = json.dumps(weather)
+        else:
+            _cache_sentinel(report)
 
     return weather
+
+
+def _cache_sentinel(report) -> None:
+    """Store the unavailable sentinel to prevent repeated failed fetches."""
+    if report:
+        report.weather_json = _WEATHER_UNAVAILABLE
