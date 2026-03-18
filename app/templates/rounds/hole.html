@@ -329,6 +329,7 @@
   }
   .he-skip-btn {
     display: block;
+    width: 100%;
     text-align: center;
     padding: .5rem 1rem;
     margin-bottom: .5rem;
@@ -338,6 +339,8 @@
     color: var(--he-gold);
     font-size: .82rem;
     font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
     text-decoration: none;
     transition: background .15s, border-color .15s;
   }
@@ -574,8 +577,10 @@
   <!-- ── Sticky next button ─────────────────────────────────────────── -->
   <div class="he-next-wrap">
     {% if is_edit %}
-    <a href="{{ url_for('rounds.submit_round', round_id=round.id) }}"
-       class="he-skip-btn">Skip to Submit →</a>
+    <button type="button" class="he-skip-btn"
+            onclick="window.location.href='{{ url_for('rounds.submit_round', round_id=round.id) }}'">
+      Skip to Submit →
+    </button>
     {% endif %}
     <button type="submit" form="hole-form" class="he-next-btn">
       {% if hole_number < total_holes %}Hole {{ display_hole_number + 1 }} →{% else %}Review Round →{% endif %}
