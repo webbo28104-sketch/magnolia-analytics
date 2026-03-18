@@ -66,6 +66,7 @@ def _run_column_migrations():
         ('users',     'home_country',          'VARCHAR(100)'),
         ('reports',   'narrative_text',        'TEXT'),
         ('reports',   'weather_json',          'TEXT'),
+        ('reports',   'insights_json',         'TEXT'),
     ]
     for table, column, col_type in migrations:
         try:
