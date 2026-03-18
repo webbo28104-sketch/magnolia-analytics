@@ -1,44 +1,60 @@
 """
-Claude API service — generates branded HTML performance reports.
-When ANTHROPIC_API_KEY is set, calls Claude live.
-Otherwise returns a high-quality styled placeholder report.
+Claude API service for Magnolia Analytics.
+
+Two entry points:
+
+  generate_report(round_)
+    Called immediately after a round is completed (from rounds.py).
+    Creates/updates the Report record and generates html_content for email
+    delivery. Uses a lightweight placeholder if no API key is set.
+
+  generate_narrative(round_, sg_data, weather, calendar_ctx)
+    Called lazily on first report page view (from reports.py).
+    Generates a 3-paragraph plain-text coaching narrative and caches it in
+    Report.narrative_text. On failure, writes a graceful fallback string so
+    the page always renders cleanly.
 """
+
 import os
 from datetime import datetime
 from app import db
 from app.models.report import Report
 
+_MODEL = 'claude-sonnet-4-20250514'
 
-def _build_prompt(round_) -> str:
-    """Construct the report prompt from round + hole data."""
+# ---------------------------------------------------------------------------
+# Internal helpers — report generation (email / legacy HTML blob)
+# ---------------------------------------------------------------------------
+
+def _build_report_prompt(round_) -> str:
+    """Prompt for the legacy full-HTML email report."""
     holes = round_.holes.all()
     user = round_.golfer
     course_name = round_.course.name if round_.course else 'Unknown Course'
 
-    hole_data = []
+    hole_lines = []
     for h in holes:
-        approach_info = ''
+        approach = ''
         if not h.gir and h.approach_miss:
-            approach_info = f' | Miss: {h.approach_miss}'
+            approach = f' | Miss: {h.approach_miss}'
         if h.scramble_distance:
-            approach_info += f' | Scramble: {h.scramble_distance}'
-        sand_info = ''
+            approach += f' | Scramble: {h.scramble_distance}'
+        sand = ''
         if h.sand_save_attempt:
-            sand_info = f' | Sand save: {"Yes" if h.sand_save_made else "No"}'
-        hole_data.append(
+            sand = f' | Sand save: {"Yes" if h.sand_save_made else "No"}'
+        hole_lines.append(
             f"Hole {h.hole_number} (Par {h.par}): Score {h.score} | "
-            f"Tee: {h.tee_shot or 'N/A'} | GIR: {'Yes' if h.gir else 'No'}{approach_info} | "
+            f"Tee: {h.tee_shot or 'N/A'} | GIR: {'Yes' if h.gir else 'No'}{approach} | "
             f"Putts: {h.putts} | First putt: {h.first_putt_distance or 'N/A'}ft | "
-            f"Penalties: {h.penalties}{sand_info}"
+            f"Penalties: {h.penalties}{sand}"
         )
 
-    hole_summary = '\n'.join(hole_data)
     score_vs_par = round_.score_vs_par()
     score_label = f'+{score_vs_par}' if score_vs_par and score_vs_par > 0 else str(score_vs_par or 'E')
     fw_pct = round(round_.fairways_hit / round_.fairways_available * 100) if round_.fairways_available else 0
-    gir_pct = round((round_.gir_count or 0) / max(round_.holes_played or 18, 1) * 100)
+    gir_pct = round(round_.gir_count / 18 * 100)
 
-    prompt = f"""You are the performance analysis engine for Magnolia Analytics — a premium golf tracking platform used by serious amateur golfers.
+    return f"""You are the performance analysis engine for Magnolia Analytics — a premium golf tracking platform used by serious amateur golfers.
 
 GOLFER DATA
 -----------
@@ -52,211 +68,97 @@ Fairways Hit: {round_.fairways_hit}/{round_.fairways_available} ({fw_pct}%)
 Greens in Regulation: {round_.gir_count}/18 ({gir_pct}%)
 Penalties: {round_.penalties}
 
-Hole-by-hole breakdown:
-{hole_summary}
+Hole-by-hole:
+{chr(10).join(hole_lines)}
 
 TASK
 ----
-Generate a complete, standalone HTML performance report. Output ONLY the HTML — no markdown, no code fences, no commentary. Start with <!DOCTYPE html>.
+Generate a complete, standalone HTML performance report. Output ONLY the HTML. Start with <!DOCTYPE html>.
 
-DESIGN SPEC — follow exactly:
-- Fonts: Playfair Display (headings/large numbers), DM Mono (labels/data), DM Sans (body). Load from Google Fonts.
-- CSS variables: --green-dark: #1a2e1a; --green-mid: #2d4a2d; --green-light: #3d6b3d; --green-accent: #5a9e5a; --gold: #c9a84c; --gold-light: #e8c97a; --cream: #f5f0e8; --cream-dark: #e8e0d0; --white: #fdfcf8; --red: #c0392b; --text-dark: #1a1a1a; --text-mid: #4a4a4a;
-- Dark green header (#1a2e1a) with course name in Playfair Display italic (gold-light), large score in gold (~6rem Playfair Display)
-- stat-card: white bg, 4px left border (green-accent / gold / red), Playfair Display value (~2.2rem), DM Mono label
-- Strokes gained: centred-zero bar chart (positive = green-accent, negative = red). DM Mono labels.
-- Putting make% bars: good = green-accent, warn = gold, bad = red
-- Narrative card: dark green bg, gold italic headline, rgba(255,255,255,0.65) body text
-- Season comparison table: this round = gold, season avg = text-mid
-- Weakness card: rgba(192,57,43,0.06) bg, red border, red DM Mono label
-- 3-column key takeaways at bottom
-- Footer: dark green, brand name in gold, "Track every shot. Understand every round."
-- Back link to /dashboard in DM Mono
-
-CONTENT REQUIREMENTS:
-1. Header: golfer name, course, date, score vs par label, large gross score
-2. Four stat cards: Score vs Par | Fairways Hit (%) | GIR (%) | Total Putts
-3. Strokes gained — estimate from data: Off the Tee (fairway %, penalty analysis), Approach (GIR %, approach miss direction), Around the Greens (scramble %, sand saves), Putting (putts per hole, first putt distances)
-4. Putting make% by distance band using first_putt_distance data (group: 0-6ft, 6-10ft, 10-20ft, 20ft+)
-5. Narrative coaching: 3 paragraphs. Specific, honest. Reference actual holes. What genuinely worked, what cost shots, one clear priority
-6. Season context table: This Round vs Season Avg (use current round values as placeholders for both since this may be the first round)
-7. Weakness card: single most impactful focus area for next practice session
-8. Three key takeaway cards
-
-TONE: Premium, analytical, like a private golf coach reviewing footage. Never generic. Reference specific hole numbers.
-
-Output only the HTML. Begin immediately with <!DOCTYPE html>.
-"""
-    return prompt
+DESIGN: Fonts: Playfair Display (headings), DM Mono (labels), DM Sans (body). Dark green header (#1a2e1a), gold accents (#c9a84c). Stat cards, strokes-gained bars (centred zero), narrative card, weakness highlight, footer.
+CONTENT: Header, four stat cards, strokes-gained estimates, putting make% by band, 3-paragraph narrative (specific/coaching), season context, weakness card, key takeaways.
+TONE: Premium, analytical, like a private coach reviewing footage. Reference specific hole numbers.
+Output only HTML. Begin immediately with <!DOCTYPE html>."""
 
 
-def _placeholder_report(round_) -> str:
-    """High-quality placeholder report matching the Magnolia design system."""
+def _placeholder_html(round_) -> str:
+    """Lightweight placeholder HTML for email when no API key is set."""
     score_vs_par = round_.score_vs_par()
-    score_label = f'+{score_vs_par}' if score_vs_par and score_vs_par > 0 else (str(score_vs_par) if score_vs_par is not None else 'E')
+    score_label = (
+        f'+{score_vs_par}' if score_vs_par and score_vs_par > 0
+        else (str(score_vs_par) if score_vs_par is not None else 'E')
+    )
     course_name = round_.course.name if round_.course else 'Unknown Course'
-    fw_pct = round(round_.fairways_hit / round_.fairways_available * 100) if round_.fairways_available else 0
-    gir_pct = round((round_.gir_count or 0) / max(round_.holes_played or 18, 1) * 100)
     date_str = round_.date_played.strftime('%d %B %Y')
     user = round_.golfer
-    putts_per_hole = round((round_.total_putts or 0) / max(round_.holes_played or 18, 1), 1)
+    fw_pct = round(round_.fairways_hit / round_.fairways_available * 100) if round_.fairways_available else 0
+    gir_pct = round(round_.gir_count / 18 * 100)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Magnolia Analytics — Round Report · {date_str}</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>Round Report — {date_str}</title>
 <style>
-  :root {{
-    --green-dark: #1a2e1a; --green-mid: #2d4a2d; --green-light: #3d6b3d;
-    --green-accent: #5a9e5a; --gold: #c9a84c; --gold-light: #e8c97a;
-    --cream: #f5f0e8; --cream-dark: #e8e0d0; --white: #fdfcf8;
-    --red: #c0392b; --text-dark: #1a1a1a; --text-mid: #4a4a4a;
-  }}
-  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{ background: var(--cream); color: var(--text-dark); font-family: 'DM Sans', sans-serif; min-height: 100vh; }}
-
-  .header {{ background: var(--green-dark); padding: 3rem 4rem 2.5rem; position: relative; overflow: hidden; }}
-  .header::before {{ content: '{course_name.upper()[:20]}'; position: absolute; right: 3rem; top: 50%; transform: translateY(-50%) rotate(-8deg); font-family: 'Playfair Display', serif; font-size: 4rem; font-style: italic; color: rgba(201,168,76,0.05); white-space: nowrap; pointer-events: none; }}
-  .magnolia-mark {{ font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.3em; color: var(--gold); text-transform: uppercase; margin-bottom: 1rem; opacity: 0.7; }}
-  .header-top {{ display: flex; justify-content: space-between; align-items: flex-start; }}
-  .header h1 {{ font-family: 'Playfair Display', serif; font-size: 2.4rem; color: var(--white); line-height: 1.1; }}
-  .header h1 em {{ color: var(--gold-light); font-style: italic; }}
-  .header-score {{ text-align: right; }}
-  .big-score {{ font-family: 'Playfair Display', serif; font-size: 6rem; color: var(--gold-light); font-weight: 700; line-height: 1; }}
-  .big-score-label {{ font-family: 'DM Mono', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.3); letter-spacing: 0.2em; text-transform: uppercase; text-align: right; margin-top: 0.3rem; }}
-  .header-meta-row {{ display: flex; gap: 2rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.07); flex-wrap: wrap; }}
-  .header-meta-item {{ display: flex; flex-direction: column; gap: 0.2rem; }}
-  .header-meta-val {{ font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--white); font-weight: 500; }}
-  .header-meta-label {{ font-family: 'DM Mono', monospace; font-size: 0.55rem; color: rgba(255,255,255,0.3); letter-spacing: 0.2em; text-transform: uppercase; }}
-
-  .main {{ padding: 3rem 4rem; max-width: 1000px; margin: 0 auto; }}
-  .section-label {{ font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--green-accent); margin-bottom: 1.2rem; }}
-  .divider {{ height: 1px; background: var(--cream-dark); margin: 2.5rem 0; }}
-
-  .grid-4 {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; margin-bottom: 3rem; }}
-  .stat-card {{ background: var(--white); border-radius: 4px; padding: 1.4rem; border-left: 3px solid var(--green-accent); }}
-  .stat-card.gold {{ border-left-color: var(--gold); }}
-  .stat-card.red {{ border-left-color: var(--red); }}
-  .stat-card-label {{ font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-mid); margin-bottom: 0.7rem; }}
-  .stat-card-value {{ font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--green-dark); font-weight: 700; line-height: 1; }}
-  .stat-card.gold .stat-card-value {{ color: var(--gold); }}
-  .stat-card.red .stat-card-value {{ color: var(--red); }}
-  .stat-card-sub {{ font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--text-mid); margin-top: 0.5rem; line-height: 1.4; }}
-
-  .narrative-card {{ background: var(--green-dark); border-radius: 4px; padding: 2rem; margin-bottom: 3rem; }}
-  .narrative-title {{ font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--gold-light); margin-bottom: 1rem; font-style: italic; }}
-  .narrative-text {{ font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: rgba(255,255,255,0.65); line-height: 1.8; }}
-  .narrative-text + .narrative-text {{ margin-top: 1rem; }}
-  .narrative-text strong {{ color: var(--white); }}
-  .api-note {{ display: inline-block; background: rgba(201,168,76,0.15); color: var(--gold-light); font-family: 'DM Mono', monospace; font-size: 0.65rem; padding: 0.3rem 0.7rem; border-radius: 2px; margin-top: 1.2rem; letter-spacing: 0.05em; }}
-
-  .footer {{ background: var(--green-dark); padding: 1.5rem 4rem; display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }}
-  .footer-brand {{ font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--gold); }}
-  .footer-meta {{ font-family: 'DM Mono', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.25); letter-spacing: 0.15em; }}
-  .back-link {{ display: block; text-align: center; padding: 1.5rem; font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.2em; color: var(--green-accent); text-decoration: none; text-transform: uppercase; }}
-  .back-link:hover {{ color: var(--gold); }}
-
-  @media (max-width: 700px) {{
-    .header, .main {{ padding: 2rem; }}
-    .grid-4 {{ grid-template-columns: 1fr 1fr; }}
-    .big-score {{ font-size: 4rem; }}
-    .header h1 {{ font-size: 1.6rem; }}
-    .footer {{ padding: 1.5rem 2rem; flex-direction: column; gap: 0.5rem; text-align: center; }}
-  }}
+  body {{ font-family: 'DM Sans', Arial, sans-serif; background: #f5f0e8; color: #1a1a1a; margin: 0; padding: 0; }}
+  .header {{ background: #1a2e1a; padding: 2.5rem 3rem; color: #fdfcf8; }}
+  .header h1 {{ font-size: 1.8rem; margin: 0 0 0.3rem; }}
+  .header .score {{ font-size: 4rem; color: #e8c97a; font-weight: 700; line-height: 1; }}
+  .body {{ padding: 2rem 3rem; max-width: 760px; margin: 0 auto; }}
+  .grid {{ display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin: 1.5rem 0; }}
+  .card {{ background: #fff; border-left: 3px solid #5a9e5a; padding: 1.2rem; border-radius: 3px; }}
+  .card .val {{ font-size: 2rem; font-weight: 700; color: #1a2e1a; }}
+  .card .lbl {{ font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em; color: #4a4a4a; margin-top: 0.3rem; }}
+  .note {{ background: #1a2e1a; color: rgba(255,255,255,0.7); padding: 1.5rem 2rem; border-radius: 3px; margin-top: 1.5rem; font-size: 0.9rem; line-height: 1.7; }}
+  .note strong {{ color: #e8c97a; }}
+  .footer {{ background: #1a2e1a; color: rgba(255,255,255,0.3); text-align: center; padding: 1rem; font-size: 0.65rem; letter-spacing: 0.15em; margin-top: 2rem; }}
 </style>
 </head>
 <body>
-
-<header class="header">
-  <div class="magnolia-mark">Magnolia Analytics · Round Report</div>
-  <div class="header-top">
-    <div>
-      <h1>Round at<br><em>{course_name}</em></h1>
+<div class="header">
+  <div style="font-size:0.6rem;letter-spacing:0.3em;color:#c9a84c;text-transform:uppercase;margin-bottom:0.8rem">Magnolia Analytics · Round Report</div>
+  <h1>Round at <em style="color:#e8c97a">{course_name}</em></h1>
+  <div class="score">{round_.total_score}</div>
+  <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);letter-spacing:0.15em;margin-top:0.3rem">{score_label} PAR · {date_str} · {user.full_name}</div>
+</div>
+<div class="body">
+  <div class="grid">
+    <div class="card" style="border-left-color:#c9a84c">
+      <div class="val" style="color:#c9a84c">{score_label}</div>
+      <div class="lbl">Score vs Par</div>
     </div>
-    <div class="header-score">
-      <div class="big-score">{round_.total_score}</div>
-      <div class="big-score-label">{score_label} Par</div>
+    <div class="card">
+      <div class="val">{round_.fairways_hit}/{round_.fairways_available}</div>
+      <div class="lbl">Fairways Hit ({fw_pct}%)</div>
     </div>
-  </div>
-  <div class="header-meta-row">
-    <div class="header-meta-item">
-      <span class="header-meta-val">{date_str}</span>
-      <span class="header-meta-label">Date Played</span>
+    <div class="card">
+      <div class="val">{round_.gir_count}/18</div>
+      <div class="lbl">GIR ({gir_pct}%)</div>
     </div>
-    <div class="header-meta-item">
-      <span class="header-meta-val">{user.full_name}</span>
-      <span class="header-meta-label">Golfer</span>
-    </div>
-    <div class="header-meta-item">
-      <span class="header-meta-val">{user.handicap_index}</span>
-      <span class="header-meta-label">Handicap Index</span>
-    </div>
-    <div class="header-meta-item">
-      <span class="header-meta-val">{round_.holes_played} Holes</span>
-      <span class="header-meta-label">Format</span>
+    <div class="card">
+      <div class="val">{round_.total_putts}</div>
+      <div class="lbl">Total Putts</div>
     </div>
   </div>
-</header>
-
-<div class="main">
-  <div class="section-label">Round Summary</div>
-  <div class="grid-4">
-    <div class="stat-card gold">
-      <div class="stat-card-label">Score vs Par</div>
-      <div class="stat-card-value">{score_label}</div>
-      <div class="stat-card-sub">{round_.total_score} gross</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">Fairways Hit</div>
-      <div class="stat-card-value">{round_.fairways_hit}/{round_.fairways_available}</div>
-      <div class="stat-card-sub">{fw_pct}% of available</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">Greens in Reg</div>
-      <div class="stat-card-value">{round_.gir_count}/18</div>
-      <div class="stat-card-sub">{gir_pct}% GIR rate</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">Total Putts</div>
-      <div class="stat-card-value">{round_.total_putts}</div>
-      <div class="stat-card-sub">{putts_per_hole} avg per hole</div>
-    </div>
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="narrative-card">
-    <div class="narrative-title">Your full report is one API key away.</div>
-    <p class="narrative-text">
-      Your stats for <strong>{date_str} at {course_name}</strong> have been saved. The numbers above are pulled directly from your hole-by-hole data — real figures, nothing estimated.
-    </p>
-    <p class="narrative-text" style="margin-top: 1rem;">
-      Once your Anthropic API key is configured, this placeholder is replaced with a full coaching report: strokes gained breakdown across all four areas of the game, putting make percentages by distance, a narrative analysis of the round, season comparison, and a single clear priority for your next practice session.
-    </p>
-    <span class="api-note">Add ANTHROPIC_API_KEY to your .env file to activate personalised reports</span>
+  <div class="note">
+    <strong>Your round data has been saved.</strong><br>
+    Add your Anthropic API key to activate the full personalised coaching report — strokes gained breakdown, putting analysis, narrative, and practice priorities.
   </div>
 </div>
-
-<a href="/dashboard" class="back-link">← Back to Dashboard</a>
-
-<footer class="footer">
-  <span class="footer-brand">Magnolia Analytics</span>
-  <span class="footer-meta">Track every shot. Understand every round.</span>
-</footer>
-
+<div class="footer">Magnolia Analytics · Track every shot. Understand every round.</div>
 </body>
 </html>"""
 
 
+# ---------------------------------------------------------------------------
+# Public API — round completion (email / legacy)
+# ---------------------------------------------------------------------------
+
 def generate_report(round_) -> Report:
     """
-    Generate a branded performance report for the given round.
-
-    If ANTHROPIC_API_KEY is set in the environment, calls Claude to generate
-    a full personalised HTML report. Otherwise returns a styled placeholder.
+    Create or update the Report record for a completed round.
+    Generates html_content for email delivery.
+    Called from rounds.py immediately after round submission.
     """
     api_key = os.environ.get('ANTHROPIC_API_KEY', '')
     html_content = None
@@ -268,29 +170,22 @@ def generate_report(round_) -> Report:
         try:
             import anthropic
             client = anthropic.Anthropic(api_key=api_key)
-            message = client.messages.create(
-                model='claude-sonnet-4-6',
-                max_tokens=8192,
-                messages=[{'role': 'user', 'content': _build_prompt(round_)}]
+            msg = client.messages.create(
+                model=_MODEL,
+max_tokens=8192,
+                messages=[{'role': 'user', 'content': _build_report_prompt(round_)}]
             )
-            html_content = message.content[0].text
-            prompt_tokens = message.usage.input_tokens
-            completion_tokens = message.usage.output_tokens
-            model_used = 'claude-sonnet-4-6'
+            html_content = msg.content[0].text
+            prompt_tokens = msg.usage.input_tokens
+            completion_tokens = msg.usage.output_tokens
+            model_used = _MODEL
         except Exception as e:
             html_content = None
-            model_used = f'placeholder (error: {str(e)[:60]})'
+            model_used = f'placeholder (api error: {str(e)[:80]})'
 
-        try:
-            html_content = _placeholder_report(round_)
-        except Exception as _ph_err:
-            import traceback
-            print(f"[REPORT ERROR] _placeholder_report failed: {_ph_err}", flush=True)
-            print(traceback.format_exc(), flush=True)
-            html_content = '<html><body><h1>Performance Report</h1><p>Your round data has been saved. Full report generation encountered an issue — please contact support.</p></body></html>'
-        html_content = _placeholder_report(round_)
+    if not html_content:
+        html_content = _placeholder_html(round_)
 
-    # Upsert report record
     report = round_.report or Report(round_id=round_.id)
     report.html_content = html_content
     report.prompt_tokens = prompt_tokens
@@ -303,3 +198,158 @@ def generate_report(round_) -> Report:
     db.session.commit()
 
     return report
+
+
+# ---------------------------------------------------------------------------
+# Public API — narrative (live report page, lazy-loaded on first view)
+# ---------------------------------------------------------------------------
+
+_NARRATIVE_FALLBACK = (
+    "Your round data has been saved and your stats are live above. "
+    "To activate the personalised coaching narrative, add your Anthropic API key "
+    "as the ANTHROPIC_API_KEY environment variable and reload this page."
+)
+
+
+def _build_narrative_prompt(round_, sg_data: dict, weather: dict | None, calendar_ctx: dict) -> str:
+    """
+    Build the prompt for the 3-paragraph narrative.
+    Passes all assembled stats so Claude can write specific, data-led coaching.
+    """
+    holes = round_.holes.all()
+    user = round_.golfer
+    course_name = round_.course.name if round_.course else 'Unknown Course'
+
+    # Hole summary
+    hole_lines = []
+    for h in holes:
+        svp = h.score - h.par
+        label = {-2:'Eagle',-1:'Birdie',0:'Par',1:'Bogey',2:'Double',3:'Triple'}.get(svp, f'+{svp}')
+        hole_lines.append(
+            f"  H{h.hole_number:02d} Par{h.par}: {h.score} ({label}) | "
+            f"Tee:{h.tee_shot or'–'} GIR:{'Y' if h.gir else'N'} "
+            f"Putts:{h.putts} FPD:{h.first_putt_distance or'?'}ft "
+            f"ApprDist:{h.approach_distance or'?'}yds Pen:{h.penalties}"
+        )
+
+    # SG summary
+    sg_putting = sg_data.get('sg_putting', {})
+    sg_lines = (
+        f"  SG Off Tee:        {sg_data.get('sg_off_tee', 0):+.2f}\n"
+        f"  SG Approach:       {sg_data.get('sg_approach', 0):+.2f}\n"
+        f"  SG Around Green:   {sg_data.get('sg_atg', 0):+.2f}\n"
+        f"  SG Putting:        {sg_putting.get('total', 0):+.2f}"
+    )
+
+    # Context
+    score_vs_par = round_.score_vs_par()
+    score_label = f'+{score_vs_par}' if score_vs_par and score_vs_par > 0 else str(score_vs_par or 'E')
+    fw_pct = round(round_.fairways_hit / round_.fairways_available * 100) if round_.fairways_available else 0
+    gir_pct = round(round_.gir_count / 18 * 100)
+
+    weather_str = 'Not available'
+    if weather:
+        weather_str = (
+            f"{weather['condition']}, {weather['temp_c']}°C, "
+            f"wind {weather['wind_kph']} km/h, precip {weather['precip_mm']} mm"
+        )
+
+    calendar_str = ' | '.join(
+        v for v in [
+            calendar_ctx.get('golf_event'),
+            calendar_ctx.get('bank_holiday'),
+            calendar_ctx.get('notable'),
+            calendar_ctx.get('season'),
+        ] if v
+    ) or 'No notable context'
+
+    return f"""You are the coaching analyst for Magnolia Analytics, a premium amateur golf tracking platform.
+
+ROUND SUMMARY
+-------------
+Golfer:  {user.full_name}  (Handicap {user.handicap_index})
+Course:  {course_name}
+Date:    {round_.date_played.strftime('%d %B %Y')}
+Score:   {round_.total_score} ({score_label} par)
+Putts:   {round_.total_putts}
+FIR:     {round_.fairways_hit}/{round_.fairways_available} ({fw_pct}%)
+GIR:     {round_.gir_count}/18 ({gir_pct}%)
+Penalties: {round_.penalties}
+
+STROKES GAINED (estimated)
+--------------------------
+{sg_lines}
+
+HOLE-BY-HOLE
+------------
+{chr(10).join(hole_lines)}
+
+CONDITIONS
+----------
+Weather:  {weather_str}
+Calendar: {calendar_str}
+
+TASK
+----
+Write a coaching narrative of exactly 3 paragraphs (plain text, no markdown, no HTML tags).
+
+Paragraph 1 — What worked: Be specific about the strongest parts of this round. Reference actual hole numbers and shot types. Note any standout stats.
+Paragraph 2 — What cost shots: Identify the specific patterns that hurt the score most. Be honest and direct. Reference hole numbers.
+Paragraph 3 — One clear priority: Name the single highest-leverage area to work on before the next round and give one concrete practice suggestion.
+
+Rules:
+- Plain text only. No bullet points, no headers, no markdown, no HTML.
+- Reference specific hole numbers.
+- Never be generic. Every sentence must be grounded in the actual data above.
+- Tone: a knowledgeable private coach who respects the golfer's intelligence.
+- Total length: 150–220 words across the 3 paragraphs.
+
+Output only the 3 paragraphs, separated by a blank line. Begin immediately."""
+
+
+def generate_narrative(round_, sg_data: dict, weather: dict | None, calendar_ctx: dict) -> str:
+    """
+    Generate and cache a 3-paragraph coaching narrative for the round.
+
+    Called on first report page view. Result is saved to Report.narrative_text
+    so subsequent views are instant. Caller must commit the DB session.
+
+    Returns the narrative string (either from Claude or the fallback).
+    """
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+
+    if not api_key:
+        return _NARRATIVE_FALLBACK
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        msg = client.messages.create(
+            model=_MODEL,
+            max_tokens=512,
+            messages=[{
+                'role': 'user',
+                'content': _build_narrative_prompt(round_, sg_data, weather, calendar_ctx)
+            }]
+        )
+        narrative = msg.content[0].text.strip()
+
+        # Update report metadata
+        report = round_.report
+        if report:
+            report.narrative_text = narrative
+            report.model_used = _MODEL
+            report.prompt_tokens = (report.prompt_tokens or 0) + msg.usage.input_tokens
+            report.completion_tokens = (report.completion_tokens or 0) + msg.usage.output_tokens
+            report.generated_at = datetime.utcnow()
+            # Caller commits
+
+        return narrative
+
+    except Exception as e:
+        fallback = (
+            f"Your round data has been saved. "
+            f"The personalised coaching narrative could not be generated at this time "
+            f"(error: {str(e)[:60]}). Please reload the page to try again."
+        )
+        return fallback
