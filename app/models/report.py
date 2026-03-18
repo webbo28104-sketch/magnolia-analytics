@@ -8,11 +8,20 @@ class Report(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     round_id = db.Column(db.Integer, db.ForeignKey('rounds.id'), nullable=False, unique=True)
 
-    # The generated HTML email content
+    # The generated HTML email content (legacy — kept for email delivery)
     html_content = db.Column(db.Text, nullable=True)
 
     # Plain text summary for SMS/push notifications (future)
     summary_text = db.Column(db.Text, nullable=True)
+
+    # Claude-generated coaching narrative (plain text, ~3 paragraphs)
+    # Populated on first report page view; cached so Claude isn't called again.
+    narrative_text = db.Column(db.Text, nullable=True)
+
+    # Cached Open-Meteo weather snapshot for the round date/course
+    # Stored as JSON string: {"temp_c": float, "wind_kph": float,
+    #                         "precip_mm": float, "condition": str}
+    weather_json = db.Column(db.Text, nullable=True)
 
     # Claude metadata
     prompt_tokens = db.Column(db.Integer, nullable=True)
