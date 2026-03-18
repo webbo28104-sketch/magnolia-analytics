@@ -14,7 +14,7 @@ rounds_bp = Blueprint('rounds', __name__)
 
 
 # ---------------------------------------------------------------------------
-# USGA World Handicap System — differentials-to-use lookup table
+# USGA World Handicap System â differentials-to-use lookup table
 # ---------------------------------------------------------------------------
 _WHS_TABLE = {
     3: 1,  4: 1,  5: 1,
@@ -28,7 +28,7 @@ _WHS_TABLE = {
 
 
 def _recalculate_handicap(user):
-    """Recalculate user.handicap_index using WHS (best N of last 20 diffs × 0.96)."""
+    """Recalculate user.handicap_index using WHS (best N of last 20 diffs Ã 0.96)."""
     rounds = (
         Round.query
         .filter_by(user_id=user.id, status='complete')
@@ -55,7 +55,7 @@ def _recalculate_handicap(user):
 @rounds_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_round():
-    """Start a new round — USGA-style course + tee selector."""
+    """Start a new round â USGA-style course + tee selector."""
     if request.method == 'POST':
         course_id   = request.form.get('course_id')
         tee_set_id  = request.form.get('tee_set_id')
@@ -148,7 +148,7 @@ def enter_hole(round_id, hole_number):
         hole.approach_distance = int(data['approach_distance']) if data.get('approach_distance') else None
         hole.approach_miss = data.get('approach_miss') or None
         hole.scramble_distance = data.get('scramble_distance') or None
-        # GIR = made the green in regulation — true when no miss recorded
+        # GIR = made the green in regulation â true when no miss recorded
         hole.gir = not bool(hole.approach_miss or hole.scramble_distance)
 
         # Par 5 second shot
@@ -192,11 +192,11 @@ def submit_round(round_id):
     if request.method == 'POST':
         current_app.logger.info(f"[submit_round] POST received for round_id={round_id}")
 
-        # Mark the round complete first — this must commit regardless of what follows
+        # Mark the round complete first â this must commit regardless of what follows
         round_.status = 'complete'
         round_.completed_at = datetime.utcnow()
 
-        # Compute totals / differential — errors here are non-fatal; round still saves
+        # Compute totals / differential â errors here are non-fatal; round still saves
         try:
             round_.compute_totals()
             round_.compute_differential()   # USGA handicap differential
@@ -212,7 +212,7 @@ def submit_round(round_id):
         except Exception as e:
             current_app.logger.exception(f"[submit_round] Handicap recalc failed: {e}")
 
-        # Trigger report generation — failure must never roll back the round save
+        # Trigger report generation â failure must never roll back the round save
         try:
             generate_report(round_)
             send_report_email(round_)
@@ -225,6 +225,16 @@ def submit_round(round_id):
 
     holes = round_.holes.all()
     return render_template('rounds/submit.html', round=round_, holes=holes)
+
+
+@rounds_bp.route('/<int:round_id>/reopen', methods=['POST'])
+@login_required
+def reopen_round(round_id):
+    """Re-open a completed round for editing hole-by-hole data."""
+    round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
+    round_.status = 'in_progress'
+    db.session.commit()
+    return redirect(url_for('rounds.enter_hole', round_id=round_id, hole_number=1))
 
 
 @rounds_bp.route('/<int:round_id>/delete', methods=['POST'])
