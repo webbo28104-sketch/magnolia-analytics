@@ -53,7 +53,11 @@ class Round(db.Model):
     def score_vs_par(self):
         if not self.total_score:
             return None
-        # Prefer tee-specific par (most accurate), fall back to course par
+        # Use actual hole pars stored on this round (most accurate — reflects data entry)
+        holes = self.holes.all()
+        if holes:
+            return self.total_score - sum(h.par for h in holes if h.par is not None)
+        # Fall back to tee-set stored par or course par
         if self.tee_set_obj:
             return self.total_score - self.tee_set_obj.total_par
         if self.course:
