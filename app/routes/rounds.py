@@ -234,7 +234,24 @@ def reopen_round(round_id):
     round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
     round_.status = 'in_progress'
     db.session.commit()
-    return redirect(url_for('rounds.enter_hole', round_id=round_id, hole_number=1))
+    return redirect(url_for('rounds.edit_round_meta', round_id=round_id))
+
+
+@rounds_bp.route('/<int:round_id>/edit-meta', methods=['GET', 'POST'])
+@login_required
+def edit_round_meta(round_id):
+    """Edit date and tee label before stepping through holes."""
+    round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
+    if request.method == 'POST':
+        date_str = request.form.get('date_played', '').strip()
+        tee_label = request.form.get('tee_set', '').strip()
+        if date_str:
+            round_.date_played = datetime.strptime(date_str, '%Y-%m-%d').date()
+        if tee_label:
+            round_.tee_set = tee_label
+        db.session.commit()
+        return redirect(url_for('rounds.enter_hole', round_id=round_id, hole_number=1))
+    return render_template('rounds/edit_meta.html', round=round_)
 
 
 @rounds_bp.route('/<int:round_id>/delete', methods=['POST'])
