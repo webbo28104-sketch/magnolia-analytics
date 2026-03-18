@@ -14,9 +14,14 @@ class Report(db.Model):
     # Plain text summary for SMS/push notifications (future)
     summary_text = db.Column(db.Text, nullable=True)
 
-    # Claude-generated coaching narrative (plain text, ~3 paragraphs)
-    # Populated on first report page view; cached so Claude isn't called again.
+    # Claude-generated coaching narrative (plain text, ~3 paragraphs) — legacy
+    # Superseded by insights_json; kept for backward compatibility.
     narrative_text = db.Column(db.Text, nullable=True)
+
+    # Claude-generated insights JSON — single API call returning all interpretive
+    # text for the report page. Populated on first view; cached thereafter.
+    # Schema: see claude_service._empty_insights()
+    insights_json = db.Column(db.Text, nullable=True)
 
     # Cached Open-Meteo weather snapshot for the round date/course
     # Stored as JSON string: {"temp_c": float, "wind_kph": float,
