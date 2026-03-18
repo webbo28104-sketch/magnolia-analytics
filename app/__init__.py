@@ -64,6 +64,8 @@ def _run_column_migrations():
         ('tee_sets',  'back_slope_rating',    'INTEGER'),
         ('rounds',    'nine_hole_selection',  'VARCHAR(10)'),
         ('users',     'home_country',          'VARCHAR(100)'),
+        ('reports',   'narrative_text',        'TEXT'),
+        ('reports',   'weather_json',          'TEXT'),
     ]
     for table, column, col_type in migrations:
         try:
