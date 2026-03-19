@@ -5,7 +5,6 @@ from app.models.hole import Hole
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
-
 @dashboard_bp.route('/')
 @login_required
 def index():
@@ -39,7 +38,7 @@ def index():
     in_progress_rounds = []
     for r in in_progress:
         saved_holes = {h.hole_number for h in r.holes}
-        if r.holes_played == 18 and r.back_nine_start:
+        if r.holes_played == 9 and r.nine_hole_selection == 'back':
             hole_range = range(10, 19)
         elif r.holes_played == 9:
             hole_range = range(1, 10)
@@ -53,9 +52,9 @@ def index():
         if next_seq is None:
             next_seq = r.holes_played
         in_progress_rounds.append({
-            'round': r,
+            'round':         r,
             'next_hole_url': url_for('rounds.enter_hole', round_id=r.id, hole_number=next_seq),
-            'holes_done': len(saved_holes),
+            'holes_done':    len(saved_holes),
         })
 
     return render_template('dashboard/index.html',
@@ -68,7 +67,6 @@ def index():
 def _compute_season_stats(rounds):
     if not rounds:
         return None
-
     scores  = [r.total_score for r in rounds if r.total_score]
     putts   = [r.total_putts for r in rounds if r.total_putts]
     vs_pars = [v for v in (r.score_vs_par() for r in rounds) if v is not None]
@@ -81,7 +79,7 @@ def _compute_season_stats(rounds):
     ]
 
     # Scramble% — missed GIR holes where par or better was still made
-    all_holes = [h for r in rounds for h in r.holes.all()]
+    all_holes  = [h for r in rounds for h in r.holes.all()]
     missed_gir = [h for h in all_holes if not h.gir]
     scrambled  = [h for h in missed_gir if h.score <= h.par]
 
