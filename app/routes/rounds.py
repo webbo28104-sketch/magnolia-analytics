@@ -13,8 +13,22 @@ from datetime import datetime, date
 rounds_bp = Blueprint('rounds', __name__)
 
 
+# ---------------------------------------------------------------------------
+# USGA World Handicap System — differentials-to-use lookup table
+# ---------------------------------------------------------------------------
+_WHS_TABLE = {
+    3: 1,  4: 1,  5: 1,
+    6: 2,  7: 2,  8: 2,
+    9: 3,  10: 3, 11: 3,
+    12: 4, 13: 4, 14: 4,
+    15: 5, 16: 5,
+    17: 6, 18: 6,
+    19: 7,
+}
+
+
 def _recalculate_handicap(user):
-    """Recalculate user.handicap_index using proper WHS rules."""
+    """Recalculate user.handicap_index using WHS (best N of last 20 diffs × 0.96)."""
     rounds = (
         Round.query
         .filter_by(user_id=user.id, status='complete')
@@ -26,61 +40,26 @@ def _recalculate_handicap(user):
 
     count = len(rounds)
     if count < 3:
-        return
+        return  # Need at least 3 rounds
 
+    n_to_use = _WHS_TABLE.get(count, 8)   # 20+ rounds -> use best 8
     diffs = sorted(r.hc_differential for r in rounds)
+    best  = diffs[:n_to_use]
 
-    # --- WHS RULES ---
-    if count == 3:
-        new_index = diffs[0] - 2.0
-
-    elif count == 4:
-        new_index = diffs[0] - 1.0
-
-    elif count == 5:
-        new_index = diffs[0]
-
-    else:
-        n_map = {
-            6: 2, 7: 2, 8: 2,
-            9: 3, 10: 3, 11: 3,
-            12: 4, 13: 4, 14: 4,
-            15: 5, 16: 5,
-            17: 6, 18: 6,
-            19: 7,
-        }
-        n = n_map.get(count, 8)
-
-        best = diffs[:n]
-        avg = sum(best) / n
-
-        if 6 <= count <= 8:
-            avg -= 1.0
-        elif 9 <= count <= 11:
-            avg -= 0.5
-        elif 15 <= count <= 16:
-            avg += 0.5
-        elif 17 <= count <= 18:
-            avg += 1.0
-        elif count == 19:
-            avg += 1.5
-        elif count >= 20:
-            avg *= 0.96
-
-        new_index = avg
-
-    user.handicap_index = round(new_index, 1)
+    new_index = round(sum(best) / n_to_use * 0.96, 1)
+    user.handicap_index = new_index
     db.session.commit()
 
     current_app.logger.info(
-        f"[handicap] {user.email} -> {user.handicap_index} "
-        f"(from {count} rounds, diffs={diffs})"
+        f"[handicap] {user.email} -> {new_index} "
+        f"(best {n_to_use} of {count} diffs)"
     )
 
 
 @rounds_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_round():
+    """Start a new round — USGA-style course + tee selector."""
     if request.method == 'POST':
         course_id   = request.form.get('course_id')
         tee_set_id  = request.form.get('tee_set_id')
@@ -97,19 +76,23 @@ def new_round():
 
         tee = db.session.get(TeeSet, int(tee_set_id))
         if not tee:
-            flash('Selected tee not found.', 'error')
+            flash('Selected tee not found. Please try again.', 'error')
             return redirect(url_for('rounds.new_round'))
+
+        course_id = tee.course_id
+        tee_label = tee.name
 
         round_ = Round(
             user_id=current_user.id,
-            course_id=tee.course_id,
+            course_id=course_id,
             tee_set_id=int(tee_set_id),
             date_played=datetime.strptime(date_played, '%Y-%m-%d').date(),
-            tee_set=tee.name,
+            tee_set=tee_label,
             holes_played=holes_played,
             nine_hole_selection=nine_hole_selection,
             status='in_progress'
         )
+
         db.session.add(round_)
         db.session.commit()
 
@@ -118,12 +101,97 @@ def new_round():
     return render_template('rounds/new.html', today=date.today().isoformat())
 
 
+@rounds_bp.route('/<int:round_id>/hole/<int:hole_number>', methods=['GET', 'POST'])
+@login_required
+def enter_hole(round_id, hole_number):
+    """Enter stats for a single hole."""
+    round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
+
+    if hole_number < 1 or hole_number > round_.holes_played:
+        return redirect(url_for('rounds.enter_hole', round_id=round_.id, hole_number=1))
+
+    if round_.nine_hole_selection == 'back' and round_.holes_played == 9:
+        actual_hole_number = hole_number + 9
+    else:
+        actual_hole_number = hole_number
+
+    existing = Hole.query.filter_by(round_id=round_id, hole_number=actual_hole_number).first()
+
+    course_par = None
+    course_yardage = None
+
+    if round_.tee_set_id:
+        ch = CourseHole.query.filter_by(
+            tee_set_id=round_.tee_set_id,
+            hole_number=actual_hole_number
+        ).first()
+        if ch:
+            course_par = ch.par
+            course_yardage = ch.yardage
+
+    if course_par is None and round_.course and round_.course.par_list:
+        course_par = round_.course.par_list[actual_hole_number - 1]
+
+    if request.method == 'POST':
+        data = request.form
+
+        if not existing:
+            hole = Hole(round_id=round_id, hole_number=actual_hole_number)
+            db.session.add(hole)
+        else:
+            hole = existing
+
+        hole.par = int(data.get('par', course_par or 4))
+        hole.score = int(data.get('score', hole.par))
+        hole.tee_shot = data.get('tee_shot') or None
+
+        hole.approach_distance = int(data['approach_distance']) if data.get('approach_distance') else None
+        hole.approach_miss = data.get('approach_miss') or None
+        hole.scramble_distance = data.get('scramble_distance') or None
+        hole.gir = not bool(hole.approach_miss or hole.scramble_distance)
+
+        hole.second_shot_distance = int(data['second_shot_distance']) if data.get('second_shot_distance') else None
+
+        hole.putts = int(data.get('putts', 2))
+        hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
+        hole.sand_save_attempt = bool(data.get('sand_save_attempt') == 'true') if data.get('sand_save_attempt') else None
+        hole.sand_save_made = data.get('sand_save_made') == 'true' if data.get('sand_save_made') else None
+        hole.penalties = int(data.get('penalties', 0))
+
+        db.session.commit()
+
+        if hole_number < round_.holes_played:
+            return redirect(url_for('rounds.enter_hole', round_id=round_id, hole_number=hole_number + 1))
+        else:
+            return redirect(url_for('rounds.submit_round', round_id=round_id))
+
+    prev_actual = (actual_hole_number - 1) if actual_hole_number > 1 else None
+    prev_hole = Hole.query.filter_by(round_id=round_id, hole_number=prev_actual).first() if prev_actual else None
+
+    is_edit = round_.holes.count() >= round_.holes_played
+
+    return render_template(
+        'rounds/hole.html',
+        round=round_,
+        hole_number=hole_number,
+        display_hole_number=actual_hole_number,
+        existing=existing,
+        course_par=course_par,
+        course_yardage=course_yardage,
+        total_holes=round_.holes_played,
+        prev_hole=prev_hole,
+        is_edit=is_edit
+    )
+
+
 @rounds_bp.route('/<int:round_id>/submit', methods=['GET', 'POST'])
 @login_required
 def submit_round(round_id):
     round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
 
     if request.method == 'POST':
+        current_app.logger.info(f"[submit_round] POST received for round_id={round_id}")
+
         round_.status = 'complete'
         round_.completed_at = datetime.utcnow()
 
@@ -131,21 +199,75 @@ def submit_round(round_id):
             round_.compute_totals()
             round_.compute_differential()
         except Exception as e:
-            current_app.logger.exception(f"Compute failed: {e}")
+            current_app.logger.exception(f"[submit_round] compute failed: {e}")
 
         db.session.commit()
 
         try:
             _recalculate_handicap(current_user)
         except Exception as e:
-            current_app.logger.exception(f"Handicap failed: {e}")
+            current_app.logger.exception(f"[submit_round] Handicap recalc failed: {e}")
 
         try:
             generate_report(round_)
             send_report_email(round_)
+            flash('Your round has been saved and your report is on its way!', 'success')
         except Exception:
-            pass
+            flash('Round saved! Report generation is in the queue.', 'info')
 
         return redirect(url_for('dashboard.index'))
 
-    return render_template('rounds/submit.html', round=round_)
+    holes = round_.holes.all()
+    return render_template('rounds/submit.html', round=round_, holes=holes)
+
+
+@rounds_bp.route('/<int:round_id>/reopen', methods=['POST'])
+@login_required
+def reopen_round(round_id):
+    round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
+    round_.status = 'in_progress'
+    db.session.commit()
+    return redirect(url_for('rounds.edit_round_meta', round_id=round_id))
+
+
+@rounds_bp.route('/<int:round_id>/edit-meta', methods=['GET', 'POST'])
+@login_required
+def edit_round_meta(round_id):
+    round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
+
+    if request.method == 'POST':
+        date_str = request.form.get('date_played', '').strip()
+        tee_label = request.form.get('tee_set', '').strip()
+        tee_set_id_str = request.form.get('tee_set_id', '').strip()
+
+        if date_str:
+            round_.date_played = datetime.strptime(date_str, '%Y-%m-%d').date()
+        if tee_label:
+            round_.tee_set = tee_label
+        if tee_set_id_str:
+            try:
+                round_.tee_set_id = int(tee_set_id_str)
+            except ValueError:
+                pass
+
+        db.session.commit()
+        return redirect(url_for('rounds.enter_hole', round_id=round_id, hole_number=1))
+
+    course_external_id = round_.course.external_id if round_.course else None
+
+    return render_template(
+        'rounds/edit_meta.html',
+        round=round_,
+        course_external_id=course_external_id,
+        current_tee_id=round_.tee_set_id
+    )
+
+
+@rounds_bp.route('/<int:round_id>/delete', methods=['POST'])
+@login_required
+def delete_round(round_id):
+    round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
+    db.session.delete(round_)
+    db.session.commit()
+    flash('Round deleted.', 'info')
+    return redirect(url_for('dashboard.index'))
