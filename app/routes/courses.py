@@ -81,7 +81,10 @@ def debug_raw_course(course_id):
 @courses_bp.route('/api/courses/search')
 @login_required
 def search_courses():
-    from rapidfuzz import fuzz as _fuzz
+    try:
+        from rapidfuzz import fuzz as _fuzz
+    except ImportError:
+        _fuzz = None
 
     q       = request.args.get('q', '').strip()
     country = request.args.get('country', '').strip() or None
@@ -94,7 +97,8 @@ def search_courses():
 
         # If the primary query returns few results, broaden by trimming 2 chars
         # (e.g. "foxhill" → "foxhi" finds "Foxhills"). Merge, dedup by id+name.
-        if len(results) < 5 and len(q) >= 5:
+        # Always broaden to catch club siblings
+    if len(q) >= 5:
             short_q = q[:max(4, len(q) - 2)]
             broader = api_search(query=short_q, country=country)
             seen = {(r.get('id'), (r.get('name') or '').lower()) for r in results}
@@ -165,7 +169,25 @@ def search_courses():
 
     # Pre-compute scores once, filter results below 50% similarity, sort desc
     scored   = [(r, _score(r)) for r in results]
-    filtered = [(r, s) for r, s in scored if s[1] >= 50]
+    # Club boost: if any result scores >= 60%, include all courses sharing that club prefix
+    boosted_prefixes = set()
+    for r, s in scored:
+        if s[1] >= 60:
+            name = (r.get('name') or '').lower()
+            for sep in (' — ', ' - ', ' ('):
+                if sep in name:
+                    boosted_prefixes.add(name.split(sep)[0].strip())
+                    break
+            else:
+                boosted_prefixes.add(name.strip())
+
+    def _is_boosted(r):
+        if not boosted_prefixes: return False
+        name = (r.get('name') or '').lower()
+        return any(name.startswith(p) for p in boosted_prefixes)
+
+    # Keep >= 35% OR boosted by a high-scoring club sibling
+    filtered = [(r, s) for r, s in scored if s[1] >= 35 or _is_boosted(r)]
     filtered.sort(key=lambda x: x[1], reverse=True)
 
     return jsonify([r for r, _ in filtered])
