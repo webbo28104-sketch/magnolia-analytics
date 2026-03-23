@@ -190,9 +190,17 @@ def enter_hole(round_id, hole_number):
         else:
             return redirect(url_for('rounds.submit_round', round_id=round_id))
 
-    prev_actual = (actual_hole_number - 1) if actual_hole_number > 1 else None
-    prev_hole   = Hole.query.filter_by(round_id=round_id, hole_number=prev_actual).first() if prev_actual else None
     is_edit     = round_.holes.count() >= round_.holes_played
+
+    # Running totals for all completed holes before this one
+    completed_before = Hole.query.filter(
+        Hole.round_id == round_id,
+        Hole.hole_number < actual_hole_number,
+        Hole.score.isnot(None)
+    ).all()
+    running_gross   = sum(h.score for h in completed_before)
+    running_vs_par  = sum((h.score - h.par) for h in completed_before if h.par)
+    holes_completed = len(completed_before)
 
     completed_hole_numbers = {h.hole_number for h in round_.holes.all()}
 
@@ -205,7 +213,9 @@ def enter_hole(round_id, hole_number):
         course_par=course_par,
         course_yardage=course_yardage,
         total_holes=round_.holes_played,
-        prev_hole=prev_hole,
+        running_gross=running_gross,
+        running_vs_par=running_vs_par,
+        holes_completed=holes_completed,
         is_edit=is_edit,
         completed_hole_numbers=completed_hole_numbers,
     )

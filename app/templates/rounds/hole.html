@@ -446,10 +446,9 @@
       <div class="he-hole-num">HOLE {{ display_hole_number }}</div>
       <div class="he-hole-info">Par {{ init_par }}{% if course_yardage %} · {{ course_yardage }} yds{% endif %}</div>
 
-      {% if prev_hole %}
-      {% set vp = prev_hole.score_vs_par %}
-      <div class="he-prev-pill he-prev-pill--{{ 'under' if vp < 0 else ('par' if vp == 0 else ('bogey' if vp == 1 else 'double')) }}">
-        Prev: {{ prev_hole.score }} ({% if vp > 0 %}+{{ vp }}{% elif vp < 0 %}{{ vp }}{% else %}E{% endif %})
+      {% if holes_completed > 0 %}
+      <div class="he-prev-pill he-prev-pill--{{ 'under' if running_vs_par < 0 else ('par' if running_vs_par == 0 else ('bogey' if running_vs_par <= 3 else 'double')) }}">
+        Thru {{ holes_completed }}: {{ running_gross }} ({% if running_vs_par > 0 %}+{{ running_vs_par }}{% elif running_vs_par < 0 %}{{ running_vs_par }}{% else %}E{% endif %})
       </div>
       {% endif %}
     </div>

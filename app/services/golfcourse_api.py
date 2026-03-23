@@ -107,8 +107,8 @@ def get_course_details(course_id):
         "city": str,
         "region": str,
         "country": str,
-        "lat": float | None,
-        "lng": float | None,
+        "lat": float,
+        "lng": float,
         "holes": int,
         "par": int,
         "tees": [
@@ -118,10 +118,10 @@ def get_course_details(course_id):
                 "gender": "M" | "W" | "X",
                 "course_rating": float,
                 "slope_rating": int,
-                "total_yardage": int | None,
+                "total_yardage": int,
                 "total_par": int,
                 "holes": [
-                    {"hole_number": int, "par": int, "yardage": int | None, "stroke_index": int | None},
+                    {"hole_number": int, "par": int, "yardage": int, "stroke_index": int},
                     ...  # 18 items
                 ]
             },

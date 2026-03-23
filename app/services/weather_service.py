@@ -63,7 +63,7 @@ def _wmo_label(code) -> str:
     return _WMO_CONDITIONS.get(int(code), f'Code {code}')
 
 
-def fetch_weather(lat: float, lng: float, date_played: date_type) -> dict | None:
+def fetch_weather(lat: float, lng: float, date_played: date_type):
     """
     Fetch hourly weather from Open-Meteo archive API for a given location
     and date. Returns the midday (12:00) snapshot, or None on any failure.
@@ -126,7 +126,7 @@ def fetch_weather(lat: float, lng: float, date_played: date_type) -> dict | None
         return None
 
 
-def get_round_weather(round_) -> dict | None:
+def get_round_weather(round_):
     """
     Return weather dict for the given round.
 

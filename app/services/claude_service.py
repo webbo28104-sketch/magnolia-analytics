@@ -211,7 +211,7 @@ _NARRATIVE_FALLBACK = (
 )
 
 
-def _build_narrative_prompt(round_, sg_data: dict, weather: dict | None, calendar_ctx: dict) -> str:
+def _build_narrative_prompt(round_, sg_data: dict, weather, calendar_ctx: dict) -> str:
     """
     Build the prompt for the 3-paragraph narrative.
     Passes all assembled stats so Claude can write specific, data-led coaching.
@@ -307,7 +307,7 @@ Rules:
 Output only the 3 paragraphs, separated by a blank line. Begin immediately."""
 
 
-def generate_narrative(round_, sg_data: dict, weather: dict | None, calendar_ctx: dict) -> str:
+def generate_narrative(round_, sg_data: dict, weather, calendar_ctx: dict) -> str:
     """
     Generate and cache a 3-paragraph coaching narrative for the round.
 

@@ -148,7 +148,7 @@ def get_calendar_context(date_played: date) -> dict:
     Return a dict of calendar context for the given date:
 
         {
-            "bank_holiday": str | None,   # name of nearby UK bank holiday
+            "bank_holiday": str,   # name of nearby UK bank holiday
             "golf_event":   str | None,   # name of nearby major golf event
             "notable":      str | None,   # notable cultural/personal date
             "season":       str,          # e.g. "Summer Season"
