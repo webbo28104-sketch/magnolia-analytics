@@ -576,12 +576,10 @@
 
   <!-- ── Sticky next button ─────────────────────────────────────────── -->
   <div class="he-next-wrap">
-    {% if is_edit %}
     <button type="button" class="he-skip-btn"
             onclick="window.location.href='{{ url_for('rounds.submit_round', round_id=round.id) }}'">
-      Skip to Submit →
+      {% if is_edit %}Skip to Submit →{% else %}Submit Round Early →{% endif %}
     </button>
-    {% endif %}
     <button type="submit" form="hole-form" class="he-next-btn">
       {% if hole_number < total_holes %}Hole {{ display_hole_number + 1 }} →{% else %}Review Round →{% endif %}
     </button>
