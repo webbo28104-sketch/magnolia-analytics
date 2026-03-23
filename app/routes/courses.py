@@ -81,6 +81,8 @@ def debug_raw_course(course_id):
 @courses_bp.route('/api/courses/search')
 @login_required
 def search_courses():
+    from rapidfuzz import fuzz as _fuzz
+
     q       = request.args.get('q', '').strip()
     country = request.args.get('country', '').strip() or None
 
@@ -89,11 +91,45 @@ def search_courses():
 
     try:
         results = api_search(query=q, country=country)
+
+        # If the primary query returns few results, broaden by trimming 2 chars
+        # (e.g. "foxhill" → "foxhi" finds "Foxhills"). Merge, dedup by id+name.
+        if len(results) < 5 and len(q) >= 5:
+            short_q = q[:max(4, len(q) - 2)]
+            broader = api_search(query=short_q, country=country)
+            seen = {(r.get('id'), (r.get('name') or '').lower()) for r in results}
+            for r in broader:
+                key = (r.get('id'), (r.get('name') or '').lower())
+                if key not in seen:
+                    results.append(r)
+                    seen.add(key)
+
     except GolfCourseAPIError as e:
         return jsonify({'error': str(e)}), 502
 
-    # Country priority re-sort — matching results float to the top, no results hidden.
-    # UK variants: API may return "United Kingdom" for courses in England/Scotland/Wales.
+    # Supplement with locally cached courses — catches previously searched courses
+    # even when the external API misses them (ILIKE handles case-insensitivity).
+    q_like = f"%{q}%"
+    cached = Course.query.filter(Course.name.ilike(q_like)).limit(15).all()
+    api_ids = {str(r.get('id')) for r in results if r.get('id') is not None}
+    for cached_course in cached:
+        ext = str(cached_course.external_id) if cached_course.external_id else None
+        if ext not in api_ids:
+            results.append({
+                'id':      ext,
+                'name':    cached_course.name,
+                'city':    cached_course.city    or '',
+                'region':  cached_course.region  or '',
+                'country': cached_course.country or '',
+                'lat':     cached_course.lat,
+                'lng':     cached_course.lng,
+                'holes':   cached_course.holes,
+                'par':     cached_course.par,
+            })
+            if ext:
+                api_ids.add(ext)
+
+    # ── Country priority ──────────────────────────────────────────────────────────────
     UK_VARIANTS = {'england', 'scotland', 'wales', 'ireland',
                    'united kingdom', 'uk', 'great britain', 'northern ireland'}
 
@@ -105,30 +141,34 @@ def search_courses():
 
     q_lower = q.lower()
 
+    # ── Fuzzy scoring ──────────────────────────────────────────────────────────────────
+    # partial_ratio handles substrings/prefixes; token_set_ratio handles word
+    # reordering and extra words (e.g. "Foxhills Golf Club" vs "foxhill").
     def _score(r):
-        name    = (r.get('name')    or '').lower()
-        city    = (r.get('city')    or '').lower()
-        region  = (r.get('region')  or '').lower()
+        name        = (r.get('name')    or '').lower()
+        city        = (r.get('city')    or '').lower()
+        region      = (r.get('region')  or '').lower()
         country_val = (r.get('country') or '').lower()
 
-        # Relevance: 3 = name starts with query, 2 = name contains, 1 = city/region contains
-        if name.startswith(q_lower):
-            relevance = 3
-        elif q_lower in name:
-            relevance = 2
-        elif q_lower in city or q_lower in region:
-            relevance = 1
-        else:
-            relevance = 0
+        name_sim = max(
+            _fuzz.partial_ratio(q_lower, name),
+            _fuzz.token_set_ratio(q_lower, name),
+        )
+        loc_sim = max(
+            _fuzz.partial_ratio(q_lower, city),
+            _fuzz.partial_ratio(q_lower, region),
+        ) // 2   # location match weighted at half
 
-        # Country bonus: 1 if result matches selected country preference
+        relevance     = max(name_sim, loc_sim)
         country_bonus = 1 if (match_set and country_val in match_set) else 0
-
         return (country_bonus, relevance)
 
-    results = sorted(results, key=_score, reverse=True)
+    # Pre-compute scores once, filter results below 50% similarity, sort desc
+    scored   = [(r, _score(r)) for r in results]
+    filtered = [(r, s) for r, s in scored if s[1] >= 50]
+    filtered.sort(key=lambda x: x[1], reverse=True)
 
-    return jsonify(results)
+    return jsonify([r for r, _ in filtered])
 
 
 # ---------------------------------------------------------------------------
