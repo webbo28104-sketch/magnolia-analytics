@@ -64,6 +64,7 @@
     text-decoration: none;
     letter-spacing: .04em;
     opacity: .75;
+    padding: 8px 12px 8px 0;
   }
   .he-back-link:hover { opacity: 1; }
 
@@ -368,6 +369,51 @@
   }
   .he-next-btn:hover { opacity: .9; }
   .he-next-btn:active { opacity: .75; }
+
+  /* ── Hole navigation grid ───────────────────────────────────────────────── */
+  .he-nav-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    padding: 2px 4px 4px;
+    background: var(--he-green);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .he-nav-dot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    pointer-events: auto;
+  }
+  .he-nav-dot-inner {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .6rem;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0;
+    border: 1.5px solid rgba(201,168,76,.3);
+    color: rgba(201,168,76,.4);
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  /* Completed hole */
+  .he-nav-dot--done .he-nav-dot-inner {
+    background: rgba(201,168,76,.18);
+    border-color: rgba(201,168,76,.65);
+    color: var(--he-gold);
+  }
+  /* Current hole */
+  .he-nav-dot--current .he-nav-dot-inner {
+    background: var(--he-gold);
+    border-color: var(--he-gold);
+    color: var(--he-green);
+  }
 </style>
 {% endblock %}
 
@@ -408,6 +454,21 @@
       {% endif %}
     </div>
   </header>
+
+  {# ── Hole navigation grid ────────────────────────────────────────────────── #}
+  {%- set nav_offset = display_hole_number - hole_number %}
+  <nav class="he-nav-grid" aria-label="Hole navigation">
+    {%- for n in range(1, total_holes + 1) %}
+    {%- set dn = n + nav_offset %}
+    {%- set is_curr = (n == hole_number) %}
+    {%- set is_done = (dn in completed_hole_numbers) and not is_curr %}
+    <a href="{{ url_for('rounds.enter_hole', round_id=round.id, hole_number=n) }}"
+       class="he-nav-dot{%- if is_curr %} he-nav-dot--current{%- elif is_done %} he-nav-dot--done{%- endif %}"
+       aria-label="Hole {{ dn }}">
+      <span class="he-nav-dot-inner">{{ dn }}</span>
+    </a>
+    {%- endfor %}
+  </nav>
 
   <!-- ── Form ──────────────────────────────────────────────────────────── -->
   <form method="POST"
