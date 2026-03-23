@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
-{% block title %}Hole {{ display_hole_number }} — Magnolia Analytics{% endblock %}
+{% block title %}Hole {{ display_hole_number }} â Magnolia Analytics{% endblock %}
 
 {% block head %}
 <style>
-  /* ── Design tokens ─────────────────────────────────────────────────────── */
+  /* ââ Design tokens âââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
   :root {
     --he-green:   #1a2e1a;
     --he-gold:    #c9a84c;
@@ -15,7 +15,7 @@
     --he-nav:     60px;   /* height of the app navbar */
   }
 
-  /* ── Page shell ────────────────────────────────────────────────────────── */
+  /* ââ Page shell ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
   body { background: var(--he-cream) !important; }
 
   .he-page {
@@ -25,7 +25,7 @@
     font-family: 'DM Sans', system-ui, sans-serif;
   }
 
-  /* ── Sticky header ─────────────────────────────────────────────────────── */
+  /* ââ Sticky header âââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
   .he-header {
     position: sticky;
     top: var(--he-nav);
@@ -36,7 +36,7 @@
     box-shadow: 0 2px 8px rgba(0,0,0,.25);
   }
 
-  /* Progress bar — full width flush at very top */
+  /* Progress bar â full width flush at very top */
   .he-progress {
     height: 4px;
     background: rgba(255,255,255,.15);
@@ -67,7 +67,7 @@
   }
   .he-back-link:hover { opacity: 1; }
 
-  /* HOLE XX — large Playfair italic gold */
+  /* HOLE XX â large Playfair italic gold */
   .he-hole-num {
     font-family: 'Playfair Display', Georgia, serif;
     font-style: italic;
@@ -78,7 +78,7 @@
     margin-top: 4px;
   }
 
-  /* Par · yardage — DM Mono small-caps cream */
+  /* Par Â· yardage â DM Mono small-caps cream */
   .he-hole-info {
     font-family: 'DM Mono', monospace;
     font-size: .7rem;
@@ -105,7 +105,7 @@
   .he-prev-pill--bogey  { background: #a07800; color: #fff; }
   .he-prev-pill--double { background: var(--he-red); color: #fff; }
 
-  /* ── Form card ──────────────────────────────────────────────────────────── */
+  /* ââ Form card ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
   .he-form {
     padding: 0 16px;
     margin-top: 16px;
@@ -114,7 +114,7 @@
     gap: 0;
   }
 
-  /* ── Field sections ─────────────────────────────────────────────────────── */
+  /* ââ Field sections âââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
   .he-field {
     padding: 18px 0 16px;
     border-bottom: 1px solid var(--he-border);
@@ -140,7 +140,7 @@
     margin-left: .3em;
   }
 
-  /* ── Score stepper (large Playfair) ─────────────────────────────────────── */
+  /* ââ Score stepper (large Playfair) âââââââââââââââââââââââââââââââââââââââ */
   .he-score-row {
     display: flex;
     align-items: center;
@@ -236,7 +236,7 @@
     line-height: 1;
   }
 
-  /* ── Pill tap buttons ────────────────────────────────────────────────────── */
+  /* ââ Pill tap buttons ââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
   .he-pills {
     display: flex;
     flex-wrap: wrap;
@@ -269,7 +269,7 @@
     border-color: var(--he-green);
   }
 
-  /* ── Bottom-border exact input ───────────────────────────────────────────── */
+  /* ââ Bottom-border exact input âââââââââââââââââââââââââââââââââââââââââââââ */
   .he-exact {
     display: block;
     width: 100%;
@@ -291,7 +291,7 @@
     border-bottom-color: var(--he-gold);
   }
 
-  /* ── Progressive disclosure ──────────────────────────────────────────────── */
+  /* ââ Progressive disclosure ââââââââââââââââââââââââââââââââââââââââââââââââ */
   .he-reveal {
     display: grid;
     grid-template-rows: 0fr;
@@ -306,7 +306,7 @@
     overflow: hidden;
   }
 
-  /* ── Penalties (de-emphasised) ───────────────────────────────────────────── */
+  /* ââ Penalties (de-emphasised) âââââââââââââââââââââââââââââââââââââââââââââ */
   .he-field--muted .he-label { color: #bbb; }
   .he-field--muted .he-mini-val { color: var(--he-muted); font-size: 1.2rem; }
   .he-field--muted .he-mini-btn {
@@ -316,7 +316,7 @@
     color: var(--he-muted);
   }
 
-  /* ── Sticky next button ──────────────────────────────────────────────────── */
+  /* ââ Sticky next button ââââââââââââââââââââââââââââââââââââââââââââââââââââ */
   .he-next-wrap {
     position: fixed;
     bottom: 0;
@@ -380,9 +380,9 @@
 
 <div class="he-page">
 
-  <!-- ── Sticky header ──────────────────────────────────────────────────── -->
+  <!-- ââ Sticky header ââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
   <header class="he-header">
-    <!-- Gold progress bar — flush at very top, full width -->
+    <!-- Gold progress bar â flush at very top, full width -->
     <div class="he-progress">
       <div class="he-progress-fill" style="width:{{ (hole_number / total_holes * 100)|int }}%"></div>
     </div>
@@ -391,13 +391,13 @@
     <div class="he-header-body">
       {% if hole_number > 1 %}
       <a href="{{ url_for('rounds.enter_hole', round_id=round.id, hole_number=hole_number - 1) }}"
-         class="he-back-link">← H{{ display_hole_number - 1 }}</a>
+         class="he-back-link">â H{{ display_hole_number - 1 }}</a>
       {% else %}
-      <a href="{{ url_for('dashboard.index') }}" class="he-back-link">← Back</a>
+      <a href="{{ url_for('dashboard.index') }}" class="he-back-link">â Back</a>
       {% endif %}
 
       <div class="he-hole-num">HOLE {{ display_hole_number }}</div>
-      <div class="he-hole-info">Par {{ init_par }}{% if course_yardage %} · {{ course_yardage }} yds{% endif %}</div>
+      <div class="he-hole-info">Par {{ init_par }}{% if course_yardage %} Â· {{ course_yardage }} yds{% endif %}</div>
 
       {% if prev_hole %}
       {% set vp = prev_hole.score_vs_par %}
@@ -408,20 +408,20 @@
     </div>
   </header>
 
-  <!-- ── Form ──────────────────────────────────────────────────────────── -->
+  <!-- ââ Form ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
   <form method="POST"
         action="{{ url_for('rounds.enter_hole', round_id=round.id, hole_number=hole_number) }}"
         id="hole-form"
         class="he-form">
 
-    <!-- par comes from server only — not user-selectable -->
+    <!-- par comes from server only â not user-selectable -->
     <input type="hidden" name="par" id="par-input" value="{{ init_par }}">
 
-    <!-- 1. Score ──────────────────────────────────────────────────────── -->
+    <!-- 1. Score ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
     <div class="he-field">
       <label class="he-label">Score</label>
       <div class="he-score-row">
-        <button type="button" class="he-stepper-btn" id="score-down">−</button>
+        <button type="button" class="he-stepper-btn" id="score-down">â</button>
         <span class="he-score-val" id="score-display">{{ init_score }}</span>
         <button type="button" class="he-stepper-btn" id="score-up">+</button>
       </div>
@@ -429,7 +429,7 @@
       <input type="hidden" name="score" id="score-input" value="{{ init_score }}">
     </div>
 
-    <!-- 2. Tee shot (hidden for par 3) ───────────────────────────────── -->
+    <!-- 2. Tee shot (hidden for par 3) âââââââââââââââââââââââââââââââââ -->
     <div class="he-field he-reveal{% if init_par != 3 %} is-visible{% endif %}" id="tee-shot-reveal">
       <div class="he-reveal-inner">
         <label class="he-label">Tee shot</label>
@@ -446,7 +446,7 @@
           <text x="150" y="43" text-anchor="middle" fill="rgba(255,255,255,.9)"  font-size="10" font-family="DM Mono,monospace" letter-spacing="1">FAIRWAY</text>
           <text x="255" y="46" text-anchor="middle" fill="rgba(255,255,255,.8)"  font-size="10" font-family="DM Mono,monospace" letter-spacing="1">RIGHT</text>
           <!-- Fairway checkmark (shown when fairway selected) -->
-          <text id="ts-check" x="150" y="38" text-anchor="middle" fill="white" font-size="22" visibility="hidden">✓</text>
+          <text id="ts-check" x="150" y="38" text-anchor="middle" fill="white" font-size="22" visibility="hidden">â</text>
         </svg>
         <div style="text-align:center;margin-top:10px">
           <button type="button" class="he-pill" id="ts-penalty-btn">Penalty</button>
@@ -456,11 +456,11 @@
       </div>
     </div>
 
-    <!-- 3. Approach distance (always visible) ────────────────────────── -->
+    <!-- 3. Approach distance (always visible) ââââââââââââââââââââââââââ -->
     <div class="he-field">
       <label class="he-label">Approach distance (yds)</label>
       <div class="he-pills he-pills--wrap" id="approach-dist-pills">
-        {% for val, label in [(75,'50–100'), (112,'100–125'), (137,'125–150'), (162,'150–175'), (187,'175–200'), (212,'200–225'), (237,'225–250'), (999,'250+')] %}
+        {% for val, label in [(75,'50â100'), (112,'100â125'), (137,'125â150'), (162,'150â175'), (187,'175â200'), (212,'200â225'), (237,'225â250'), (999,'250+')] %}
         <button type="button"
                 class="he-pill{% if existing and existing.approach_distance == val %} is-active{% endif %}"
                 data-field="approach_dist_bucket" data-value="{{ val }}"
@@ -468,18 +468,18 @@
         {% endfor %}
       </div>
       <input type="number" id="approach-dist-exact" class="he-exact"
-             placeholder="or exact yds…" min="1" max="600"
+             placeholder="or exact ydsâ¦" min="1" max="600"
              value="{{ existing.approach_distance if existing and existing.approach_distance else '' }}">
       <input type="hidden" name="approach_distance" id="approach-distance-input"
              value="{{ existing.approach_distance or '' }}">
     </div>
 
-    <!-- 4. Second shot distance (par 5 only) ─────────────────────────── -->
+    <!-- 4. Second shot distance (par 5 only) âââââââââââââââââââââââââââ -->
     <div class="he-field he-reveal{% if init_par == 5 %} is-visible{% endif %}" id="second-shot-reveal">
       <div class="he-reveal-inner">
         <label class="he-label">2nd shot distance (yds)</label>
         <div class="he-pills he-pills--wrap" id="second-shot-pills">
-          {% for val, label in [(100,'&lt;100'), (125,'100–125'), (150,'125–150'), (175,'150–175'), (200,'175–200'), (225,'200–225'), (250,'225–250'), (999,'250+')] %}
+          {% for val, label in [(100,'&lt;100'), (125,'100â125'), (150,'125â150'), (175,'150â175'), (200,'175â200'), (225,'200â225'), (250,'225â250'), (999,'250+')] %}
           <button type="button"
                   class="he-pill{% if existing and existing.second_shot_distance == val %} is-active{% endif %}"
                   data-field="second_shot_bucket" data-value="{{ val }}"
@@ -487,14 +487,14 @@
           {% endfor %}
         </div>
         <input type="number" id="second-shot-exact" class="he-exact"
-               placeholder="or exact yds…" min="1" max="600"
+               placeholder="or exact ydsâ¦" min="1" max="600"
                value="{{ existing.second_shot_distance if existing and existing.second_shot_distance else '' }}">
         <input type="hidden" name="second_shot_distance" id="second-shot-distance-input"
                value="{{ existing.second_shot_distance or '' }}">
       </div>
     </div>
 
-    <!-- 5. Miss direction (always visible; blank = GIR) ─────────────── -->
+    <!-- 5. Miss direction (always visible; blank = GIR) âââââââââââââââ -->
     <div class="he-field">
       <label class="he-label">Miss direction <span class="he-label-hint">leave blank if GIR</span></label>
       <div class="he-pills" id="miss-pills">
@@ -508,7 +508,7 @@
              value="{{ existing.approach_miss or '' }}">
     </div>
 
-    <!-- 6. Scramble section (revealed when miss is selected) ─────────── -->
+    <!-- 6. Scramble section (revealed when miss is selected) âââââââââââ -->
     <div class="he-reveal{% if init_miss %} is-visible{% endif %}" id="scramble-reveal">
       <div class="he-reveal-inner">
 
@@ -516,14 +516,14 @@
         <div class="he-field">
           <label class="he-label">Short game distance (yds)</label>
           <div class="he-pills he-pills--wrap" id="scramble-pills">
-            {% for option, label in [('fringe','Fringe'), ('0_10','0–10'), ('10_20','10–20'), ('20_40','20–40'), ('40_plus','40+')] %}
+            {% for option, label in [('fringe','Fringe'), ('0_10','0â10'), ('10_20','10â20'), ('20_40','20â40'), ('40_plus','40+')] %}
             <button type="button"
                     class="he-pill{% if existing and existing.scramble_distance == option %} is-active{% endif %}"
                     data-field="scramble_distance" data-value="{{ option }}">{{ label }}</button>
             {% endfor %}
           </div>
           <input type="number" id="scramble-dist-exact" class="he-exact"
-                 placeholder="or exact yds…" min="0" value="">
+                 placeholder="or exact ydsâ¦" min="0" value="">
           <input type="hidden" name="scramble_distance" id="scramble-distance-input"
                  value="{{ existing.scramble_distance or '' }}">
         </div>
@@ -533,18 +533,18 @@
       </div>
     </div>
 
-    <!-- 7. Putts ─────────────────────────────────────────────────────── -->
+    <!-- 7. Putts âââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
     <div class="he-field">
       <label class="he-label">Putts</label>
       <div class="he-mini-row">
-        <button type="button" class="he-mini-btn" id="putts-down">−</button>
+        <button type="button" class="he-mini-btn" id="putts-down">â</button>
         <span class="he-mini-val" id="putts-display">{{ init_putts }}</span>
         <button type="button" class="he-mini-btn" id="putts-up">+</button>
       </div>
       <input type="hidden" name="putts" id="putts-input" value="{{ init_putts }}">
     </div>
 
-    <!-- 8. First putt distance ───────────────────────────────────────── -->
+    <!-- 8. First putt distance âââââââââââââââââââââââââââââââââââââââââ -->
     <div class="he-field">
       <label class="he-label">First putt distance (ft)</label>
       <div class="he-pills" id="first-putt-pills">
@@ -555,17 +555,17 @@
         {% endfor %}
       </div>
       <input type="number" id="first-putt-exact" class="he-exact"
-             placeholder="or exact ft…" min="1" max="200"
+             placeholder="or exact ftâ¦" min="1" max="200"
              value="{{ existing.first_putt_distance if existing and existing.first_putt_distance else '' }}">
       <input type="hidden" name="first_putt_distance" id="first-putt-input"
              value="{{ existing.first_putt_distance or '' }}">
     </div>
 
-    <!-- 9. Penalties (de-emphasised) ────────────────────────────────── -->
+    <!-- 9. Penalties (de-emphasised) ââââââââââââââââââââââââââââââââââ -->
     <div class="he-field he-field--muted">
       <label class="he-label">Penalty strokes</label>
       <div class="he-mini-row">
-        <button type="button" class="he-mini-btn" id="penalties-down">−</button>
+        <button type="button" class="he-mini-btn" id="penalties-down">â</button>
         <span class="he-mini-val" id="penalties-display">{{ init_penalties }}</span>
         <button type="button" class="he-mini-btn" id="penalties-up">+</button>
       </div>
@@ -574,14 +574,14 @@
 
   </form>
 
-  <!-- ── Sticky next button ─────────────────────────────────────────── -->
+  <!-- ââ Sticky next button âââââââââââââââââââââââââââââââââââââââââââ -->
   <div class="he-next-wrap">
-    <button type="button" class="he-skip-btn"
-            onclick="window.location.href='{{ url_for('rounds.submit_round', round_id=round.id) }}'">
+    <a class="he-skip-btn"
+       href="{{ url_for('rounds.submit_round', round_id=round.id) }}">
       {% if is_edit %}Skip to Submit →{% else %}Submit Round Early →{% endif %}
-    </button>
+    </a>
     <button type="submit" form="hole-form" class="he-next-btn">
-      {% if hole_number < total_holes %}Hole {{ display_hole_number + 1 }} →{% else %}Review Round →{% endif %}
+      {% if hole_number < total_holes %}Hole {{ display_hole_number + 1 }} â{% else %}Review Round â{% endif %}
     </button>
   </div>
 
