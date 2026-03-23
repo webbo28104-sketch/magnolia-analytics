@@ -17,6 +17,90 @@
 .hcp-display { font-family: 'Playfair Display', Georgia, serif; font-size: 2.4rem; font-weight: 700; color: var(--green, #1a2e1a); line-height: 1; }
 .hcp-note { font-family: 'DM Mono', monospace; font-size: .65rem; letter-spacing: .05em; color: var(--text-muted); margin-top: .4rem; }
 .profile-save-row { display: flex; justify-content: flex-end; margin-top: 1.25rem; }
+
+/* Lifetime stat pills */
+.lifetime-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .75rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.lifetime-stat { text-align: center; }
+.lifetime-val {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--green, #1a2e1a);
+  line-height: 1;
+}
+.lifetime-lbl {
+  font-family: 'DM Mono', monospace;
+  font-size: .6rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: .35rem;
+}
+
+/* Stats section */
+.stats-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+@media (max-width: 400px) {
+  .stats-split { grid-template-columns: 1fr; }
+}
+.stats-group-label {
+  font-family: 'DM Mono', monospace;
+  font-size: .65rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--gold, #c9a84c);
+  margin-bottom: .85rem;
+  font-weight: 600;
+}
+.stat-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: .45rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.stat-line:last-child { border-bottom: none; }
+.stat-line-label {
+  font-family: 'DM Mono', monospace;
+  font-size: .65rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.stat-line-val {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--green, #1a2e1a);
+}
+.stat-line-val--muted {
+  font-family: 'DM Mono', monospace;
+  font-size: .75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.stats-empty {
+  font-family: 'DM Mono', monospace;
+  font-size: .7rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 1rem 0 .25rem;
+}
+.stats-divider {
+  width: 1px;
+  background: var(--border);
+  margin: 0 .25rem;
+}
 </style>
 {% endblock %}
 
@@ -26,12 +110,89 @@
     <h1 class="form-page-title">Profile &amp; Settings</h1>
     <p class="form-page-subtitle">Your details are shown on every report. Your home country prioritises course search results.</p>
   </div>
-  <!-- Handicap (read-only) -->
+
+  <!-- Handicap + lifetime stats -->
   <div class="profile-section">
     <div class="profile-section-title">Handicap Index</div>
     <div class="hcp-display">{{ '%.1f'|format(current_user.handicap_index or 0) }}</div>
     <div class="hcp-note">Auto-calculated from your last 20 rounds using the WHS method. Submit rounds to update.</div>
+
+    <div class="lifetime-row">
+      <div class="lifetime-stat">
+        <div class="lifetime-val">{{ lifetime.holes_in_one }}</div>
+        <div class="lifetime-lbl">Holes in One</div>
+      </div>
+      <div class="lifetime-stat">
+        <div class="lifetime-val">{{ lifetime.total_birdies }}</div>
+        <div class="lifetime-lbl">Birdies</div>
+      </div>
+      <div class="lifetime-stat">
+        <div class="lifetime-val">{{ lifetime.courses_played }}</div>
+        <div class="lifetime-lbl">Courses Played</div>
+      </div>
+    </div>
   </div>
+
+  <!-- Stats: 9-hole vs 18-hole -->
+  <div class="profile-section">
+    <div class="profile-section-title">Your Stats</div>
+
+    <div class="stats-split">
+      <!-- 9-hole -->
+      <div>
+        <div class="stats-group-label">9 holes{% if stats_9 %} · {{ stats_9.count }} round{{ 's' if stats_9.count != 1 }}{% endif %}</div>
+        {% if stats_9 %}
+        <div class="stat-line">
+          <span class="stat-line-label">Avg Score</span>
+          <span class="stat-line-val">{{ stats_9.avg_score if stats_9.avg_score else '—' }}</span>
+        </div>
+        <div class="stat-line">
+          <span class="stat-line-label">GIR%</span>
+          <span class="stat-line-val">{{ stats_9.gir_pct }}%</span>
+        </div>
+        <div class="stat-line">
+          <span class="stat-line-label">Scramble%</span>
+          <span class="stat-line-val">{{ stats_9.scramble_pct ~ '%' if stats_9.scramble_pct is not none else '—' }}</span>
+        </div>
+        <div class="stat-line">
+          <span class="stat-line-label">Putts/hole</span>
+          <span class="stat-line-val">{{ stats_9.putts_per_hole if stats_9.putts_per_hole else '—' }}</span>
+        </div>
+        {% else %}
+        <div class="stats-empty">No 9-hole rounds yet</div>
+        {% endif %}
+      </div>
+
+      <!-- Vertical divider -->
+      <div style="position:relative">
+        <div class="stats-divider" style="position:absolute;left:0;top:0;bottom:0"></div>
+        <div style="padding-left:1.25rem">
+          <div class="stats-group-label">18 holes{% if stats_18 %} · {{ stats_18.count }} round{{ 's' if stats_18.count != 1 }}{% endif %}</div>
+          {% if stats_18 %}
+          <div class="stat-line">
+            <span class="stat-line-label">Avg Score</span>
+            <span class="stat-line-val">{{ stats_18.avg_score if stats_18.avg_score else '—' }}</span>
+          </div>
+          <div class="stat-line">
+            <span class="stat-line-label">GIR%</span>
+            <span class="stat-line-val">{{ stats_18.gir_pct }}%</span>
+          </div>
+          <div class="stat-line">
+            <span class="stat-line-label">Scramble%</span>
+            <span class="stat-line-val">{{ stats_18.scramble_pct ~ '%' if stats_18.scramble_pct is not none else '—' }}</span>
+          </div>
+          <div class="stat-line">
+            <span class="stat-line-label">Putts/hole</span>
+            <span class="stat-line-val">{{ stats_18.putts_per_hole if stats_18.putts_per_hole else '—' }}</span>
+          </div>
+          {% else %}
+          <div class="stats-empty">No 18-hole rounds yet</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Personal details + preferences -->
   <form method="POST" action="{{ url_for('profile.index') }}">
     <div class="profile-section">
