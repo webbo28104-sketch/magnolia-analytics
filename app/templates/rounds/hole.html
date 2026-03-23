@@ -555,41 +555,51 @@
       </div>
     </div>
 
-    <!-- 5. Miss direction (always visible; blank = GIR) ─────────────── -->
+    <!-- 5. GIR? ─────────────────────────────────────────────────────── -->
     <div class="he-field">
-      <label class="he-label">Miss direction <span class="he-label-hint">leave blank if GIR</span></label>
-      <div class="he-pills" id="miss-pills">
-        {% for option, label in [('left','Left'), ('right','Right'), ('short','Short'), ('long','Long'), ('bunker','Bunker')] %}
-        <button type="button"
-                class="he-pill{% if existing and existing.approach_miss == option %} is-active{% endif %}"
-                data-field="approach_miss" data-value="{{ option }}">{{ label }}</button>
-        {% endfor %}
+      <label class="he-label">GIR? <span class="he-label-hint">on the green for a birdie putt</span></label>
+      <div class="he-pills" id="gir-pills">
+        <button type="button" class="he-pill{% if existing and not existing.approach_miss %} is-active{% endif %}" id="gir-yes">Yes</button>
+        <button type="button" class="he-pill{% if init_miss %} is-active{% endif %}" id="gir-no">No</button>
       </div>
-      <input type="hidden" name="approach_miss" id="approach-miss-input"
-             value="{{ existing.approach_miss or '' }}">
     </div>
 
-    <!-- 6. Scramble section (revealed when miss is selected) ─────────── -->
-    <div class="he-reveal{% if init_miss %} is-visible{% endif %}" id="scramble-reveal">
+    <!-- 6. Miss direction + scramble (revealed when GIR = No) ───────── -->
+    <div class="he-reveal{% if init_miss %} is-visible{% endif %}" id="miss-reveal">
       <div class="he-reveal-inner">
 
-        <!-- Scramble distance -->
         <div class="he-field">
-          <label class="he-label">Short game distance (yds)</label>
-          <div class="he-pills he-pills--wrap" id="scramble-pills">
-            {% for option, label in [('fringe','Fringe'), ('0_10','0–10'), ('10_20','10–20'), ('20_40','20–40'), ('40_plus','40+')] %}
+          <label class="he-label">Miss direction</label>
+          <div class="he-pills" id="miss-pills">
+            {% for option, label in [('left','Left'), ('right','Right'), ('short','Short'), ('long','Long'), ('bunker','Bunker')] %}
             <button type="button"
-                    class="he-pill{% if existing and existing.scramble_distance == option %} is-active{% endif %}"
-                    data-field="scramble_distance" data-value="{{ option }}">{{ label }}</button>
+                    class="he-pill{% if existing and existing.approach_miss == option %} is-active{% endif %}"
+                    data-field="approach_miss" data-value="{{ option }}">{{ label }}</button>
             {% endfor %}
           </div>
-          <input type="number" id="scramble-dist-exact" class="he-exact"
-                 placeholder="or exact yds…" min="0" value="">
-          <input type="hidden" name="scramble_distance" id="scramble-distance-input"
-                 value="{{ existing.scramble_distance or '' }}">
+          <input type="hidden" name="approach_miss" id="approach-miss-input"
+                 value="{{ existing.approach_miss or '' }}">
         </div>
 
-        
+        <!-- Scramble section (revealed when miss selected) ─────────── -->
+        <div class="he-reveal{% if init_miss %} is-visible{% endif %}" id="scramble-reveal">
+          <div class="he-reveal-inner">
+            <div class="he-field">
+              <label class="he-label">Short game distance (yds)</label>
+              <div class="he-pills he-pills--wrap" id="scramble-pills">
+                {% for option, label in [('fringe','Fringe'), ('0_10','0–10'), ('10_20','10–20'), ('20_40','20–40'), ('40_plus','40+')] %}
+                <button type="button"
+                        class="he-pill{% if existing and existing.scramble_distance == option %} is-active{% endif %}"
+                        data-field="scramble_distance" data-value="{{ option }}">{{ label }}</button>
+                {% endfor %}
+              </div>
+              <input type="number" id="scramble-dist-exact" class="he-exact"
+                     placeholder="or exact yds…" min="0" value="">
+              <input type="hidden" name="scramble_distance" id="scramble-distance-input"
+                     value="{{ existing.scramble_distance or '' }}">
+            </div>
+          </div>
+        </div>
 
       </div>
     </div>

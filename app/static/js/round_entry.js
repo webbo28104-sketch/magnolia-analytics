@@ -70,17 +70,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Approach miss → show/hide scramble reveal ───────────
   function handleApproachMissChange(missValue) {
-    const scrambleReveal  = document.getElementById('scramble-reveal');
-
+    const scrambleReveal = document.getElementById('scramble-reveal');
     reveal(scrambleReveal, !!missValue);
+    if (!missValue) clearScrambleInputs();
+  }
 
-    if (!missValue) {
-      clearScrambleInputs();
-    }
 
-    if (missValue === 'bunker') {
-    } else {
-    }
+  // ── GIR toggle ──────────────────────────────────────────
+  const girYes     = document.getElementById('gir-yes');
+  const girNo      = document.getElementById('gir-no');
+  const missReveal = document.getElementById('miss-reveal');
+
+  if (girYes) {
+    girYes.addEventListener('click', () => {
+      girYes.classList.add('is-active');
+      girNo.classList.remove('is-active');
+      reveal(missReveal, false);
+      const missInput = document.getElementById('approach-miss-input');
+      if (missInput) missInput.value = '';
+      document.querySelectorAll('#miss-pills .he-pill').forEach(b => b.classList.remove('is-active'));
+      handleApproachMissChange('');
+      if (navigator.vibrate) navigator.vibrate(10);
+    });
+  }
+
+  if (girNo) {
+    girNo.addEventListener('click', () => {
+      girNo.classList.add('is-active');
+      girYes.classList.remove('is-active');
+      reveal(missReveal, true);
+      if (navigator.vibrate) navigator.vibrate(10);
+    });
   }
 
 
@@ -97,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const secondShotReveal = document.getElementById('second-shot-reveal');
   reveal(secondShotReveal, initPar === 5);
 
-  // Approach miss — applies to scramble reveal (Jinja sets is-visible from server data)
+  // Approach miss — sync scramble reveal from server-rendered value
   const missInput = document.getElementById('approach-miss-input');
   const initMiss  = missInput ? missInput.value : '';
   if (initMiss) {
