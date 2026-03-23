@@ -194,6 +194,8 @@ def enter_hole(round_id, hole_number):
     prev_hole   = Hole.query.filter_by(round_id=round_id, hole_number=prev_actual).first() if prev_actual else None
     is_edit     = round_.holes.count() >= round_.holes_played
 
+    completed_hole_numbers = {h.hole_number for h in round_.holes.all()}
+
     return render_template(
         'rounds/hole.html',
         round=round_,
@@ -204,7 +206,8 @@ def enter_hole(round_id, hole_number):
         course_yardage=course_yardage,
         total_holes=round_.holes_played,
         prev_hole=prev_hole,
-        is_edit=is_edit
+        is_edit=is_edit,
+        completed_hole_numbers=completed_hole_numbers,
     )
 
 
