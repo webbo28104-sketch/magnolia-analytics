@@ -1248,3 +1248,26 @@ h1, h2, h3, h4 {
   .glossary-grid { grid-template-columns: 1fr; }
   .glossary-grid--scores { grid-template-columns: repeat(2, 1fr); }
 }
+
+
+/* ── Global touch-target baseline ──────────────────────────────────────────── */
+/* Suppress the default tap flash on all interactive elements */
+a, button, [role="button"],
+input[type="submit"], input[type="button"], input[type="reset"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Nav links: text-only links in the top bar have no height set.
+   Give them a 44px touch area using inline-flex + min-height so the
+   visual size is unchanged but the tap region meets WCAG 2.5.5. */
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+/* .btn already has padding: 12px 24px which produces ~44px total height — 
+   guard with min-height so custom font sizes don’t shrink it below 44px. */
+.btn {
+  min-height: 44px;
+}
