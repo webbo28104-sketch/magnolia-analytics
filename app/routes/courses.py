@@ -98,7 +98,7 @@ def search_courses():
         # If the primary query returns few results, broaden by trimming 2 chars
         # (e.g. "foxhill" → "foxhi" finds "Foxhills"). Merge, dedup by id+name.
         # Always broaden to catch club siblings
-    if len(q) >= 5:
+        if len(q) >= 5:
             short_q = q[:max(4, len(q) - 2)]
             broader = api_search(query=short_q, country=country)
             seen = {(r.get('id'), (r.get('name') or '').lower()) for r in results}
