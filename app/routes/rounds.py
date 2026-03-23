@@ -26,10 +26,12 @@ def _recalculate_handicap(user):
 
     Steps:
       1. Take last 20 rounds with a valid hc_differential.
-      2. Pair 9-hole differentials (most recent first) into 18-hole equivalents
-         by summing adjacent pairs; drop any odd 9-hole round.
+      2. Any round with holes_played < 18 is treated as a 9-hole score
+         (includes declared 9-hole rounds AND partial submissions of 18-hole rounds).
+         Pair these 9-hole diffs (most recent first) into 18-hole equivalents by
+         summing adjacent pairs; drop any odd one out.
       3. Build a list of 18-hole differentials only.
-      4. Apply WHS lookup table to find N best differentials to average:
+      4. Apply WHS lookup table:
            3  -> lowest 1 - 2.0
            4  -> lowest 1 - 1.0
            5  -> lowest 1
@@ -51,8 +53,8 @@ def _recalculate_handicap(user):
         .all()
     )
 
-    # Separate by holes_played
-    nine_hole_diffs = [r.hc_differential for r in rounds if r.holes_played == 9]
+    # holes_played < 18 covers declared 9-hole rounds AND partial submissions
+    nine_hole_diffs = [r.hc_differential for r in rounds if r.holes_played < 18]
     eighteen_diffs  = [r.hc_differential for r in rounds if r.holes_played == 18]
 
     # Pair 9-hole diffs (most recent first) into 18-hole equivalents; drop odd one out
@@ -168,19 +170,19 @@ def enter_hole(round_id, hole_number):
         else:
             hole = existing
 
-        hole.par              = int(data.get('par', course_par or 4))
-        hole.score            = int(data.get('score', hole.par))
-        hole.tee_shot         = data.get('tee_shot') or None
+        hole.par               = int(data.get('par', course_par or 4))
+        hole.score             = int(data.get('score', hole.par))
+        hole.tee_shot          = data.get('tee_shot') or None
         hole.approach_distance = int(data['approach_distance']) if data.get('approach_distance') else None
-        hole.approach_miss    = data.get('approach_miss') or None
+        hole.approach_miss     = data.get('approach_miss') or None
         hole.scramble_distance = data.get('scramble_distance') or None
-        hole.gir              = not bool(hole.approach_miss or hole.scramble_distance)
+        hole.gir               = not bool(hole.approach_miss or hole.scramble_distance)
         hole.second_shot_distance = int(data['second_shot_distance']) if data.get('second_shot_distance') else None
-        hole.putts            = int(data.get('putts', 2))
+        hole.putts             = int(data.get('putts', 2))
         hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
         hole.sand_save_attempt = bool(data.get('sand_save_attempt') == 'true') if data.get('sand_save_attempt') else None
-        hole.sand_save_made   = data.get('sand_save_made') == 'true' if data.get('sand_save_made') else None
-        hole.penalties        = int(data.get('penalties', 0))
+        hole.sand_save_made    = data.get('sand_save_made') == 'true' if data.get('sand_save_made') else None
+        hole.penalties         = int(data.get('penalties', 0))
         db.session.commit()
 
         if hole_number < round_.holes_played:
@@ -214,6 +216,8 @@ def submit_round(round_id):
         current_app.logger.info(f"[submit_round] POST received for round_id={round_id}")
         round_.status       = 'complete'
         round_.completed_at = datetime.utcnow()
+        # Stamp actual holes completed so handicap pairing and stats use the real count
+        round_.holes_played = round_.holes.count()
         try:
             round_.compute_totals()
             round_.compute_differential()
