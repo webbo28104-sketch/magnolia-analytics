@@ -215,6 +215,33 @@ body::before {
   .context-banner{grid-template-columns:1fr;}
   .pd-grid{grid-template-columns:repeat(3,1fr);}
 }
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-mid);
+  background: transparent;
+  color: var(--gold);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.share-btn:hover { background: rgba(201,168,76,.12); border-color: var(--gold); }
+@media print {
+  .no-print { display: none !important; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body::before { display: none; }
+  .fu { opacity: 1 !important; transform: none !important; animation: none !important; }
+  .page { padding-bottom: 20px; }
+  .sec-divider { break-after: avoid; }
+  .sum-grid, .sc-wrap, .sg-cards { break-inside: avoid; }
+}
 </style>
 {# Dynamic watermark text for hero::before #}
 <style>.hero-gross::before { content: '{{ course_name_upper }}'; }</style>
@@ -255,7 +282,12 @@ body::before {
   <!-- MASTHEAD -->
   <div class="masthead fu d1">
     <span class="brand-line">Magnolia Analytics · Round Report</span>
-    <a href="{{ url_for('dashboard.index') }}" class="back-link">← Dashboard</a>
+    <div class="no-print" style="display:flex;align-items:center;gap:16px;">
+      <button class="share-btn" onclick="window.print()" title="Save as PDF — in the print dialog, select 'Save as PDF' and enable Background graphics">
+        ↓ Save PDF
+      </button>
+      <a href="{{ url_for('dashboard.index') }}" class="back-link">← Dashboard</a>
+    </div>
   </div>
 
   <!-- HERO -->
