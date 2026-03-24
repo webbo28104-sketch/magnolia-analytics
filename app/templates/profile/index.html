@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Profile — Magnolia Analytics{% endblock %}
+{% block title %}Profile â Magnolia Analytics{% endblock %}
 
 {% block head %}
 <style>
@@ -119,78 +119,37 @@
 
     <div class="lifetime-row">
       <div class="lifetime-stat">
+        <div class="lifetime-val">{{ lifetime.total_rounds }}</div>
+        <div class="lifetime-lbl">Rounds Logged</div>
+      </div>
+      <div class="lifetime-stat">
+        <div class="lifetime-val">{{ lifetime.total_holes }}</div>
+        <div class="lifetime-lbl">Holes Played</div>
+      </div>
+      <div class="lifetime-stat">
+        <div class="lifetime-val">{{ lifetime.courses_played }}</div>
+        <div class="lifetime-lbl">Courses Played</div>
+      </div>
+      <div class="lifetime-stat">
         <div class="lifetime-val">{{ lifetime.holes_in_one }}</div>
         <div class="lifetime-lbl">Holes in One</div>
+      </div>
+    </div>
+    <div class="lifetime-row">
+      <div class="lifetime-stat">
+        <div class="lifetime-val">{{ lifetime.total_eagles }}</div>
+        <div class="lifetime-lbl">Eagles</div>
       </div>
       <div class="lifetime-stat">
         <div class="lifetime-val">{{ lifetime.total_birdies }}</div>
         <div class="lifetime-lbl">Birdies</div>
       </div>
       <div class="lifetime-stat">
-        <div class="lifetime-val">{{ lifetime.courses_played }}</div>
-        <div class="lifetime-lbl">Courses Played</div>
+        <div class="lifetime-val">{{ lifetime.total_pars }}</div>
+        <div class="lifetime-lbl">Pars</div>
       </div>
     </div>
   </div>
-
-  <!-- Stats: 9-hole vs 18-hole -->
-  <div class="profile-section">
-    <div class="profile-section-title">Your Stats</div>
-
-    <div class="stats-split">
-      <!-- 9-hole -->
-      <div>
-        <div class="stats-group-label">9 holes{% if stats_9 %} · {{ stats_9.count }} round{{ 's' if stats_9.count != 1 }}{% endif %}</div>
-        {% if stats_9 %}
-        <div class="stat-line">
-          <span class="stat-line-label">Avg Score</span>
-          <span class="stat-line-val">{{ stats_9.avg_score if stats_9.avg_score else '—' }}</span>
-        </div>
-        <div class="stat-line">
-          <span class="stat-line-label">GIR%</span>
-          <span class="stat-line-val">{{ stats_9.gir_pct }}%</span>
-        </div>
-        <div class="stat-line">
-          <span class="stat-line-label">Scramble%</span>
-          <span class="stat-line-val">{{ stats_9.scramble_pct ~ '%' if stats_9.scramble_pct is not none else '—' }}</span>
-        </div>
-        <div class="stat-line">
-          <span class="stat-line-label">Putts/hole</span>
-          <span class="stat-line-val">{{ stats_9.putts_per_hole if stats_9.putts_per_hole else '—' }}</span>
-        </div>
-        {% else %}
-        <div class="stats-empty">No 9-hole rounds yet</div>
-        {% endif %}
-      </div>
-
-      <!-- Vertical divider -->
-      <div style="position:relative">
-        <div class="stats-divider" style="position:absolute;left:0;top:0;bottom:0"></div>
-        <div style="padding-left:1.25rem">
-          <div class="stats-group-label">18 holes{% if stats_18 %} · {{ stats_18.count }} round{{ 's' if stats_18.count != 1 }}{% endif %}</div>
-          {% if stats_18 %}
-          <div class="stat-line">
-            <span class="stat-line-label">Avg Score</span>
-            <span class="stat-line-val">{{ stats_18.avg_score if stats_18.avg_score else '—' }}</span>
-          </div>
-          <div class="stat-line">
-            <span class="stat-line-label">GIR%</span>
-            <span class="stat-line-val">{{ stats_18.gir_pct }}%</span>
-          </div>
-          <div class="stat-line">
-            <span class="stat-line-label">Scramble%</span>
-            <span class="stat-line-val">{{ stats_18.scramble_pct ~ '%' if stats_18.scramble_pct is not none else '—' }}</span>
-          </div>
-          <div class="stat-line">
-            <span class="stat-line-label">Putts/hole</span>
-            <span class="stat-line-val">{{ stats_18.putts_per_hole if stats_18.putts_per_hole else '—' }}</span>
-          </div>
-          {% else %}
-          <div class="stats-empty">No 18-hole rounds yet</div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Personal details + preferences -->
