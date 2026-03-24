@@ -13,8 +13,6 @@ from app.services.weather_service import get_round_weather
 from app.services.calendar_service import get_calendar_context
 from app.services.claude_service import generate_narrative
 
-import re as _re
-import weasyprint
 reports_bp = Blueprint('reports', __name__)
 
 
@@ -387,103 +385,4 @@ def view_report_html(round_id):
 
     response = make_response(report.html_content)
     response.headers['Content-Type'] = 'text/html; charset=utf-8'
-    return response
-
-
-@reports_bp.route('/<int:round_id>/pdf')
-@login_required
-def download_pdf(round_id):
-    """Generate and download a PDF of the round report via WeasyPrint."""
-    from flask import request as req
-    round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
-
-    holes = round_.holes.order_by('hole_number').all()
-    if not holes:
-        abort(404)
-
-    course_hole_map = {}
-    if round_.tee_set_obj:
-        chs = round_.tee_set_obj.course_holes.all()
-        course_hole_map = {ch.hole_number: ch for ch in chs}
-
-    holes_data = _build_holes_data(holes, course_hole_map)
-    split      = _split_totals(holes_data)
-
-    sg_putting  = strokes_gained_putting(holes)
-    sg_off_tee  = strokes_gained_off_tee(holes)
-    sg_approach = strokes_gained_approach(holes)
-    sg_atg      = strokes_gained_around_green(holes)
-    sg_total    = round(sg_off_tee + sg_approach + sg_atg + sg_putting['total'], 2)
-
-    sg_data = {
-        'sg_off_tee':  sg_off_tee,
-        'sg_approach': sg_approach,
-        'sg_atg':      sg_atg,
-        'sg_putting':  sg_putting,
-        'sg_total':    sg_total,
-    }
-    sg_bars = {
-        'off_tee':  {'value': sg_off_tee,  'width': _sg_bar_width(sg_off_tee),  'positive': sg_off_tee  >= 0},
-        'approach': {'value': sg_approach, 'width': _sg_bar_width(sg_approach), 'positive': sg_approach >= 0},
-        'atg':      {'value': sg_atg,      'width': _sg_bar_width(sg_atg),      'positive': sg_atg      >= 0},
-        'putting':  {'value': sg_putting['total'], 'width': _sg_bar_width(sg_putting['total']), 'positive': sg_putting['total'] >= 0},
-        'total':    {'value': sg_total,    'width': _sg_bar_width(sg_total, scale=20),          'positive': sg_total >= 0},
-    }
-
-    tee_gir      = _tee_shot_gir_breakdown(holes_data)
-    approach_bds = _approach_distance_breakdown(holes_data)
-    miss_dirs    = _miss_direction_counts(holes_data)
-    scramble     = _scramble_stats(holes_data)
-    putt_dist    = _putting_distribution(holes_data)
-    first_putt   = _first_putt_profile(holes_data)
-    weakest_sg   = _weakest_sg_category(sg_data)
-
-    weather      = get_round_weather(round_)
-    calendar_ctx = get_calendar_context(round_)
-    report       = round_.report
-    narrative    = report.narrative_text if report else None
-
-    score_vs_par = round_.score_vs_par()
-    par = (
-        round_.tee_set_obj.total_par
-        if round_.tee_set_obj
-        else (round_.course.par if round_.course else 72)
-    )
-    course_name = round_.course.name if round_.course else 'Unknown Course'
-
-    html = render_template(
-        'reports/report.html',
-        round             = round_,
-        user              = current_user,
-        course_name       = course_name,
-        course_name_upper = course_name.upper()[:14],
-        par               = par,
-        score_vs_par      = score_vs_par,
-        score_vs_par_label = _score_label(score_vs_par),
-        holes_data        = holes_data,
-        split             = split,
-        sg_data           = sg_data,
-        sg_bars           = sg_bars,
-        weakest_sg        = weakest_sg,
-        tee_gir           = tee_gir,
-        approach_bds      = approach_bds,
-        miss_dirs         = miss_dirs,
-        scramble          = scramble,
-        putt_dist         = putt_dist,
-        first_putt        = first_putt,
-        weather           = weather,
-        calendar_ctx      = calendar_ctx,
-        narrative         = narrative,
-        pdf_mode          = True,
-    )
-
-    pdf_bytes = weasyprint.HTML(string=html, base_url=req.host_url).write_pdf()
-
-    safe_course = _re.sub(r'[^a-z0-9]+', '-', course_name.lower()).strip('-')
-    date_str    = round_.date_played.strftime('%Y-%m-%d') if round_.date_played else 'unknown'
-    filename    = f'magnolia-{safe_course}-{date_str}.pdf'
-
-    response = make_response(pdf_bytes)
-    response.headers['Content-Type']        = 'application/pdf'
-    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
