@@ -25,7 +25,7 @@ def index():
     )
     stats = _compute_stats(last_20) if last_20 else None
 
-    # In-progress rounds — find the next unplayed hole for each
+    # In-progress rounds â find the next unplayed hole for each
     in_progress = (
         Round.query
         .filter_by(user_id=current_user.id, status='in_progress')
@@ -64,7 +64,7 @@ def _compute_stats(rounds):
     if not rounds:
         return None
 
-    # Per-hole average score — normalises across 9 and 18-hole rounds
+    # Per-hole average score â normalises across 9 and 18-hole rounds
     scored = [r for r in rounds if r.total_score and r.holes_played]
     avg_score_per_hole = (
         round(sum(r.total_score / r.holes_played for r in scored) / len(scored), 2)
@@ -80,10 +80,10 @@ def _compute_stats(rounds):
         if all_holes else None
     )
 
-    # FIR % — only counted on par 4s and par 5s
-    fir_holes = [h for h in all_holes if h.par in (4, 5)]
+    # FIR % â only counted on par 4s and par 5s
+    fir_holes = [h for h in all_holes if h.par in (4, 5) and h.tee_shot is not None]
     fir_pct = (
-        round(sum(1 for h in fir_holes if h.fir) / len(fir_holes) * 100, 1)
+        round(sum(1 for h in fir_holes if h.tee_shot == 'fairway') / len(fir_holes) * 100, 1)
         if fir_holes else None
     )
 
