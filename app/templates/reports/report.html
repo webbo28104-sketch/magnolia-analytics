@@ -235,21 +235,40 @@ body::before {
 .share-btn:hover { background: rgba(201,168,76,.12); border-color: var(--gold); }
 @media print {
   @page { margin: 14mm 12mm; }
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* Force ALL colours and backgrounds to print — applies to pseudo-elements too */
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Restore dark theme — var(--bg) was undefined, causing body to fall back to white */
+  html, body {
+    background: var(--forest) !important;
+    color: var(--cream) !important;
+  }
+
+  /* Remove decorative gradient overlay (fixed-position, not needed in print) */
+  body::before { display: none; }
+
+  /* Disable scroll animations so all content is fully visible */
+  .fu { opacity: 1 !important; transform: none !important; animation: none !important; }
+
+  /* Hide non-report UI only — nothing else changes */
   .no-print,
   #share-modal,
   #share-trigger,
   .back-link,
   .share-btn { display: none !important; }
-  body::before { display: none; }
-  body { background: var(--bg) !important; }
-  .fu { opacity: 1 !important; transform: none !important; animation: none !important; }
+
+  /* Print layout */
   .page { padding-bottom: 20px; max-width: 100%; }
+  .hero { break-inside: avoid; }
+  h2 { break-after: avoid; }
   .sec-divider { break-after: avoid; }
   .sum-grid, .sc-wrap, .sg-cards, .section { break-inside: avoid; }
   .section { margin-bottom: 1.5rem; }
-  .hero { break-inside: avoid; }
-  h2 { break-after: avoid; }
 }
 
 /* ---- Share modal ---- */
