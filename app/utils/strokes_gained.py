@@ -1,7 +1,8 @@
 """
 Strokes Gained calculations.
-Based on PGA Tour baseline data for amateur golfers.
-Extend with full SG tables as the dataset grows.
+Baseline values are PGA Tour averages derived from Mark Broadie's research
+("Every Shot Counts", 2014 and subsequent work).  All four categories use
+the same benchmark so users can compare their numbers directly to tour data.
 """
 
 # Baseline expected strokes to hole out from given distances (in feet)
@@ -96,22 +97,22 @@ def strokes_gained_off_tee(holes) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Approach distance → expected strokes to hole out (from fairway/rough)
-# TODO: replace with full Broadie distance-to-hole lookup tables
-# These are rough amateur-baseline estimates only.
+# Approach distance → expected strokes to hole out
+# Source: Mark Broadie's PGA Tour averages (all lies combined).
+# Using PGA Tour values so SG numbers are on the same scale as tour data.
 # ---------------------------------------------------------------------------
 _APPROACH_BASELINES = {
-    # distance (yds): expected strokes remaining from that distance
-    30:  2.80,
-    50:  2.90,
-    75:  2.95,
-    100: 3.05,
-    125: 3.15,
-    150: 3.25,
-    175: 3.40,
-    200: 3.55,
-    225: 3.70,
-    250: 3.85,
+    # distance (yds): expected strokes remaining (PGA Tour average)
+    30:  2.47,
+    50:  2.58,
+    75:  2.70,
+    100: 2.79,
+    125: 2.88,
+    150: 2.98,
+    175: 3.11,
+    200: 3.25,
+    225: 3.41,
+    250: 3.58,
 }
 
 
