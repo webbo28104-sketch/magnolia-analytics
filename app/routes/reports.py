@@ -327,11 +327,17 @@ def view_report(round_id):
 
     # ---- Derived display values ----
     score_vs_par = round_.score_vs_par()
-    par = (
-        round_.tee_set_obj.total_par
-        if round_.tee_set_obj
-        else (round_.course.par if round_.course else 72)
-    )
+    # Par: sum actual hole pars (from CourseHole API data, stored on each Hole record).
+    # This is correct for both 18-hole and 9-hole rounds and reflects the true course par.
+    # Fall back to tee set / course level only when hole data is absent.
+    if holes_data:
+        par = sum(h['par'] for h in holes_data)
+    elif round_.tee_set_obj:
+        par = round_.tee_set_obj.total_par
+    elif round_.course:
+        par = round_.course.par
+    else:
+        par = 72
     course_name = round_.course.name if round_.course else 'Unknown Course'
 
     return render_template(
