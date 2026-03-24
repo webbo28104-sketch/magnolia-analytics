@@ -234,13 +234,22 @@ body::before {
 }
 .share-btn:hover { background: rgba(201,168,76,.12); border-color: var(--gold); }
 @media print {
-  .no-print { display: none !important; }
-  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { margin: 14mm 12mm; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .no-print,
+  #share-modal,
+  #share-trigger,
+  .back-link,
+  .share-btn { display: none !important; }
   body::before { display: none; }
+  body { background: var(--bg) !important; }
   .fu { opacity: 1 !important; transform: none !important; animation: none !important; }
-  .page { padding-bottom: 20px; }
+  .page { padding-bottom: 20px; max-width: 100%; }
   .sec-divider { break-after: avoid; }
-  .sum-grid, .sc-wrap, .sg-cards { break-inside: avoid; }
+  .sum-grid, .sc-wrap, .sg-cards, .section { break-inside: avoid; }
+  .section { margin-bottom: 1.5rem; }
+  .hero { break-inside: avoid; }
+  h2 { break-after: avoid; }
 }
 
 /* ---- Share modal ---- */
@@ -263,7 +272,7 @@ body::before {
 .sm-pdf-btn{display:flex;align-items:center;gap:.6rem;background:transparent;border:1px solid #c9a84c;border-radius:8px;color:#c9a84c;padding:.7rem 1.4rem;font-size:.9rem;font-weight:600;cursor:pointer;text-decoration:none;transition:background .15s,color .15s;letter-spacing:.03em}
 .sm-pdf-btn:hover{background:#c9a84c;color:#1a2e1a}
 .sm-pdf-hint{color:#8a9e8a;font-size:.75rem;text-align:center}
-@media print{#share-modal,#share-trigger{display:none!important;}}
+
 </style>
 {# Dynamic watermark text for hero::before #}
 <style>.hero-gross::before { content: '{{ course_name_upper }}'; }</style>
@@ -1008,10 +1017,10 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
     <div class="sm-divider"></div>
     <div class="sm-pdf-section">
-      <a class="sm-pdf-btn" href="{{ url_for('reports.download_pdf', round_id=round.id) }}">
+      <button class="sm-pdf-btn" onclick="closeShareModal();setTimeout(window.print,200)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download PDF
-      </a>
+        Save as PDF
+      </button>
       <p class="sm-pdf-hint">Full scorecard &amp; stats &mdash; print-quality PDF</p>
     </div>
   </div>
