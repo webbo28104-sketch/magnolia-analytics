@@ -16,17 +16,12 @@ def index():
         .all()
     )
 
-    # Season stats — split by holes played so 9-hole rounds don't skew 18-hole averages
     all_complete = (
         Round.query
         .filter_by(user_id=current_user.id, status='complete')
         .all()
     )
-    rounds_18 = [r for r in all_complete if r.holes_played == 18]
-    rounds_9  = [r for r in all_complete if r.holes_played == 9]
-
-    stats   = _compute_season_stats(rounds_18) if rounds_18 else None
-    stats_9 = _compute_season_stats(rounds_9)  if rounds_9  else None
+    stats = _compute_stats(all_complete) if all_complete else None
 
     # In-progress rounds — find the next unplayed hole for each
     in_progress = (
@@ -52,42 +47,51 @@ def index():
         if next_seq is None:
             next_seq = r.holes_played
         in_progress_rounds.append({
-            'round':         r,
+            'round': r,
             'next_hole_url': url_for('rounds.enter_hole', round_id=r.id, hole_number=next_seq),
-            'holes_done':    len(saved_holes),
+            'holes_done': len(saved_holes),
         })
 
     return render_template('dashboard/index.html',
-                           recent_rounds=recent_rounds,
-                           stats=stats,
-                           stats_9=stats_9,
-                           in_progress_rounds=in_progress_rounds)
+        recent_rounds=recent_rounds,
+        stats=stats,
+        in_progress_rounds=in_progress_rounds)
 
 
-def _compute_season_stats(rounds):
+def _compute_stats(rounds):
     if not rounds:
         return None
-    scores  = [r.total_score for r in rounds if r.total_score]
-    putts   = [r.total_putts for r in rounds if r.total_putts]
-    vs_pars = [v for v in (r.score_vs_par() for r in rounds) if v is not None]
 
-    # GIR% — per-round percentage then averaged
-    gir_pcts = [
-        r.gir_count / r.holes_played * 100
-        for r in rounds
-        if r.gir_count is not None and r.holes_played
-    ]
+    # Per-hole average score — normalises across 9 and 18-hole rounds
+    scored = [r for r in rounds if r.total_score and r.holes_played]
+    avg_score_per_hole = (
+        round(sum(r.total_score / r.holes_played for r in scored) / len(scored), 2)
+        if scored else None
+    )
 
-    # Scramble% — missed GIR holes where par or better was still made
-    all_holes  = [h for r in rounds for h in r.holes.all()]
+    # Aggregate all holes for per-hole metrics
+    all_holes = [h for r in rounds for h in r.holes.all()]
+    gir_pct = (
+        round(sum(1 for h in all_holes if h.gir) / len(all_holes) * 100, 1)
+        if all_holes else None
+    )
+
     missed_gir = [h for h in all_holes if not h.gir]
-    scrambled  = [h for h in missed_gir if h.score <= h.par]
+    scramble_pct = (
+        round(sum(1 for h in missed_gir if h.score <= h.par) / len(missed_gir) * 100, 1)
+        if missed_gir else None
+    )
+
+    putts_data = [h.putts for h in all_holes if h.putts is not None]
+    putts_per_hole = (
+        round(sum(putts_data) / len(putts_data), 2)
+        if putts_data else None
+    )
 
     return {
-        'rounds_played':     len(rounds),
-        'avg_score':         round(sum(scores)   / len(scores),   1) if scores   else None,
-        'best_vs_par':       min(vs_pars)                            if vs_pars  else None,
-        'avg_putts':         round(sum(putts)    / len(putts),    1) if putts    else None,
-        'avg_gir_pct':       round(sum(gir_pcts) / len(gir_pcts), 1) if gir_pcts else None,
-        'avg_scramble_pct':  round(100 * len(scrambled) / len(missed_gir), 1) if missed_gir else None,
+        'rounds_played': len(rounds),
+        'avg_score_per_hole': avg_score_per_hole,
+        'gir_pct': gir_pct,
+        'scramble_pct': scramble_pct,
+        'putts_per_hole': putts_per_hole,
     }
