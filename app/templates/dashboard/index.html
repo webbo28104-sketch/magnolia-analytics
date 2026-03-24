@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard — Magnolia Analytics{% endblock %}
+{% block title %}Dashboard â Magnolia Analytics{% endblock %}
 
 {% block head %}
 <style>
-/* ── Round delete button & inline confirm ─────────────────────────── */
+/* ââ Round delete button & inline confirm âââââââââââââââââââââââââââ */
 .round-delete-btn {
   background: none;
   border: none;
@@ -79,7 +79,7 @@
   <div class="dashboard-header">
     <div>
       <h1 class="dashboard-title">Good to have you back, {{ current_user.first_name }}.</h1>
-      <p class="dashboard-subtitle">{{ current_user.home_course }} &nbsp;·&nbsp; HCP {{ current_user.handicap_index }}</p>
+      <p class="dashboard-subtitle">{{ current_user.home_course }} &nbsp;Â·&nbsp; HCP {{ current_user.handicap_index }}</p>
     </div>
     <a href="{{ url_for('rounds.new_round') }}" class="btn btn--gold">+ Log Round</a>
   </div>
@@ -93,14 +93,14 @@
         <div class="in-progress-title">Round in progress</div>
         <div class="in-progress-meta">
           {{ item.round.course.name if item.round.course else 'Unknown Course' }}
-          &nbsp;·&nbsp;
+          &nbsp;Â·&nbsp;
           {{ item.round.date_played.strftime('%d %b') }}
-          &nbsp;·&nbsp;
+          &nbsp;Â·&nbsp;
           {{ item.holes_done }}/{{ item.round.holes_played }} holes saved
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <a href="{{ item.next_hole_url }}" class="btn btn--gold btn--sm">Continue →</a>
+        <a href="{{ item.next_hole_url }}" class="btn btn--gold btn--sm">Continue â</a>
         <button type="button" class="round-delete-btn"
                 id="delbtn-{{ item.round.id }}"
                 onclick="showDelConfirm('delbtn-{{ item.round.id }}','delconfirm-{{ item.round.id }}')"
@@ -124,60 +124,27 @@
   </div>
   {% endif %}
 
-  <!-- Season stats -->
+  <!-- Performance stats -->
   {% if stats %}
   <div class="section">
-    <h2 class="section-title">18-Hole Rounds</h2>
-    <p class="stats-note">{{ stats.rounds_played }} round{{ 's' if stats.rounds_played != 1 }} this season</p>
+    <h2 class="section-title">Performance</h2>
+    <p class="stats-note">{{ stats.rounds_played }} round{{ 's' if stats.rounds_played != 1 }} logged</p>
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-value">{{ stats.avg_score or '—' }}</div>
-      <div class="stat-label">Avg Score</div>
+      <div class="stat-value">{{ stats.avg_score_per_hole or '—' }}</div>
+      <div class="stat-label">Avg Score / Hole</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">{%- if stats.best_vs_par is not none -%}{%- if stats.best_vs_par > 0 -%}+{{ stats.best_vs_par }}{%- elif stats.best_vs_par == 0 -%}E{%- else -%}{{ stats.best_vs_par }}{%- endif -%}{%- else -%}—{%- endif -%}</div>
-      <div class="stat-label">Best vs Par</div>
+      <div class="stat-value">{{ stats.gir_pct ~ '%' if stats.gir_pct is not none else '—' }}</div>
+      <div class="stat-label">GIR%</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">{{ stats.avg_putts or '—' }}</div>
-      <div class="stat-label">Avg Putts</div>
+      <div class="stat-value">{{ stats.scramble_pct ~ '%' if stats.scramble_pct is not none else '—' }}</div>
+      <div class="stat-label">Scramble%</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">{{ stats.avg_gir_pct ~ '%' if stats.avg_gir_pct is not none else '—' }}</div>
-      <div class="stat-label">Avg GIR%</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.avg_scramble_pct ~ '%' if stats.avg_scramble_pct is not none else '—' }}</div>
-      <div class="stat-label">Avg Scramble%</div>
-    </div>
-  </div>
-  </div>
-  {% endif %}
-
-  {% if stats_9 %}
-  <div class="section">
-    <h2 class="section-title">9-Hole Rounds</h2>
-    <p class="stats-note">{{ stats_9.rounds_played }} round{{ 's' if stats_9.rounds_played != 1 }} this season</p>
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-value">{{ stats_9.avg_score or '—' }}</div>
-      <div class="stat-label">Avg Score</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{%- if stats_9.best_vs_par is not none -%}{%- if stats_9.best_vs_par > 0 -%}+{{ stats_9.best_vs_par }}{%- elif stats_9.best_vs_par == 0 -%}E{%- else -%}{{ stats_9.best_vs_par }}{%- endif -%}{%- else -%}—{%- endif -%}</div>
-      <div class="stat-label">Best vs Par</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats_9.avg_putts or '—' }}</div>
-      <div class="stat-label">Avg Putts</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats_9.avg_gir_pct ~ '%' if stats_9.avg_gir_pct is not none else '—' }}</div>
-      <div class="stat-label">Avg GIR%</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats_9.avg_scramble_pct ~ '%' if stats_9.avg_scramble_pct is not none else '—' }}</div>
-      <div class="stat-label">Avg Scramble%</div>
+      <div class="stat-value">{{ stats.putts_per_hole or '—' }}</div>
+      <div class="stat-label">Putts / Hole</div>
     </div>
   </div>
   </div>
@@ -202,14 +169,14 @@
               </span>
             {% endif %}
           {% else %}
-            <span class="score-dash">—</span>
+            <span class="score-dash">â</span>
           {% endif %}
         </div>
-        <div class="round-putts">{{ round.total_putts or '—' }} putts</div>
-        <div class="round-gir">{{ round.gir_count or '—' }}/{{ round.holes_played }} GIR</div>
+        <div class="round-putts">{{ round.total_putts or 'â' }} putts</div>
+        <div class="round-gir">{{ round.gir_count or 'â' }}/{{ round.holes_played }} GIR</div>
         <div class="round-actions" style="display:flex;align-items:center;gap:8px">
           {% if round.report and round.report.html_content %}
-            <a href="{{ url_for('reports.view_report', round_id=round.id) }}" class="link-gold">View Report →</a>
+            <a href="{{ url_for('reports.view_report', round_id=round.id) }}" class="link-gold">View Report â</a>
           {% else %}
             <span class="badge badge--pending">Report pending</span>
           {% endif %}
