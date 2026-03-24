@@ -233,42 +233,49 @@ body::before {
   -webkit-tap-highlight-color: transparent;
 }
 .share-btn:hover { background: rgba(201,168,76,.12); border-color: var(--gold); }
-@media print {
-  @page { margin: 14mm 12mm; }
+/* ── Print / Save as PDF ───────────────────────────────────────── */
+@page { size: A4; margin: 14mm 12mm; }
 
-  /* Force ALL colours and backgrounds to print — applies to pseudo-elements too */
+@media print {
+  /* Force every element to use its specified background and colour —
+     overrides any browser "Background graphics off" print setting */
   *, *::before, *::after {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
 
-  /* Restore dark theme — var(--bg) was undefined, causing body to fall back to white */
-  html, body {
+  /* Restore dark root — previous rule used undefined var(--bg), collapsing to white.
+     Hardcoded hex first as a universal fallback, then var() for full fidelity. */
+  html { background: #1a2e1a !important; }
+  body {
+    background: #1a2e1a !important;
     background: var(--forest) !important;
+    color: #f5f0e8 !important;
     color: var(--cream) !important;
   }
 
-  /* Remove decorative gradient overlay (fixed-position, not needed in print) */
-  body::before { display: none; }
+  /* Remove fixed-position decorative overlay — it would tint every page */
+  body::before { display: none !important; }
 
-  /* Disable scroll animations so all content is fully visible */
+  /* Make scroll-in animations instant so all content is visible */
   .fu { opacity: 1 !important; transform: none !important; animation: none !important; }
 
-  /* Hide non-report UI only — nothing else changes */
+  /* Hide nav and interactive-only UI — report content is untouched */
   .no-print,
   #share-modal,
   #share-trigger,
-  .back-link,
-  .share-btn { display: none !important; }
+  .share-btn,
+  .back-link { display: none !important; }
 
-  /* Print layout */
-  .page { padding-bottom: 20px; max-width: 100%; }
+  /* Layout */
+  .page { padding: 0 0 20px; max-width: 100%; }
   .hero { break-inside: avoid; }
-  h2 { break-after: avoid; }
+  h2, h3 { break-after: avoid; }
   .sec-divider { break-after: avoid; }
-  .sum-grid, .sc-wrap, .sg-cards, .section { break-inside: avoid; }
-  .section { margin-bottom: 1.5rem; }
+  .section { break-inside: avoid; margin-bottom: 1.5rem; }
+  .sum-grid, .sc-wrap, .sg-cards, .sg-bars,
+  .a-card, .sum-card, .split-card { break-inside: avoid; }
 }
 
 /* ---- Share modal ---- */
@@ -1073,6 +1080,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }).catch(function(){ prompt('Copy this caption:', _caption); });
   };
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeShareModal(); });
+
+  // Auto-open share modal when navigated here with #share (e.g. from dashboard Share button)
+  if (window.location.hash === '#share') {
+    history.replaceState(null, '', window.location.pathname);
+    openShareModal();
+  }
 })();
 </script>
 </body>
