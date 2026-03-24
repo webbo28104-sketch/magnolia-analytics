@@ -67,6 +67,11 @@ def _run_column_migrations():
         ('reports',   'narrative_text',        'TEXT'),
         ('reports',   'weather_json',          'TEXT'),
         ('reports',   'insights_json',         'TEXT'),
+        ('rounds',    'sg_off_tee',             'REAL'),
+        ('rounds',    'sg_approach',            'REAL'),
+        ('rounds',    'sg_atg',                 'REAL'),
+        ('rounds',    'sg_putting',             'REAL'),
+        ('rounds',    'sg_total',               'REAL'),
     ]
     for table, column, col_type in migrations:
         try:

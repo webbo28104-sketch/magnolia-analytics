@@ -25,6 +25,13 @@ class Round(db.Model):
     gir_count          = db.Column(db.Integer, nullable=True)
     penalties          = db.Column(db.Integer, nullable=True)
 
+    # Strokes Gained (PGA Tour baseline — Broadie methodology)
+    sg_off_tee  = db.Column(db.Float, nullable=True)
+    sg_approach = db.Column(db.Float, nullable=True)
+    sg_atg      = db.Column(db.Float, nullable=True)   # around the green
+    sg_putting  = db.Column(db.Float, nullable=True)
+    sg_total    = db.Column(db.Float, nullable=True)
+
     # Handicap
     hc_differential = db.Column(db.Float, nullable=True)
 
