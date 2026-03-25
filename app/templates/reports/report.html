@@ -170,11 +170,11 @@ body::before {
 .sg-br { display:flex; align-items:center; gap:12px; margin-bottom:11px; }
 .sg-br:last-child { margin-bottom:0; }
 .sg-bc { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--cream-faint); width:84px; flex-shrink:0; }
-.sg-bt { flex:1; height:5px; background:rgba(245,240,232,0.07); border-radius:3px; position:relative; }
-.sg-bz { position:absolute; left:50%; top:-3px; bottom:-3px; width:1px; background:rgba(245,240,232,0.18); }
-.sg-bf { position:absolute; top:0; height:100%; border-radius:3px; }
-.sg-bf.p { background:var(--green-mid); right:50%; }
-.sg-bf.n { background:var(--red-soft); left:50%; }
+.sg-bt { flex:1; height:5px; background:rgba(245,240,232,0.07); border-radius:3px; position:relative; overflow:hidden; }
+.sg-bz { position:absolute; left:50%; top:0; bottom:0; width:1px; background:rgba(245,240,232,0.25); }
+.sg-bf { position:absolute; top:0; height:100%; border-radius:3px; max-width:50%; }
+.sg-bf.p { left:50%; }
+.sg-bf.n { right:50%; }
 .sg-bn { font-family:'Playfair Display',serif; font-size:13px; width:40px; text-align:right; flex-shrink:0; }
 .sg-bn.p { color:var(--green-soft); } .sg-bn.n { color:var(--red-soft); }
 .pd-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:14px; }
@@ -835,15 +835,13 @@ body::before {
     </span>
     &nbsp;vs PGA Tour Average
   </div>
-  {# Relative colour: best SG value → green, worst → red, others gradient #}
-  {% set _sg_all = [sg_data.sg_off_tee, sg_data.sg_approach, sg_data.sg_atg, sg_data.sg_putting.total] %}
-  {% set _sg_min = _sg_all | min %}
-  {% set _sg_max = _sg_all | max %}
-  {% set _sg_rng = _sg_max - _sg_min %}
-  {# t=0 → worst (red #e8a090), t=1 → best (green #7ecf9e) #}
-  {% macro relclr(val) -%}
-    {%- set t = ((val - _sg_min) / _sg_rng) if _sg_rng > 0 else 0.5 -%}
-    rgb({{ (232 - 106*t)|round|int }},{{ (160 + 47*t)|round|int }},{{ (144 + 14*t)|round|int }})
+  {# Rank-based colour: best category → green, worst → red, middle two → amber #}
+  {% set _sg_sorted = [sg_data.sg_off_tee, sg_data.sg_approach, sg_data.sg_atg, sg_data.sg_putting.total] | sort %}
+  {% macro rankclr(val) -%}
+    {%- if val == _sg_sorted[-1] -%}var(--green-soft)
+    {%- elif val == _sg_sorted[0] -%}var(--red-soft)
+    {%- else -%}#c9a84c
+    {%- endif -%}
   {%- endmacro %}
 
   <div class="sg-cards fu d7">
@@ -853,7 +851,7 @@ body::before {
           <span class="mg-pop">Measures tee-shot performance on par-4s and par-5s. Based on fairway/rough/penalty outcome vs. the PGA Tour average, using Broadie's SG model.</span>
         </span>
       </div>
-      <div class="sg-val" style="color:{{ relclr(sg_data.sg_off_tee) }}">{{ sgfmt(sg_data.sg_off_tee) }}</div>
+      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_off_tee) }}">{{ sgfmt(sg_data.sg_off_tee) }}</div>
       <div class="sg-sub">{{ fw_pct }}% fairways</div>
     </div>
     <div class="sg-card">
@@ -862,7 +860,7 @@ body::before {
           <span class="mg-pop">Measures approach shot performance. Based on GIR rate and approach distance versus expected strokes to hole out from that distance.</span>
         </span>
       </div>
-      <div class="sg-val" style="color:{{ relclr(sg_data.sg_approach) }}">{{ sgfmt(sg_data.sg_approach) }}</div>
+      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_approach) }}">{{ sgfmt(sg_data.sg_approach) }}</div>
       <div class="sg-sub">{{ gir_pct }}% GIR</div>
     </div>
     <div class="sg-card">
@@ -871,7 +869,7 @@ body::before {
           <span class="mg-pop">Measures short-game performance on chips, pitches, and bunker shots (within ~30 yards of the green). Based on scramble rate and sand-save percentage.</span>
         </span>
       </div>
-      <div class="sg-val" style="color:{{ relclr(sg_data.sg_atg) }}">{{ sgfmt(sg_data.sg_atg) }}</div>
+      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_atg) }}">{{ sgfmt(sg_data.sg_atg) }}</div>
       <div class="sg-sub">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% scramble</div>
     </div>
     <div class="sg-card">
@@ -880,7 +878,7 @@ body::before {
           <span class="mg-pop">Measures putting performance from first-putt distances versus expected putts to hole out from those distances, compared to the PGA Tour average.</span>
         </span>
       </div>
-      <div class="sg-val" style="color:{{ relclr(sg_data.sg_putting.total) }}">{{ sgfmt(sg_data.sg_putting.total) }}</div>
+      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_putting.total) }}">{{ sgfmt(sg_data.sg_putting.total) }}</div>
       <div class="sg-sub">{{ round.total_putts }} total putts</div>
     </div>
   </div>
@@ -892,15 +890,15 @@ body::before {
       ('Putting',      sg_data.sg_putting.total),
     ] %}
     {% for label, val in sg_rows %}
-    {% set w = [[((val | abs) / 5 * 100) | round | int, 0] | max, 100] | min %}
+    {% set w = [[((val | abs) / 8 * 50) | round | int, 0] | max, 50] | min %}
     {% set cls = 'p' if val >= 0 else 'n' %}
     <div class="sg-br">
       <span class="sg-bc">{{ label }}</span>
       <div class="sg-bt">
         <div class="sg-bz"></div>
-        <div class="sg-bf {{ cls }}" style="width:{{ w }}%; background:{{ relclr(val) }};"></div>
+        <div class="sg-bf {{ cls }}" style="width:{{ w }}%; background:{{ rankclr(val) }};"></div>
       </div>
-      <span class="sg-bn" style="color:{{ relclr(val) }}">{{ sgfmt(val) }}</span>
+      <span class="sg-bn" style="color:{{ rankclr(val) }}">{{ sgfmt(val) }}</span>
     </div>
     {% endfor %}
   </div>

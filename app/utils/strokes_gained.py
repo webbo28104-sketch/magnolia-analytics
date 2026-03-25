@@ -1,233 +1,354 @@
 """
-Strokes Gained calculations.
-Baseline values are PGA Tour averages derived from Mark Broadie's research
-("Every Shot Counts", 2014 and subsequent work).  All four categories use
-the same benchmark so users can compare their numbers directly to tour data.
+Strokes Gained calculations — Broadie PGA Tour methodology.
+
+All four categories use the same PGA Tour benchmark so values are
+directly comparable to tour data.  The core formula for every shot is:
+
+    SG = expected_strokes(start_position) - 1 - expected_strokes(end_position)
+
+Where "expected strokes" is the average number of strokes a PGA Tour
+player needs to hole out from that position / lie.
+
+Baseline tables are sourced from Mark Broadie's "Every Shot Counts" (2014)
+and subsequently published tour-average datasets.
 """
 
-# Baseline expected strokes to hole out from given distances (in feet)
-# Source: approximated from Mark Broadie's SG research
+# ---------------------------------------------------------------------------
+# Putting baseline: distance in feet → expected putts (PGA Tour average)
+# ---------------------------------------------------------------------------
 PUTTING_BASELINES = {
-    3: 1.03,
-    6: 1.30,
-    9: 1.50,
-    12: 1.65,
-    15: 1.75,
-    20: 1.85,
-    30: 1.95,
-    40: 2.05,
-    50: 2.15,
+    1: 1.001,  2: 1.009,  3: 1.053,  4: 1.147,  5: 1.252,
+    6: 1.354,  7: 1.447,  8: 1.527,  9: 1.596, 10: 1.655,
+   11: 1.705, 12: 1.748, 13: 1.786, 14: 1.820, 15: 1.850,
+   16: 1.877, 17: 1.901, 18: 1.923, 19: 1.943, 20: 1.960,
+   22: 1.991, 25: 2.034, 28: 2.069, 30: 2.088, 33: 2.113,
+   35: 2.127, 40: 2.160, 45: 2.189, 50: 2.214, 55: 2.237,
+   60: 2.257, 70: 2.292, 80: 2.322, 100: 2.373,
+}
+
+# ---------------------------------------------------------------------------
+# Off-the-Tee baseline: hole distance in yards → expected strokes (PGA Tour)
+# ---------------------------------------------------------------------------
+_OTT_BASELINES = {
+    300: 3.71, 325: 3.80, 350: 3.88, 375: 3.93, 400: 3.99,
+    425: 4.04, 450: 4.10, 475: 4.17, 500: 4.23, 525: 4.50,
+    550: 4.57, 575: 4.63, 600: 4.70,
+}
+
+# ---------------------------------------------------------------------------
+# Approach baselines: distance in yards → expected strokes by lie (PGA Tour)
+# ---------------------------------------------------------------------------
+_APPROACH_FAIRWAY = {
+      5: 2.10,  10: 2.23,  15: 2.36,  20: 2.46,  30: 2.60,
+     40: 2.70,  50: 2.78,  60: 2.82,  70: 2.85,  80: 2.88,
+     90: 2.90, 100: 2.92, 110: 2.95, 120: 2.97, 130: 2.99,
+    140: 3.01, 150: 3.04, 160: 3.08, 170: 3.13, 180: 3.18,
+    190: 3.23, 200: 3.28, 210: 3.33, 220: 3.38, 230: 3.43,
+    240: 3.48, 250: 3.53, 260: 3.58, 280: 3.67, 300: 3.75,
+    320: 3.83, 340: 3.90, 360: 3.96, 400: 4.07, 450: 4.19,
+}
+_APPROACH_ROUGH = {
+      5: 2.18,  10: 2.34,  20: 2.55,  30: 2.67,  40: 2.78,
+     50: 2.88,  60: 2.95,  70: 3.01,  80: 3.05,  90: 3.10,
+    100: 3.13, 110: 3.16, 120: 3.18, 130: 3.21, 140: 3.24,
+    150: 3.27, 160: 3.31, 170: 3.36, 180: 3.42, 190: 3.48,
+    200: 3.54, 210: 3.60, 220: 3.66, 230: 3.71, 240: 3.76,
+    250: 3.81, 260: 3.86, 280: 3.95, 300: 4.03, 320: 4.10,
+    340: 4.17, 360: 4.23, 400: 4.33, 450: 4.45,
+}
+_APPROACH_BUNKER = {
+      5: 2.42,  10: 2.49,  20: 2.64,  30: 2.77,  40: 2.89,
+     50: 2.99,  60: 3.07,  70: 3.12,  80: 3.17,  90: 3.21,
+    100: 3.25, 110: 3.29, 120: 3.33, 130: 3.37, 140: 3.41,
+    150: 3.46, 160: 3.52, 170: 3.58, 180: 3.65, 190: 3.72,
+    200: 3.79, 210: 3.85, 220: 3.90, 230: 3.95, 240: 4.00,
+    250: 4.06, 260: 4.12, 280: 4.22, 300: 4.32, 320: 4.41,
+    340: 4.50, 360: 4.58, 400: 4.71, 450: 4.85,
+}
+_APPROACH_RECOVERY = {
+     80: 3.80,  90: 3.78, 100: 3.80, 110: 3.81, 120: 3.82,
+    130: 3.87, 140: 3.92, 150: 3.97, 160: 4.03, 170: 4.10,
+    180: 4.20, 190: 4.31, 200: 4.44, 210: 4.56, 220: 4.66,
+    230: 4.75, 240: 4.84, 250: 4.94, 260: 5.03, 280: 5.13,
+    300: 5.22, 320: 5.32, 340: 5.41, 360: 5.51, 400: 5.60,
+    450: 5.70,
+}
+
+# ---------------------------------------------------------------------------
+# Around-the-Green baselines: distance in yards → expected strokes by lie
+# ---------------------------------------------------------------------------
+_ATG_FAIRWAY = {
+     5: 2.04, 10: 2.18, 15: 2.28, 20: 2.40,
+    25: 2.50, 30: 2.58, 40: 2.70, 50: 2.80,
+}
+_ATG_BUNKER = {
+     5: 2.37, 10: 2.47, 15: 2.43, 20: 2.51,
+    25: 2.60, 30: 2.68, 40: 2.80, 50: 2.89,
 }
 
 DISTANCE_BANDS = [
-    (0, 6, '0–6 ft'),
-    (6, 10, '6–10 ft'),
-    (10, 15, '10–15 ft'),
-    (15, 30, '15–30 ft'),
+    (0, 6,          '0–6 ft'),
+    (6, 10,         '6–10 ft'),
+    (10, 15,        '10–15 ft'),
+    (15, 30,        '15–30 ft'),
     (30, float('inf'), '30+ ft'),
 ]
 
 
-def expected_putts(distance_ft: int) -> float:
-    """Return expected putts from a given distance using baseline table."""
-    keys = sorted(PUTTING_BASELINES.keys())
-    if distance_ft <= keys[0]:
-        return PUTTING_BASELINES[keys[0]]
-    if distance_ft >= keys[-1]:
-        return PUTTING_BASELINES[keys[-1]]
-    # Linear interpolation
-    for i in range(len(keys) - 1):
-        if keys[i] <= distance_ft <= keys[i + 1]:
-            t = (distance_ft - keys[i]) / (keys[i + 1] - keys[i])
-            return PUTTING_BASELINES[keys[i]] + t * (
-                PUTTING_BASELINES[keys[i + 1]] - PUTTING_BASELINES[keys[i]]
-            )
-    return 2.0
+# ---------------------------------------------------------------------------
+# Interpolation helpers
+# ---------------------------------------------------------------------------
 
+def _interp(table: dict, dist: float) -> float:
+    """Linear-interpolate expected strokes from a distance→strokes table."""
+    keys = sorted(table.keys())
+    if dist <= keys[0]:
+        return table[keys[0]]
+    if dist >= keys[-1]:
+        return table[keys[-1]]
+    for i in range(len(keys) - 1):
+        lo, hi = keys[i], keys[i + 1]
+        if lo <= dist <= hi:
+            t = (dist - lo) / (hi - lo)
+            return table[lo] + t * (table[hi] - table[lo])
+    return table[keys[-1]]
+
+
+def expected_putts(distance_ft: float) -> float:
+    return _interp(PUTTING_BASELINES, distance_ft)
+
+
+def expected_ott(hole_yardage: float) -> float:
+    return _interp(_OTT_BASELINES, hole_yardage)
+
+
+def expected_approach(distance_yds: float, lie: str = 'fairway') -> float:
+    table = {
+        'fairway':  _APPROACH_FAIRWAY,
+        'rough':    _APPROACH_ROUGH,
+        'bunker':   _APPROACH_BUNKER,
+        'recovery': _APPROACH_RECOVERY,
+    }.get(lie, _APPROACH_ROUGH)
+    return _interp(table, distance_yds)
+
+
+def expected_atg(distance_yds: float, lie: str = 'rough') -> float:
+    table = _ATG_BUNKER if lie == 'bunker' else _ATG_FAIRWAY
+    return _interp(table, distance_yds)
+
+
+def _tee_shot_lie(tee_shot: str) -> str:
+    """Map tee_shot field value to approach-baseline lie category."""
+    if tee_shot == 'fairway':
+        return 'fairway'
+    if tee_shot == 'penalty':
+        return 'recovery'
+    if tee_shot == 'bunker':
+        return 'bunker'
+    return 'rough'  # left / right / other
+
+
+def _parse_yards(value):
+    """Safely parse a yards value that may be stored as string or int."""
+    if value is None:
+        return None
+    try:
+        return float(str(value).split()[0])
+    except (ValueError, TypeError):
+        return None
+
+
+# ---------------------------------------------------------------------------
+# SG: Putting
+# ---------------------------------------------------------------------------
 
 def strokes_gained_putting(holes) -> dict:
     """
-    Calculate strokes gained putting for a list of Hole objects.
-    Returns per-band breakdown and total SG putting.
+    SG Putting per hole: expected_putts(first_putt_distance) - actual_putts.
+    Returns per-band breakdown and total.
     """
-    band_data = {band[2]: {'attempts': 0, 'makes': 0, 'sg': 0.0} for band in DISTANCE_BANDS}
+    band_data = {band[2]: {'attempts': 0, 'makes': 0, 'sg': 0.0}
+                 for band in DISTANCE_BANDS}
     total_sg = 0.0
 
     for hole in holes:
-        if hole.first_putt_distance and hole.putts:
-            dist = hole.first_putt_distance
-            exp = expected_putts(dist)
-            sg = exp - hole.putts
-            total_sg += sg
+        if not (hole.first_putt_distance and hole.putts):
+            continue
+        dist = hole.first_putt_distance
+        exp  = expected_putts(dist)
+        sg   = exp - hole.putts
+        total_sg += sg
 
-            # Assign to distance band
-            for lo, hi, label in DISTANCE_BANDS:
-                if lo <= dist < hi:
-                    band_data[label]['attempts'] += 1
-                    band_data[label]['sg'] += sg
-                    if hole.putts == 1:
-                        band_data[label]['makes'] += 1
-                    break
+        for lo, hi, label in DISTANCE_BANDS:
+            if lo <= dist < hi:
+                band_data[label]['attempts'] += 1
+                band_data[label]['sg'] += sg
+                if hole.putts == 1:
+                    band_data[label]['makes'] += 1
+                break
 
-    # Compute make percentages
     for band in band_data.values():
-        attempts = band['attempts']
-        band['make_pct'] = (
-            round(band['makes'] / attempts * 100, 1) if attempts else None
-        )
+        a = band['attempts']
+        band['make_pct'] = round(band['makes'] / a * 100, 1) if a else None
 
     return {'total': round(total_sg, 2), 'bands': band_data}
 
 
-def strokes_gained_off_tee(holes) -> float:
+# ---------------------------------------------------------------------------
+# SG: Off the Tee
+# ---------------------------------------------------------------------------
+
+def strokes_gained_off_tee(holes, course_hole_map=None) -> float:
     """
-    Simplified SG off tee: penalise for left/right/penalty misses.
-    A full implementation requires course-specific yardage data.
+    SG Off the Tee (par 4/5 only):
+      SG = expected_OTT(hole_yardage) - 1 - expected_approach(remaining_dist, lie)
+
+    Requires hole yardage from course_hole_map and either approach_distance
+    (par 4) or second_shot_distance (par 5) as the remaining distance after
+    the tee shot.  Falls back to a lie-only adjustment when data is absent.
     """
     sg = 0.0
     for hole in holes:
-        if hole.par in (4, 5) and hole.tee_shot:
+        if hole.par not in (4, 5) or not hole.tee_shot:
+            continue
+
+        lie = _tee_shot_lie(hole.tee_shot)
+
+        # Remaining distance after tee shot
+        remaining = (hole.approach_distance if hole.par == 4
+                     else _parse_yards(hole.second_shot_distance))
+
+        # Hole yardage from course data
+        ch           = course_hole_map.get(hole.hole_number) if course_hole_map else None
+        hole_yardage = ch.yardage if (ch and ch.yardage) else None
+
+        if hole_yardage and remaining:
+            exp_start = expected_ott(hole_yardage)
+            exp_end   = expected_approach(remaining, lie)
+            sg += exp_start - 1 - exp_end
+        else:
+            # Fallback: flat adjustment by lie result
             if hole.tee_shot == 'fairway':
                 sg += 0.2
-            elif hole.tee_shot in ('left', 'right'):
-                sg -= 0.2
             elif hole.tee_shot == 'penalty':
                 sg -= 0.7
+            else:
+                sg -= 0.2
+
     return round(sg, 2)
 
 
 # ---------------------------------------------------------------------------
-# Approach distance → expected strokes to hole out
-# Source: Mark Broadie's PGA Tour averages (all lies combined).
-# Using PGA Tour values so SG numbers are on the same scale as tour data.
+# SG: Approach
 # ---------------------------------------------------------------------------
-_APPROACH_BASELINES = {
-    # distance (yds): expected strokes remaining (PGA Tour average)
-    30:  2.47,
-    50:  2.58,
-    75:  2.70,
-    100: 2.79,
-    125: 2.88,
-    150: 2.98,
-    175: 3.11,
-    200: 3.25,
-    225: 3.41,
-    250: 3.58,
-}
-
-
-def _expected_strokes_approach(distance_yds: int) -> float:
-    """Linear-interpolate expected strokes from approach distance (yards)."""
-    keys = sorted(_APPROACH_BASELINES.keys())
-    if distance_yds <= keys[0]:
-        return _APPROACH_BASELINES[keys[0]]
-    if distance_yds >= keys[-1]:
-        return _APPROACH_BASELINES[keys[-1]]
-    for i in range(len(keys) - 1):
-        if keys[i] <= distance_yds <= keys[i + 1]:
-            t = (distance_yds - keys[i]) / (keys[i + 1] - keys[i])
-            return _APPROACH_BASELINES[keys[i]] + t * (
-                _APPROACH_BASELINES[keys[i + 1]] - _APPROACH_BASELINES[keys[i]]
-            )
-    return 3.2
-
 
 def strokes_gained_approach(holes) -> float:
     """
-    Estimate SG Approach to the Green.
+    SG Approach to the Green:
+      SG = expected_approach(dist, lie) - 1 - expected_end_position
 
-    Method:
-    - Par 3s: use approach_distance (tee-to-green distance) and compare
-      expected strokes from that distance vs. actual score after the tee shot
-      (i.e. score minus 1 tee shot = strokes used from that distance).
-    - Par 4/5 GIR: approach_distance gives distance of the approach shot;
-      SG = expected_from(distance) - putts  (we know they holed it in putts).
-    - Par 4/5 GIR missed: penalise — they needed extra strokes to get on green.
+    End position:
+    - GIR hit:    expected_putts(first_putt_distance)
+    - GIR missed: expected_atg(scramble_distance, atg_lie)
 
-    TODO: replace with Broadie's full shot-level expected-strokes model once
-    course-level yardage data is consistently available.
+    Falls back to a flat penalty when approach_distance is unavailable.
     """
     sg = 0.0
-    eligible = 0
 
     for hole in holes:
         dist = hole.approach_distance
 
-        if hole.par == 3 and dist:
-            # On a par 3, the tee shot IS the approach shot.
-            # exp = expected strokes to hole out FROM that distance (includes the shot).
-            # Actual strokes from tee = hole.score (all strokes on the hole).
-            exp = _expected_strokes_approach(dist)
-            sg += exp - hole.score
-            eligible += 1
+        if hole.par == 3:
+            if not dist:
+                continue
+            # Tee shot IS the approach shot; lies are played from the tee (fairway)
+            exp_start = expected_approach(dist, 'fairway')
+            if hole.gir:
+                fpd = hole.first_putt_distance
+                exp_end = expected_putts(fpd) if fpd else expected_putts(20)
+                sg += exp_start - 1 - exp_end
+            else:
+                # Missed GIR — end position is an ATG shot
+                sdist  = _parse_yards(hole.scramble_distance)
+                atg_lie = 'bunker' if hole.approach_miss == 'bunker' else 'rough'
+                if sdist:
+                    sg += exp_start - 1 - expected_atg(sdist, atg_lie)
+                elif hole.approach_miss == 'bunker':
+                    sg += exp_start - 1 - expected_atg(10, 'bunker')
+                else:
+                    sg += exp_start - 1 - expected_atg(15, 'rough')
 
         elif hole.par in (4, 5):
-            if hole.gir and dist:
-                # Approach found the green.
-                # exp = expected strokes to hole out from approach distance.
-                # Actual strokes from approach lie = 1 (the approach) + putts.
-                exp = _expected_strokes_approach(dist)
-                sg += exp - (1 + hole.putts)
-                eligible += 1
-            elif not hole.gir:
-                # Missed GIR — simple penalty model
-                # TODO: refine with distance from green after the approach
-                if hole.approach_miss == 'bunker':
-                    sg -= 0.4
-                elif hole.approach_miss in ('left', 'right', 'short', 'long'):
-                    sg -= 0.3
+            lie = _tee_shot_lie(hole.tee_shot) if hole.tee_shot else 'rough'
+
+            if hole.gir:
+                if not dist:
+                    continue
+                exp_start = expected_approach(dist, lie)
+                fpd       = hole.first_putt_distance
+                exp_end   = expected_putts(fpd) if fpd else expected_putts(20)
+                sg += exp_start - 1 - exp_end
+            else:
+                # Missed GIR
+                sdist   = _parse_yards(hole.scramble_distance)
+                atg_lie = 'bunker' if hole.approach_miss == 'bunker' else 'rough'
+                if dist and sdist:
+                    exp_start = expected_approach(dist, lie)
+                    sg += exp_start - 1 - expected_atg(sdist, atg_lie)
+                elif dist:
+                    # No scramble distance — use typical ATG distance by miss type
+                    exp_start = expected_approach(dist, lie)
+                    default_sdist = 10 if hole.approach_miss == 'bunker' else 15
+                    sg += exp_start - 1 - expected_atg(default_sdist, atg_lie)
                 else:
-                    sg -= 0.25
-                eligible += 1
+                    # No approach distance at all — flat fallback
+                    if hole.approach_miss == 'bunker':
+                        sg -= 0.4
+                    elif hole.approach_miss in ('left', 'right', 'short', 'long'):
+                        sg -= 0.3
+                    else:
+                        sg -= 0.25
 
     return round(sg, 2)
 
 
+# ---------------------------------------------------------------------------
+# SG: Around the Green
+# ---------------------------------------------------------------------------
+
 def strokes_gained_around_green(holes) -> float:
     """
-    Estimate SG Around the Green (chip/pitch/bunker play).
+    SG Around the Green (GIR-miss holes only):
+      SG = expected_atg(scramble_distance, lie) - 1 - expected_putts(first_putt_distance)
 
-    Applies only to holes where GIR was missed and the player had a
-    short-game shot to play before putting.
-
-    Method:
-    - Good scramble (par or better despite GIR miss): positive SG
-    - Bunker save made: bonus
-    - Bunker save missed: penalty
-    - Failed scramble (bogey+): scaled penalty based on severity
-
-    TODO: replace with Broadie's around-green expected-strokes model using
-    scramble_distance data once that field is more consistently populated.
+    Falls back to a score-based adjustment when scramble_distance or
+    first_putt_distance is unavailable.
     """
     sg = 0.0
 
     for hole in holes:
         if hole.gir:
-            continue  # Around-green only applies to GIR misses
+            continue
 
-        score_diff = hole.score - hole.par  # vs par on this hole
+        sdist   = _parse_yards(hole.scramble_distance)
+        atg_lie = 'bunker' if hole.approach_miss == 'bunker' else 'rough'
 
-        # Sand save contribution
-        if hole.sand_save_attempt:
-            if hole.sand_save_made:
-                sg += 0.5   # saved from bunker — significantly above average
-            else:
-                sg -= 0.3   # failed bunker escape — below average
-
-        elif score_diff <= 0:
-            # Scrambled for par or better without a bunker — strong short game
-            sg += 0.4
-
-        elif score_diff == 1:
-            # Bogey — average around the green for an amateur on a GIR miss
-            sg += 0.0
-
-        elif score_diff == 2:
-            # Double — below average short game
-            sg -= 0.4
-
+        if sdist and hole.first_putt_distance:
+            exp_start = expected_atg(sdist, atg_lie)
+            exp_end   = expected_putts(hole.first_putt_distance)
+            sg += exp_start - 1 - exp_end
         else:
-            # Triple or worse
-            sg -= 0.7
+            # Fallback: score-relative model
+            score_diff = hole.score - hole.par
+            if hole.sand_save_attempt:
+                sg += 0.5 if hole.sand_save_made else -0.3
+            elif score_diff <= 0:
+                sg += 0.4
+            elif score_diff == 1:
+                sg += 0.0
+            elif score_diff == 2:
+                sg -= 0.4
+            else:
+                sg -= 0.7
 
     return round(sg, 2)

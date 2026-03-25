@@ -65,8 +65,14 @@ def recompute(dry_run: bool = False, clear_cache: bool = False) -> None:
                     skipped += 1
                     continue
 
+                # Build course_hole_map for OTT yardage lookups
+                course_hole_map = {}
+                if round_.tee_set_obj:
+                    chs = round_.tee_set_obj.course_holes.all()
+                    course_hole_map = {ch.hole_number: ch for ch in chs}
+
                 sg_putting_data = strokes_gained_putting(holes)
-                sg_off_tee      = round(strokes_gained_off_tee(holes), 3)
+                sg_off_tee      = round(strokes_gained_off_tee(holes, course_hole_map), 3)
                 sg_approach     = round(strokes_gained_approach(holes), 3)
                 sg_atg          = round(strokes_gained_around_green(holes), 3)
                 sg_putting_val  = round(sg_putting_data['total'], 3)

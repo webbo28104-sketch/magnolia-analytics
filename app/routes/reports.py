@@ -279,7 +279,7 @@ def view_report(round_id):
 
     # ---- Strokes gained ----
     sg_putting  = strokes_gained_putting(holes)
-    sg_off_tee  = strokes_gained_off_tee(holes)
+    sg_off_tee  = strokes_gained_off_tee(holes, course_hole_map)
     sg_approach = strokes_gained_approach(holes)
     sg_atg      = strokes_gained_around_green(holes)
     sg_total    = round(sg_off_tee + sg_approach + sg_atg + sg_putting['total'], 2)
