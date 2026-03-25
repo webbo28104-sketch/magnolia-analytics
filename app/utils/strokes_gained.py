@@ -137,6 +137,19 @@ def expected_atg(distance_yds: float, lie: str = 'rough') -> float:
     return _interp(table, distance_yds)
 
 
+ATG_MAX_YARDS = 50  # ATG baselines only cover up to 50 yards
+
+
+def expected_scramble(distance_yds: float, lie: str = 'rough') -> float:
+    """Return expected strokes for a scramble shot.
+    Uses ATG baselines within range; switches to approach baselines beyond 50 yards
+    (e.g. topped shots leaving a full approach shot from off the green).
+    """
+    if distance_yds > ATG_MAX_YARDS:
+        return expected_approach(distance_yds, lie)
+    return expected_atg(distance_yds, lie)
+
+
 def _tee_shot_lie(tee_shot: str) -> str:
     """Map tee_shot field value to approach-baseline lie category."""
     if tee_shot == 'fairway':
@@ -272,7 +285,7 @@ def strokes_gained_approach(holes) -> float:
                 sdist  = _parse_yards(hole.scramble_distance)
                 atg_lie = 'bunker' if hole.approach_miss == 'bunker' else 'rough'
                 if sdist:
-                    sg += exp_start - 1 - expected_atg(sdist, atg_lie)
+                    sg += exp_start - 1 - expected_scramble(sdist, atg_lie)
                 elif hole.approach_miss == 'bunker':
                     sg += exp_start - 1 - expected_atg(10, 'bunker')
                 else:
@@ -294,7 +307,7 @@ def strokes_gained_approach(holes) -> float:
                 atg_lie = 'bunker' if hole.approach_miss == 'bunker' else 'rough'
                 if dist and sdist:
                     exp_start = expected_approach(dist, lie)
-                    sg += exp_start - 1 - expected_atg(sdist, atg_lie)
+                    sg += exp_start - 1 - expected_scramble(sdist, atg_lie)
                 elif dist:
                     # No scramble distance — use typical ATG distance by miss type
                     exp_start = expected_approach(dist, lie)
@@ -334,7 +347,7 @@ def strokes_gained_around_green(holes) -> float:
         atg_lie = 'bunker' if hole.approach_miss == 'bunker' else 'rough'
 
         if sdist and hole.first_putt_distance:
-            exp_start = expected_atg(sdist, atg_lie)
+            exp_start = expected_scramble(sdist, atg_lie)
             exp_end   = expected_putts(hole.first_putt_distance)
             sg += exp_start - 1 - exp_end
         else:
