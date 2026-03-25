@@ -68,8 +68,8 @@ def recompute(dry_run: bool = False, clear_cache: bool = False) -> None:
                 # Build course_hole_map for OTT yardage lookups
                 course_hole_map = {}
                 if round_.tee_set_obj:
-                    chs = round_.tee_set_obj.course_holes.all()
-                    course_hole_map = {ch.hole_number: ch for ch in chs}
+                    chs = sorted(round_.tee_set_obj.course_holes.all(), key=lambda ch: ch.id)
+                    course_hole_map = {i + 1: ch for i, ch in enumerate(chs)}
 
                 sg_putting_data = strokes_gained_putting(holes)
                 sg_off_tee      = round(strokes_gained_off_tee(holes, course_hole_map), 3)
