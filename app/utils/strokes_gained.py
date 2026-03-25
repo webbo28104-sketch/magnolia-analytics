@@ -154,20 +154,20 @@ def strokes_gained_approach(holes) -> float:
         dist = hole.approach_distance
 
         if hole.par == 3 and dist:
-            # On a par 3, the tee shot IS the approach shot
+            # On a par 3, the tee shot IS the approach shot.
+            # exp = expected strokes to hole out FROM that distance (includes the shot).
+            # Actual strokes from tee = hole.score (all strokes on the hole).
             exp = _expected_strokes_approach(dist)
-            # Strokes used from that distance = total score - 1 (the tee shot)
-            # SG approach = expected - actual strokes used from approach lie
-            strokes_used = hole.score - 1
-            sg += exp - strokes_used
+            sg += exp - hole.score
             eligible += 1
 
         elif hole.par in (4, 5):
             if hole.gir and dist:
-                # Approach found the green — compare expected from that distance
+                # Approach found the green.
+                # exp = expected strokes to hole out from approach distance.
+                # Actual strokes from approach lie = 1 (the approach) + putts.
                 exp = _expected_strokes_approach(dist)
-                strokes_used = hole.putts  # they got on in regulation, putts remain
-                sg += exp - strokes_used
+                sg += exp - (1 + hole.putts)
                 eligible += 1
             elif not hole.gir:
                 # Missed GIR — simple penalty model
