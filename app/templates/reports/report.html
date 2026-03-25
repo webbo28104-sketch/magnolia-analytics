@@ -162,6 +162,8 @@ body::before {
 .insight strong { color:var(--gold-light); }
 .sg-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
 .sg-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:14px 12px; text-align:center; }
+.sg-hcp { font-size:9px; color:var(--cream); opacity:.45; margin-top:4px; letter-spacing:.02em; }
+.sg-hcp.c-grn { color:var(--green-soft); opacity:.8; }
 .sg-cat { font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:9px; }
 .sg-val { font-family:'Playfair Display',serif; font-size:26px; font-weight:500; line-height:1; }
 .sg-sub { font-size:9px; color:var(--cream-faint); margin-top:4px; }
@@ -844,6 +846,19 @@ body::before {
     {%- endif -%}
   {%- endmacro %}
 
+  {% macro hcplabel(sg) -%}
+    {%- if sg > 0 -%}
+      <div class="sg-hcp">Tour level</div>
+    {%- else -%}
+      {%- set hcp = ((sg + 1) * -6 + 6) | round | int -%}
+      {%- if hcp < 0 -%}
+        <div class="sg-hcp c-grn">Plays to +{{ hcp | abs }}</div>
+      {%- else -%}
+        <div class="sg-hcp">Plays to {{ hcp }} hcp</div>
+      {%- endif -%}
+    {%- endif -%}
+  {%- endmacro %}
+
   <div class="sg-cards fu d7">
     <div class="sg-card">
       <div class="sg-cat">
@@ -853,6 +868,7 @@ body::before {
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_off_tee) }}">{{ sgfmt(sg_data.sg_off_tee) }}</div>
       <div class="sg-sub">{{ fw_pct }}% fairways</div>
+      {{ hcplabel(sg_data.sg_off_tee) }}
     </div>
     <div class="sg-card">
       <div class="sg-cat">
@@ -862,6 +878,7 @@ body::before {
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_approach) }}">{{ sgfmt(sg_data.sg_approach) }}</div>
       <div class="sg-sub">{{ gir_pct }}% GIR</div>
+      {{ hcplabel(sg_data.sg_approach) }}
     </div>
     <div class="sg-card">
       <div class="sg-cat">
@@ -871,6 +888,7 @@ body::before {
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_atg) }}">{{ sgfmt(sg_data.sg_atg) }}</div>
       <div class="sg-sub">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% scramble</div>
+      {{ hcplabel(sg_data.sg_atg) }}
     </div>
     <div class="sg-card">
       <div class="sg-cat">
@@ -880,6 +898,7 @@ body::before {
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_putting.total) }}">{{ sgfmt(sg_data.sg_putting.total) }}</div>
       <div class="sg-sub">{{ round.total_putts }} total putts</div>
+      {{ hcplabel(sg_data.sg_putting.total) }}
     </div>
   </div>
   <div class="sg-bars fu d7">
