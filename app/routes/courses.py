@@ -265,11 +265,11 @@ def get_tees(external_id: str):
         db.session.flush()
 
         holes = tee_data.get('holes', [])
-        for hole in holes:
+        for idx, hole in enumerate(holes, start=1):
             db.session.add(CourseHole(
                 course_id=course.id,
                 tee_set_id=ts.id,
-                hole_number=hole['hole_number'],
+                hole_number=hole['hole_number'] or idx,
                 par=hole['par'],
                 yardage=hole.get('yardage'),
                 stroke_index=hole.get('stroke_index'),
