@@ -32,7 +32,7 @@
 /* ---- Reset & Base ---- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { font-size: 16px; scroll-behavior: smooth; }
+html { font-size: 16px; scroll-behavior: smooth; overflow-x: hidden; }
 
 body {
   font-family: var(--font-sans);
@@ -42,6 +42,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 a { color: var(--gold); text-decoration: none; }
@@ -119,6 +120,69 @@ h1, h2, h3, h4 {
 .nav-link--cta:hover { background: var(--gold-light); color: var(--green-900); }
 
 .nav-link--muted { color: #6b9e86; }
+
+/* Hamburger button — hidden on desktop, shown on mobile */
+.nav-hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 22px;
+  height: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-hamburger-bar {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--gold);
+  border-radius: 2px;
+  transition: transform .2s ease, opacity .2s ease;
+}
+.nav-hamburger--open .nav-hamburger-bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-hamburger--open .nav-hamburger-bar:nth-child(2) { opacity: 0; }
+.nav-hamburger--open .nav-hamburger-bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+@media (max-width: 640px) {
+  .nav-hamburger { display: flex; }
+
+  /* Hide nav links by default; slide in as a fixed dropdown when open */
+  .nav-links {
+    display: none;
+  }
+  .nav-links.nav-links--open {
+    display: flex;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    gap: 0;
+    background: var(--green-900);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    padding: 6px 0 14px;
+    z-index: 200;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+  .nav-links.nav-links--open .nav-link {
+    padding: 13px 24px;
+    border-radius: 0;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+    font-size: .95rem;
+  }
+  .nav-links.nav-links--open .nav-link:last-child { border-bottom: none; }
+  .nav-links.nav-links--open .nav-link--cta {
+    margin: 10px 20px 2px;
+    padding: 11px 20px;
+    text-align: center;
+    border-radius: var(--radius);
+    font-size: .9rem;
+  }
+}
 
 /* ---- Flash messages ---- */
 .flash-container {

@@ -37,7 +37,8 @@ class Round(db.Model):
     algo_version = db.Column(db.Integer, nullable=True)
 
     # Handicap
-    hc_differential = db.Column(db.Float, nullable=True)
+    hc_differential        = db.Column(db.Float, nullable=True)
+    counts_for_official_hc = db.Column(db.Boolean, default=True, nullable=True)
 
     # Status
     status       = db.Column(db.String(20), default='in_progress')

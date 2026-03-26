@@ -22,38 +22,12 @@ _WHS_TABLE = {
 }
 
 
-def _recalculate_handicap(user):
-    """Recalculate user.handicap_index using correct WHS rules.
+def _compute_whs_index(rounds):
+    """Compute a WHS handicap index from a list of Round objects.
 
-    Steps:
-      1. Take last 20 rounds with a valid hc_differential.
-      2. Any round with holes_played < 18 is treated as a 9-hole score
-         (includes declared 9-hole rounds AND partial submissions of 18-hole rounds).
-         Pair these 9-hole diffs (most recent first) into 18-hole equivalents by
-         summing adjacent pairs; drop any odd one out.
-      3. Build a list of 18-hole differentials only.
-      4. Apply WHS lookup table:
-           3  -> lowest 1 - 2.0
-           4  -> lowest 1 - 1.0
-           5  -> lowest 1
-           6-8  -> avg lowest 2
-           9-11 -> avg lowest 3
-           12-14 -> avg lowest 4
-           15-16 -> avg lowest 5
-           17-18 -> avg lowest 6
-           19   -> avg lowest 7
-           20   -> avg lowest 8 * 0.96
-      5. Round to 1 decimal and save to user.handicap_index.
+    Returns the computed index (float) or None if fewer than 3 qualifying
+    differentials are available.
     """
-    rounds = (
-        Round.query
-        .filter_by(user_id=user.id, status='complete')
-        .filter(Round.hc_differential.isnot(None))
-        .order_by(Round.date_played.desc())
-        .limit(20)
-        .all()
-    )
-
     # holes_played < 18 covers declared 9-hole rounds AND partial submissions
     nine_hole_diffs = [r.hc_differential for r in rounds if r.holes_played < 18]
     eighteen_diffs  = [r.hc_differential for r in rounds if r.holes_played == 18]
@@ -67,27 +41,54 @@ def _recalculate_handicap(user):
     all_diffs = eighteen_diffs + paired
     count = len(all_diffs)
     if count < 3:
-        return  # Need at least 3 qualifying differentials
+        return None
 
     n_to_use = _WHS_TABLE.get(count, 8)
     best = sorted(all_diffs)[:n_to_use]
     avg = sum(best) / n_to_use
 
-    # WHS adjustments by qualifying round count
     if count == 3:
-        new_index = round(avg - 2.0, 1)
+        return round(avg - 2.0, 1)
     elif count == 4:
-        new_index = round(avg - 1.0, 1)
+        return round(avg - 1.0, 1)
     elif count >= 20:
-        new_index = round(avg * 0.96, 1)
+        return round(avg * 0.96, 1)
     else:
-        new_index = round(avg, 1)
+        return round(avg, 1)
 
-    user.handicap_index = new_index
+
+def _recalculate_handicap(user):
+    """Recalculate both handicap indexes for user and commit.
+
+    Computes:
+      - user.handicap_index          — all complete rounds (All Rounds HCP)
+      - user.official_handicap_index — rounds with counts_for_official_hc=True only
+
+    Uses the same WHS differential logic for both. Requires at least 3
+    qualifying 18-hole differentials (9-hole pairs count as one 18-hole diff).
+    """
+    all_rounds = (
+        Round.query
+        .filter_by(user_id=user.id, status='complete')
+        .filter(Round.hc_differential.isnot(None))
+        .order_by(Round.date_played.desc())
+        .limit(20)
+        .all()
+    )
+
+    # All Rounds handicap
+    new_all = _compute_whs_index(all_rounds)
+    if new_all is not None:
+        user.handicap_index = new_all
+
+    # Official handicap — rounds explicitly marked as counting (None treated as True)
+    official_rounds = [r for r in all_rounds if r.counts_for_official_hc is not False]
+    user.official_handicap_index = _compute_whs_index(official_rounds)
+
     db.session.commit()
     current_app.logger.info(
-        f"[handicap] {user.email} -> {new_index} "
-        f"(best {n_to_use} of {count} diffs)"
+        f"[handicap] {user.email} -> all={new_all} "
+        f"official={user.official_handicap_index}"
     )
 
 
@@ -289,6 +290,25 @@ def edit_round_meta(round_id):
         course_external_id=course_external_id,
         current_tee_id=round_.tee_set_id
     )
+
+
+@rounds_bp.route('/<int:round_id>/toggle-official-hc', methods=['POST'])
+@login_required
+def toggle_official_hc(round_id):
+    """Toggle whether a round counts towards the Official Handicap."""
+    round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
+    # Treat None (pre-migration rows) as True before toggling
+    current_state = round_.counts_for_official_hc
+    if current_state is None:
+        current_state = True
+    round_.counts_for_official_hc = not current_state
+    db.session.commit()
+    _recalculate_handicap(current_user)
+    return jsonify({
+        'counts': round_.counts_for_official_hc,
+        'official_hcp': current_user.official_handicap_index,
+        'all_hcp': current_user.handicap_index,
+    })
 
 
 @rounds_bp.route('/<int:round_id>/delete', methods=['POST'])

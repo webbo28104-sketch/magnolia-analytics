@@ -72,6 +72,51 @@
 .stats-grid--wide { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 480px) { .stats-grid--wide { grid-template-columns: repeat(2, 1fr); } }
 
+/* ── Official HCP toggle chip ─────────────────────────────────────── */
+.hcp-toggle-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  border: 1.5px solid #d8d0c0;
+  background: #f8f5ef;
+  cursor: pointer;
+  font-size: .7rem;
+  font-weight: 600;
+  color: #9a9080;
+  white-space: nowrap;
+  transition: border-color .15s, background .15s, color .15s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.hcp-toggle-chip input { display: none; }
+.hcp-toggle-chip .hcp-toggle-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #d0c8b8;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.hcp-toggle-chip.is-counting {
+  border-color: #2d6a4f;
+  background: rgba(45,106,79,.07);
+  color: #1b4332;
+}
+.hcp-toggle-chip.is-counting .hcp-toggle-dot { background: #2d6a4f; }
+
+/* Dual handicap display in header */
+.hcp-duo {
+  display: flex;
+  gap: 16px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.hcp-duo-item { display: flex; flex-direction: column; gap: 1px; }
+.hcp-duo-val { font-weight: 700; font-size: .93rem; color: var(--text, #111); }
+.hcp-duo-lbl { font-size: .67rem; color: var(--text-muted, #888); letter-spacing: .02em; }
+
 /* ── Your Game at a Glance ───────────────────────────────────────── */
 .glance-grid {
   display: grid;
@@ -107,7 +152,27 @@
   <div class="dashboard-header">
     <div>
       <h1 class="dashboard-title">Good to have you back, {{ current_user.first_name }}.</h1>
-      <p class="dashboard-subtitle">{{ current_user.home_course }} &nbsp;·&nbsp; HCP {{ current_user.handicap_index }}</p>
+      {% if current_user.home_course %}
+      <p class="dashboard-subtitle" style="margin-bottom:6px">{{ current_user.home_course }}</p>
+      {% endif %}
+      <div class="hcp-duo">
+        <div class="hcp-duo-item">
+          <span class="hcp-duo-val" id="official-hcp">
+            {%- if current_user.official_handicap_index is not none -%}
+              {{ '%.1f'|format(current_user.official_handicap_index) }}
+            {%- else -%}—{%- endif -%}
+          </span>
+          <span class="hcp-duo-lbl">Official HCP</span>
+        </div>
+        <div class="hcp-duo-item">
+          <span class="hcp-duo-val" id="all-hcp">
+            {%- if current_user.handicap_index -%}
+              {{ '%.1f'|format(current_user.handicap_index) }}
+            {%- else -%}—{%- endif -%}
+          </span>
+          <span class="hcp-duo-lbl">All Rounds</span>
+        </div>
+      </div>
     </div>
     <a href="{{ url_for('rounds.new_round') }}" class="btn btn--gold">+ Log Round</a>
   </div>
@@ -281,7 +346,15 @@
         </div>
         <div class="round-putts">{{ round.total_putts or '—' }} putts</div>
         <div class="round-gir">{{ round.gir_count or '—' }}/{{ round.holes_played }} GIR</div>
-        <div class="round-actions" style="display:flex;align-items:center;gap:8px">
+        <div class="round-actions" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          {# Official HCP toggle chip #}
+          <button type="button"
+                  class="hcp-toggle-chip {% if round.counts_for_official_hc != False %}is-counting{% endif %}"
+                  data-round-id="{{ round.id }}"
+                  title="Toggle whether this round counts towards your Official Handicap">
+            <span class="hcp-toggle-dot"></span>
+            <span class="hcp-toggle-text">{% if round.counts_for_official_hc != False %}Official{% else %}Casual{% endif %}</span>
+          </button>
           {% if round.report and round.report.html_content %}
             <a href="{{ url_for('reports.view_report', round_id=round.id) }}" class="link-gold">View Report →</a>
             <a href="{{ url_for('reports.view_report', round_id=round.id) }}#share" class="round-edit-btn" title="Share report" style="display:inline-flex;align-items:center;text-decoration:none;color:inherit;vertical-align:middle">
@@ -336,7 +409,6 @@
 {% block scripts %}
 <script>
 function showDelConfirm(btnId, confirmId) {
-  // Close any other open confirmations first
   document.querySelectorAll('.round-delete-confirm').forEach(el => el.style.display = 'none');
   document.querySelectorAll('.round-delete-btn').forEach(el => el.style.display = '');
   var confirmEl = document.getElementById(confirmId);
@@ -350,5 +422,40 @@ function hideDelConfirm(btnId, confirmId) {
   if (confirmEl) confirmEl.style.display = 'none';
   if (btnEl)     btnEl.style.display     = '';
 }
+
+// Official HCP toggle chips
+document.querySelectorAll('.hcp-toggle-chip').forEach(function (chip) {
+  chip.addEventListener('click', function () {
+    var roundId = chip.getAttribute('data-round-id');
+    chip.style.opacity = '0.5';
+    chip.style.pointerEvents = 'none';
+    fetch('/rounds/' + roundId + '/toggle-official-hc', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      // Update chip appearance
+      var text = chip.querySelector('.hcp-toggle-text');
+      if (data.counts) {
+        chip.classList.add('is-counting');
+        if (text) text.textContent = 'Official';
+      } else {
+        chip.classList.remove('is-counting');
+        if (text) text.textContent = 'Casual';
+      }
+      // Update header handicap display
+      var officialEl = document.getElementById('official-hcp');
+      var allEl      = document.getElementById('all-hcp');
+      if (officialEl) officialEl.textContent = data.official_hcp !== null ? parseFloat(data.official_hcp).toFixed(1) : '—';
+      if (allEl)      allEl.textContent      = data.all_hcp !== null      ? parseFloat(data.all_hcp).toFixed(1)      : '—';
+    })
+    .catch(function () { /* silently ignore — page still functions */ })
+    .finally(function () {
+      chip.style.opacity = '';
+      chip.style.pointerEvents = '';
+    });
+  });
+});
 </script>
 {% endblock %}

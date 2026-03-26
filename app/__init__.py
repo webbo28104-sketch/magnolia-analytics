@@ -76,6 +76,8 @@ def _run_column_migrations():
         ('rounds',    'sg_putting',             'REAL'),
         ('rounds',    'sg_total',               'REAL'),
         ('rounds',    'algo_version',           'INTEGER'),
+        ('rounds',    'counts_for_official_hc', 'BOOLEAN DEFAULT TRUE'),
+        ('users',     'official_handicap_index', 'REAL'),
     ]
     for table, column, col_type in migrations:
         try:

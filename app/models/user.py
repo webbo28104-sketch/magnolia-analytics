@@ -17,8 +17,9 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
-    handicap_index = db.Column(db.Float, default=0.0)
-    home_course    = db.Column(db.String(200), default='')
+    handicap_index          = db.Column(db.Float, default=0.0)
+    official_handicap_index = db.Column(db.Float, nullable=True)
+    home_course             = db.Column(db.String(200), default='')
     home_country   = db.Column(db.String(100), default='England')
 
     # Subscription

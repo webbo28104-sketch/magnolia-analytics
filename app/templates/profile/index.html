@@ -16,6 +16,11 @@
 .form-select { appearance: none; -webkit-appearance: none; cursor: pointer; }
 .hcp-display { font-family: 'Playfair Display', Georgia, serif; font-size: 2.4rem; font-weight: 700; color: var(--green, #1a2e1a); line-height: 1; }
 .hcp-note { font-family: 'DM Mono', monospace; font-size: .65rem; letter-spacing: .05em; color: var(--text-muted); margin-top: .4rem; }
+.hcp-dual { display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap; }
+.hcp-dual-item { display: flex; flex-direction: column; gap: .25rem; }
+.hcp-dual-val { font-family: 'Playfair Display', Georgia, serif; font-size: 2.4rem; font-weight: 700; color: var(--green, #1a2e1a); line-height: 1; }
+.hcp-dual-label { font-family: 'DM Mono', monospace; font-size: .65rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.hcp-dual-note { font-family: 'DM Mono', monospace; font-size: .6rem; color: var(--text-muted); margin-top: .2rem; }
 .profile-save-row { display: flex; justify-content: flex-end; margin-top: 1.25rem; }
 
 /* Lifetime stat pills */
@@ -61,8 +66,23 @@
   <!-- Handicap + lifetime stats -->
   <div class="profile-section">
     <div class="profile-section-title">Handicap Index</div>
-    <div class="hcp-display">{{ '%.1f'|format(current_user.handicap_index or 0) }}</div>
-    <div class="hcp-note">Auto-calculated from your last 20 rounds using the WHS method. Submit rounds to update.</div>
+    <div class="hcp-dual">
+      <div class="hcp-dual-item">
+        <div class="hcp-dual-label">Official HCP</div>
+        <div class="hcp-dual-val">
+          {%- if current_user.official_handicap_index is not none -%}
+            {{ '%.1f'|format(current_user.official_handicap_index) }}
+          {%- else -%}—{%- endif -%}
+        </div>
+        <div class="hcp-dual-note">Qualifying (EG/competitive) rounds only</div>
+      </div>
+      <div class="hcp-dual-item">
+        <div class="hcp-dual-label">All Rounds</div>
+        <div class="hcp-dual-val">{{ '%.1f'|format(current_user.handicap_index or 0) }}</div>
+        <div class="hcp-dual-note">Every complete round</div>
+      </div>
+    </div>
+    <div class="hcp-note" style="margin-top:.75rem">WHS method, last 20 rounds. Toggle rounds on the dashboard to mark as Official or Casual.</div>
 
     <div class="lifetime-row">
       <div class="lifetime-stat">

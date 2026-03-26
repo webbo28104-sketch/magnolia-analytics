@@ -25,7 +25,13 @@
     <div class="nav-inner">
       <a href="{{ url_for('main.index') }}" class="nav-logo">Magnolia Analytics</a>
 
-      <div class="nav-links">
+      <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+        <span class="nav-hamburger-bar"></span>
+        <span class="nav-hamburger-bar"></span>
+        <span class="nav-hamburger-bar"></span>
+      </button>
+
+      <div class="nav-links" id="navLinks">
         {% if current_user.is_authenticated %}
           <a href="{{ url_for('dashboard.index') }}" class="nav-link">Dashboard</a>
           <a href="{{ url_for('main.glossary') }}" class="nav-link">Glossary</a>
@@ -40,6 +46,30 @@
       </div>
     </div>
   </nav>
+  <script>
+  (function () {
+    var btn   = document.getElementById('navHamburger');
+    var links = document.getElementById('navLinks');
+    if (!btn || !links) return;
+    function close() {
+      links.classList.remove('nav-links--open');
+      btn.classList.remove('nav-hamburger--open');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = links.classList.toggle('nav-links--open');
+      btn.classList.toggle('nav-hamburger--open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (e) {
+      if (!links.contains(e.target)) close();
+    });
+    links.querySelectorAll('.nav-link').forEach(function (l) {
+      l.addEventListener('click', close);
+    });
+  }());
+  </script>
 
   <!-- Flash messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
