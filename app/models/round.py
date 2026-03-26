@@ -32,6 +32,10 @@ class Round(db.Model):
     sg_putting  = db.Column(db.Float, nullable=True)
     sg_total    = db.Column(db.Float, nullable=True)
 
+    # Computation version — matches CURRENT_ALGO_VERSION in app/utils/round_stats.py.
+    # NULL or a lower value means stored stats are stale and need recomputing.
+    algo_version = db.Column(db.Integer, nullable=True)
+
     # Handicap
     hc_differential = db.Column(db.Float, nullable=True)
 

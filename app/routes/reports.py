@@ -9,6 +9,7 @@ from app.utils.strokes_gained import (
     strokes_gained_approach,
     strokes_gained_around_green,
 )
+from app.utils.round_stats import build_course_hole_map
 from app.services.weather_service import get_round_weather
 from app.services.calendar_service import get_calendar_context
 from app.services.claude_service import generate_narrative
@@ -325,21 +326,32 @@ def view_report(round_id):
     if not holes:
         abort(404)
 
-    # CourseHole yardages (keyed by hole_number)
-    course_hole_map = {}
-    if round_.tee_set_obj:
-        chs = round_.tee_set_obj.course_holes.all()
-        course_hole_map = {ch.hole_number: ch for ch in chs}
+    # CourseHole yardages — use enumerate fallback when hole_number=0 (Golf Course API issue)
+    course_hole_map = build_course_hole_map(round_)
 
     holes_data = _build_holes_data(holes, course_hole_map)
     split      = _split_totals(holes_data)
 
-    # ---- Strokes gained ----
-    sg_putting  = strokes_gained_putting(holes)
-    sg_off_tee  = strokes_gained_off_tee(holes, course_hole_map)
-    sg_approach = strokes_gained_approach(holes)
-    sg_atg      = strokes_gained_around_green(holes)
-    sg_total    = round(sg_off_tee + sg_approach + sg_atg + sg_putting['total'], 2)
+    # ---- Strokes Gained ----
+    # Always compute putting live — needed for per-band chart detail (not stored).
+    # Summary totals are read from stored fields (single source of truth).
+    # Fall back to live computation only if stored values are absent (pre-v2 rounds).
+    sg_putting_data = strokes_gained_putting(holes)
+
+    if round_.sg_off_tee is not None:
+        # Stored path — authoritative values, avoids any course_hole_map sensitivity
+        sg_off_tee  = round_.sg_off_tee
+        sg_approach = round_.sg_approach
+        sg_atg      = round_.sg_atg
+        sg_total    = round_.sg_total
+        sg_putting  = {'total': round_.sg_putting, 'bands': sg_putting_data['bands']}
+    else:
+        # Live fallback for rounds without stored SG (algo_version is NULL)
+        sg_off_tee  = strokes_gained_off_tee(holes, course_hole_map)
+        sg_approach = strokes_gained_approach(holes)
+        sg_atg      = strokes_gained_around_green(holes)
+        sg_putting  = sg_putting_data
+        sg_total    = round(sg_off_tee + sg_approach + sg_atg + sg_putting['total'], 2)
 
     sg_data = {
         'sg_off_tee':  sg_off_tee,

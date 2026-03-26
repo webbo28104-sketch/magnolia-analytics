@@ -49,6 +49,7 @@ def create_app(config_name='default'):
         from app.models.report import Report        # noqa
         db.create_all()
         _run_column_migrations()
+        _warn_stale_rounds(app)
 
     return app
 
@@ -72,6 +73,7 @@ def _run_column_migrations():
         ('rounds',    'sg_atg',                 'REAL'),
         ('rounds',    'sg_putting',             'REAL'),
         ('rounds',    'sg_total',               'REAL'),
+        ('rounds',    'algo_version',           'INTEGER'),
     ]
     for table, column, col_type in migrations:
         try:
@@ -81,3 +83,31 @@ def _run_column_migrations():
             db.session.commit()
         except Exception:
             db.session.rollback()   # column already exists — fine
+
+
+def _warn_stale_rounds(app):
+    """
+    Log a warning at startup if any complete rounds have stale stored stats.
+
+    A round is stale when its algo_version is NULL or lower than
+    CURRENT_ALGO_VERSION in app/utils/round_stats.py.  Run
+    `python recompute_sg.py` to bring all rounds up to date.
+    """
+    try:
+        from app.utils.round_stats import CURRENT_ALGO_VERSION
+        from app.models.round import Round
+        stale = Round.query.filter(
+            Round.status == 'complete',
+            db.or_(
+                Round.algo_version.is_(None),
+                Round.algo_version < CURRENT_ALGO_VERSION,
+            )
+        ).count()
+        if stale:
+            app.logger.warning(
+                f'[startup] {stale} complete round(s) have stale stored stats '
+                f'(algo_version < {CURRENT_ALGO_VERSION}). '
+                'Run: python recompute_sg.py to update.'
+            )
+    except Exception as exc:
+        app.logger.debug(f'[startup] Staleness check skipped: {exc}')

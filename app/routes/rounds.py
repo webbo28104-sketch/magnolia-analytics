@@ -8,6 +8,7 @@ from app.models.tee_set import TeeSet
 from app.models.course_hole import CourseHole
 from app.services.claude_service import generate_report
 from app.services.sendgrid_service import send_report_email
+from app.utils.round_stats import compute_all_stats
 from datetime import datetime, date
 
 rounds_bp = Blueprint('rounds', __name__)
@@ -232,7 +233,7 @@ def submit_round(round_id):
         # Stamp actual holes completed so handicap pairing and stats use the real count
         round_.holes_played = round_.holes.count()
         try:
-            round_.compute_totals()
+            compute_all_stats(round_)     # totals + SG + algo_version in one pass
             round_.compute_differential()
         except Exception as e:
             current_app.logger.exception(f"[submit_round] compute failed: {e}")
