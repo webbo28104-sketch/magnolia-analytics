@@ -1,56 +1,81 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models.user import User
+from app.models.access_code import AccessCode
 from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__)
+
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.index'))
+
+    invite_only = current_app.config.get('INVITE_ONLY', False)
+
     if request.method == 'POST':
-        first_name = request.form.get('first_name', '').strip()
-        last_name = request.form.get('last_name', '').strip()
-        email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '')
+        first_name       = request.form.get('first_name', '').strip()
+        last_name        = request.form.get('last_name', '').strip()
+        email            = request.form.get('email', '').strip().lower()
+        password         = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
+        invite_code_raw  = request.form.get('invite_code', '').strip().upper()
+
         # Basic validation
         if not all([first_name, last_name, email, password]):
             flash('All fields are required.', 'error')
-            return render_template('auth/register.html')
+            return render_template('auth/register.html', invite_only=invite_only)
         if password != confirm_password:
             flash('Passwords do not match.', 'error')
-            return render_template('auth/register.html')
+            return render_template('auth/register.html', invite_only=invite_only)
         if len(password) < 8:
             flash('Password must be at least 8 characters.', 'error')
-            return render_template('auth/register.html')
+            return render_template('auth/register.html', invite_only=invite_only)
         if User.query.filter_by(email=email).first():
             flash('An account with that email already exists.', 'error')
-            return render_template('auth/register.html')
-        user = User(
-            first_name=first_name,
-            last_name=last_name,
-            email=email
-        )
+            return render_template('auth/register.html', invite_only=invite_only)
+
+        # Invite code check (only when INVITE_ONLY is True)
+        access_code_obj = None
+        if invite_only:
+            if not invite_code_raw:
+                flash('An invite code is required to create an account.', 'error')
+                return render_template('auth/register.html', invite_only=invite_only)
+
+            access_code_obj = AccessCode.query.filter_by(code=invite_code_raw).first()
+
+            if not access_code_obj or not access_code_obj.is_available:
+                flash('That invite code is invalid or has already been used.', 'error')
+                return render_template('auth/register.html', invite_only=invite_only)
+
+        # Create user
+        user = User(first_name=first_name, last_name=last_name, email=email)
         user.set_password(password)
         db.session.add(user)
+
+        # Mark code as used
+        if access_code_obj:
+            access_code_obj.mark_used(email)
+
         db.session.commit()
         login_user(user)
         flash(f'Welcome to Magnolia Analytics, {first_name}!', 'success')
         return redirect(url_for('dashboard.index'))
-    return render_template('auth/register.html')
+
+    return render_template('auth/register.html', invite_only=invite_only)
+
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.index'))
     if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
+        email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         remember = request.form.get('remember_me') == 'on'
-        user = User.query.filter_by(email=email).first()
+        user     = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
             user.last_login = datetime.utcnow()
             db.session.commit()
@@ -61,9 +86,11 @@ def login():
             flash('Invalid email or password.', 'error')
     return render_template('auth/login.html')
 
+
 @auth_bp.route('/forgot-password', methods=['GET'])
 def forgot_password():
     return render_template('auth/forgot_password.html')
+
 
 @auth_bp.route('/logout')
 @login_required

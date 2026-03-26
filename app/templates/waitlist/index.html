@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magnolia Analytics — Join the Waiting List</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-900: #0d2218;
+      --green-800: #1B4332;
+      --green-700: #2d6a4f;
+      --green-100: #e8f5ee;
+      --gold:      #C9A84C;
+      --gold-light:#e8c97a;
+      --cream:     #f7f5f0;
+      --cream-mid: #ede9e1;
+      --white:     #ffffff;
+      --text:      #1a1a1a;
+      --text-mid:  #4a5568;
+      --text-muted:#6b7280;
+      --border:    #e2ddd5;
+      --error:     #c0392b;
+      --radius:    10px;
+      --radius-lg: 18px;
+      --font-serif:'Playfair Display', Georgia, serif;
+      --font-sans: 'DM Sans', system-ui, sans-serif;
+      --shadow:    0 2px 16px rgba(27,67,50,0.08);
+      --shadow-lg: 0 8px 40px rgba(27,67,50,0.13);
+    }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--cream);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a { color: var(--green-800); text-decoration: none; }
+
+    .wl-container {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Header ─────────────────────────────────────── */
+    .wl-header {
+      padding: 22px 0 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .wl-header .wl-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .wl-logo {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--green-800);
+      letter-spacing: 0.01em;
+    }
+
+    .wl-logo span {
+      color: var(--gold);
+    }
+
+    .wl-coming-pill {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green-700);
+      background: var(--green-100);
+      border: 1px solid rgba(45,106,79,0.2);
+      border-radius: 20px;
+      padding: 5px 13px;
+    }
+
+    /* ── Hero ────────────────────────────────────────── */
+    .wl-hero {
+      text-align: center;
+      padding: 72px 24px 48px;
+    }
+
+    .wl-eyebrow {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 18px;
+    }
+
+    .wl-headline {
+      font-family: var(--font-serif);
+      font-size: clamp(36px, 5vw, 58px);
+      font-weight: 600;
+      line-height: 1.1;
+      color: var(--green-800);
+      margin-bottom: 20px;
+    }
+
+    .wl-subheading {
+      font-size: 17px;
+      color: var(--text-mid);
+      max-width: 540px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ── Form card ───────────────────────────────────── */
+    .wl-form-wrap {
+      max-width: 480px;
+      margin: 0 auto 40px;
+      padding: 0 24px;
+    }
+
+    .wl-form-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px 32px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .wl-form-card .wl-form-title {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--green-800);
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .wl-field {
+      margin-bottom: 16px;
+    }
+
+    .wl-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-mid);
+      margin-bottom: 6px;
+    }
+
+    .wl-input, .wl-select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      color: var(--text);
+      background: var(--white);
+      transition: border-color 0.15s;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .wl-input:focus, .wl-select:focus {
+      border-color: var(--green-700);
+    }
+
+    .wl-input::placeholder { color: #b0aa9f; }
+
+    .wl-select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+    .wl-btn {
+      width: 100%;
+      padding: 13px 20px;
+      background: var(--green-800);
+      color: var(--white);
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.15s;
+      letter-spacing: 0.01em;
+    }
+
+    .wl-btn:hover { background: var(--green-700); }
+
+    /* ── Flash messages ──────────────────────────────── */
+    .wl-flash {
+      margin-bottom: 18px;
+      padding: 11px 14px;
+      border-radius: var(--radius);
+      font-size: 14px;
+    }
+    .wl-flash--error {
+      background: #fdf0ef;
+      border: 1px solid #e8a090;
+      color: var(--error);
+    }
+    .wl-flash--info {
+      background: var(--green-100);
+      border: 1px solid rgba(45,106,79,0.25);
+      color: var(--green-800);
+    }
+
+    /* ── Success state ───────────────────────────────── */
+    .wl-success {
+      text-align: center;
+      padding: 28px 16px;
+    }
+
+    .wl-success-icon {
+      width: 52px;
+      height: 52px;
+      background: var(--green-100);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      font-size: 22px;
+    }
+
+    .wl-success h3 {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      color: var(--green-800);
+      margin-bottom: 10px;
+    }
+
+    .wl-success p {
+      font-size: 14px;
+      color: var(--text-mid);
+      line-height: 1.65;
+    }
+
+    /* ── Stats row ───────────────────────────────────── */
+    .wl-stats {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      padding: 0 24px 64px;
+      flex-wrap: wrap;
+    }
+
+    .wl-stat {
+      text-align: center;
+    }
+
+    .wl-stat-value {
+      font-family: var(--font-serif);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--green-800);
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+
+    .wl-stat-label {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .wl-stats-divider {
+      width: 1px;
+      height: 40px;
+      background: var(--border);
+      align-self: center;
+    }
+
+    /* ── Feature cards ───────────────────────────────── */
+    .wl-features-section {
+      background: var(--green-800);
+      padding: 64px 0;
+    }
+
+    .wl-features-label {
+      text-align: center;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(232,201,122,0.7);
+      margin-bottom: 36px;
+    }
+
+    .wl-features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .wl-feature {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+    }
+
+    .wl-feature-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(201,168,76,0.15);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 16px;
+    }
+
+    .wl-feature-title {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    .wl-feature-body {
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.65;
+    }
+
+    /* ── Footer ──────────────────────────────────────── */
+    .wl-footer {
+      background: var(--green-900);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding: 22px 0;
+      margin-top: auto;
+    }
+
+    .wl-footer .wl-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .wl-footer-brand {
+      font-family: var(--font-serif);
+      font-size: 14px;
+      color: rgba(255,255,255,0.55);
+    }
+
+    .wl-footer-contact {
+      font-size: 13px;
+      color: rgba(255,255,255,0.35);
+    }
+
+    .wl-footer-contact a {
+      color: rgba(232,201,122,0.6);
+    }
+
+    .wl-footer-contact a:hover { color: var(--gold-light); }
+
+    /* ── Responsive ──────────────────────────────────── */
+    @media (max-width: 640px) {
+      .wl-form-card { padding: 28px 20px; }
+      .wl-stats { gap: 28px; }
+      .wl-stats-divider { display: none; }
+      .wl-features { grid-template-columns: 1fr; }
+      .wl-hero { padding: 48px 24px 36px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="wl-header">
+    <div class="wl-container">
+      <span class="wl-logo">Magnolia <span>Analytics</span></span>
+      <span class="wl-coming-pill">Coming soon</span>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="wl-hero">
+    <span class="wl-eyebrow">Now taking signups</span>
+    <h1 class="wl-headline">Know your game.<br>Lower your score.</h1>
+    <p class="wl-subheading">
+      Hole-by-hole logging, automatic strokes gained analysis, and AI coaching after every round — built for golfers who want real data, not guesswork.
+    </p>
+  </section>
+
+  <!-- Form card -->
+  <div class="wl-form-wrap">
+    <div class="wl-form-card">
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="wl-flash wl-flash--{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      {% if success %}
+        <div class="wl-success">
+          <div class="wl-success-icon">⛳</div>
+          <h3>You're on the list.</h3>
+          <p>
+            We'll send you an invite when Magnolia Analytics opens.<br>
+            Sit tight — good things take a round or two.
+          </p>
+        </div>
+      {% else %}
+        <p class="wl-form-title">Join the waiting list</p>
+
+        <form method="POST" action="{{ url_for('waitlist.index') }}">
+          <div class="wl-field">
+            <label class="wl-label" for="wl-name">Full name</label>
+            <input class="wl-input" type="text" id="wl-name" name="name"
+                   placeholder="Charlie Webb" required autocomplete="name">
+          </div>
+
+          <div class="wl-field">
+            <label class="wl-label" for="wl-email">Email address</label>
+            <input class="wl-input" type="email" id="wl-email" name="email"
+                   placeholder="charlie@example.com" required autocomplete="email">
+          </div>
+
+          <div class="wl-field">
+            <label class="wl-label" for="wl-handicap">Handicap index <span style="color:#b0aa9f;font-weight:400">(optional)</span></label>
+            <input class="wl-input" type="number" id="wl-handicap" name="handicap"
+                   placeholder="e.g. 14.2" min="-10" max="54" step="0.1" autocomplete="off">
+          </div>
+
+          <div class="wl-field">
+            <label class="wl-label" for="wl-rounds">Rounds per month <span style="color:#b0aa9f;font-weight:400">(optional)</span></label>
+            <select class="wl-select" id="wl-rounds" name="rounds_per_month">
+              <option value="">Select…</option>
+              <option value="1">1–2 rounds</option>
+              <option value="3">3–4 rounds</option>
+              <option value="6">5–8 rounds</option>
+              <option value="10">9+ rounds</option>
+            </select>
+          </div>
+
+          <button type="submit" class="wl-btn">Join the waiting list →</button>
+        </form>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="wl-stats">
+    <div class="wl-stat">
+      <div class="wl-stat-value">{{ shown_count }}</div>
+      <div class="wl-stat-label">On the waiting list</div>
+    </div>
+    {% if avg_handicap is not none %}
+    <div class="wl-stats-divider"></div>
+    <div class="wl-stat">
+      <div class="wl-stat-value">{{ avg_handicap }}</div>
+      <div class="wl-stat-label">Avg handicap</div>
+    </div>
+    {% endif %}
+    <div class="wl-stats-divider"></div>
+    <div class="wl-stat">
+      <div class="wl-stat-value" style="font-size:20px;padding-top:4px">2026</div>
+      <div class="wl-stat-label">Opening soon</div>
+    </div>
+  </div>
+
+  <!-- Feature cards -->
+  <section class="wl-features-section">
+    <div class="wl-container">
+      <p class="wl-features-label">What you get</p>
+      <div class="wl-features">
+
+        <div class="wl-feature">
+          <div class="wl-feature-icon">⚡</div>
+          <h3 class="wl-feature-title">Log in seconds</h3>
+          <p class="wl-feature-body">
+            Tap through each hole in under a minute. Score, putts, tee shot, GIR — everything captured without slowing down your game.
+          </p>
+        </div>
+
+        <div class="wl-feature">
+          <div class="wl-feature-icon">📊</div>
+          <h3 class="wl-feature-title">Strokes gained breakdown</h3>
+          <p class="wl-feature-body">
+            See exactly where you're losing shots versus the tour average — off the tee, approach, around the green, and putting. Know what to fix.
+          </p>
+        </div>
+
+        <div class="wl-feature">
+          <div class="wl-feature-icon">🧠</div>
+          <h3 class="wl-feature-title">Coaching after every round</h3>
+          <p class="wl-feature-body">
+            An AI-powered narrative breaks down your round and tells you exactly what to work on before your next tee time. Personalised, every time.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="wl-footer">
+    <div class="wl-container">
+      <span class="wl-footer-brand">Magnolia Analytics</span>
+      <span class="wl-footer-contact">
+        <a href="mailto:hello@magnoliaanalytics.com">hello@magnoliaanalytics.com</a>
+      </span>
+    </div>
+  </footer>
+
+</body>
+</html>

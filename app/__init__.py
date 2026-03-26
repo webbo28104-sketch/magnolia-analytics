@@ -29,6 +29,7 @@ def create_app(config_name='default'):
     from app.routes.reports import reports_bp
     from app.routes.courses import courses_bp
     from app.routes.profile import profile_bp
+    from app.routes.waitlist import waitlist_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -37,21 +38,25 @@ def create_app(config_name='default'):
     app.register_blueprint(reports_bp, url_prefix='/reports')
     app.register_blueprint(courses_bp)
     app.register_blueprint(profile_bp, url_prefix='/profile')
+    app.register_blueprint(waitlist_bp)
 
     # Recompute stale stats for the user on every login (covers login + register)
     user_logged_in.connect(_recompute_stale_on_login, app)
 
     # Create all tables on startup (safe to call repeatedly)
     with app.app_context():
-        from app.models.user import User            # noqa
-        from app.models.course import Course        # noqa
-        from app.models.tee_set import TeeSet       # noqa
-        from app.models.course_hole import CourseHole  # noqa
-        from app.models.round import Round          # noqa
-        from app.models.hole import Hole            # noqa
-        from app.models.report import Report        # noqa
+        from app.models.user import User                    # noqa
+        from app.models.course import Course                # noqa
+        from app.models.tee_set import TeeSet               # noqa
+        from app.models.course_hole import CourseHole       # noqa
+        from app.models.round import Round                  # noqa
+        from app.models.hole import Hole                    # noqa
+        from app.models.report import Report                # noqa
+        from app.models.waitlist import WaitingList         # noqa
+        from app.models.access_code import AccessCode       # noqa
         db.create_all()
         _run_column_migrations()
+        _ensure_admin_code(app)
 
     return app
 
@@ -87,6 +92,36 @@ def _run_column_migrations():
             db.session.commit()
         except Exception:
             db.session.rollback()   # column already exists — fine
+
+
+def _ensure_admin_code(app):
+    """
+    On first startup, generate a MAGNOLIA-XXXX admin code if none exists.
+    Admin codes are unlimited-use — they are never marked as consumed.
+    The generated code is printed clearly to the logs.
+    """
+    import random
+    import string
+    from app.models.access_code import AccessCode
+
+    try:
+        if AccessCode.query.filter_by(is_admin=True).count() == 0:
+            suffix = ''.join(random.choices(string.ascii_uppercase, k=4))
+            code   = f'MAGNOLIA-{suffix}'
+            entry  = AccessCode(code=code, is_admin=True)
+            db.session.add(entry)
+            db.session.commit()
+            app.logger.warning(
+                '\n'
+                '╔══════════════════════════════════════════╗\n'
+                '║   MAGNOLIA ADMIN CODE GENERATED          ║\n'
+                f'║   Code: {code:<34}║\n'
+                '║   Use this at /auth/register             ║\n'
+                '╚══════════════════════════════════════════╝'
+            )
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.error(f'[startup] Admin code generation failed: {exc}')
 
 
 def _recompute_stale_on_login(sender, user, **kwargs):

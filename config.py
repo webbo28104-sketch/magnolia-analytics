@@ -23,6 +23,9 @@ class Config:
     APP_NAME = 'Magnolia Analytics'
     DEFAULT_COURSE = 'Seaford GC'
 
+    # Access control — set to True to require an invite code at registration
+    INVITE_ONLY = True
+
 
 class DevelopmentConfig(Config):
     DEBUG = True
