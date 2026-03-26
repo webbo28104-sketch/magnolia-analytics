@@ -9,8 +9,8 @@
     <p class="hero-eyebrow">Golf performance. Refined.</p>
     <h1 class="hero-title">Play. Log. Improve.<br>Repeat.</h1>
     <p class="hero-subtitle">
-      Log your round hole by hole in minutes. Receive a beautiful personalised
-      performance report — delivered to your inbox within 30 seconds of finishing.
+      Log your round hole by hole as you play. Get a personalised performance
+      report in your inbox in seconds of finishing.
     </p>
     <div class="hero-actions">
       <a href="{{ url_for('auth.register') }}" class="btn btn--gold">Start Tracking Free</a>
@@ -19,14 +19,14 @@
   </div>
 </section>
 
-<!-- Feedback loop — Atomic Habits -->
+<!-- Feedback loop -->
 <section class="loop-section">
   <div class="loop-inner">
-    <p class="section-eyebrow">Build a better practice habit</p>
+    <p class="section-eyebrow">How it works</p>
     <h2 class="section-title">The Magnolia loop</h2>
     <p class="section-subtitle">
-      The best golfers don't just play — they reflect. Magnolia builds the feedback
-      loop that turns every round into a coaching session.
+      Log what happened. Get analysis that tells you why. Four areas of your game,
+      one clear picture of where shots are being lost.
     </p>
     <div class="loop-steps">
       <div class="loop-step">
@@ -38,25 +38,25 @@
       <div class="loop-step">
         <div class="loop-step-num">02</div>
         <div class="loop-step-label">Log</div>
-        <div class="loop-step-desc">Enter each hole in minutes on your phone</div>
+        <div class="loop-step-desc">Enter each hole in seconds on your phone</div>
       </div>
       <div class="loop-arrow">→</div>
       <div class="loop-step">
         <div class="loop-step-num">03</div>
         <div class="loop-step-label">Report</div>
-        <div class="loop-step-desc">Receive your personalised report in 30 seconds</div>
+        <div class="loop-step-desc">Your personalised report arrives in seconds</div>
       </div>
       <div class="loop-arrow">→</div>
       <div class="loop-step">
         <div class="loop-step-num">04</div>
         <div class="loop-step-label">Focus</div>
-        <div class="loop-step-desc">Know exactly what to practice before next time</div>
+        <div class="loop-step-desc">Know exactly what to work on before next time</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Example report preview -->
+<!-- Tabbed report preview -->
 <section class="preview-section">
   <div class="preview-inner">
     <p class="section-eyebrow">What you get</p>
@@ -66,73 +66,246 @@
       Greens, and Putting — then tells you exactly where shots are being gained or lost.
     </p>
 
-    <div class="preview-card">
-      <div class="preview-card-header">
-        <div class="preview-card-title">
-          <span class="preview-logo">Magnolia Analytics</span>
-          <span class="preview-date">Round Report</span>
+    <!-- Tabbed mini-report -->
+    <div class="mock-report">
+      <div class="mock-report-header">
+        <div class="mock-report-brand">
+          <span class="mock-brand-name">Magnolia Analytics</span>
+          <span class="mock-brand-sub">Round Report</span>
         </div>
-        <div class="preview-score-block">
-          <div class="preview-score">78</div>
-          <div class="preview-score-label">+6 over par</div>
-        </div>
-      </div>
-
-      <div class="preview-stats-row">
-        <div class="preview-stat">
-          <div class="preview-stat-value mono">9 / 14</div>
-          <div class="preview-stat-label">Fairways Hit</div>
-        </div>
-        <div class="preview-stat">
-          <div class="preview-stat-value mono">11 / 18</div>
-          <div class="preview-stat-label">Greens in Reg</div>
-        </div>
-        <div class="preview-stat">
-          <div class="preview-stat-value mono">31</div>
-          <div class="preview-stat-label">Total Putts</div>
-        </div>
-        <div class="preview-stat">
-          <div class="preview-stat-value mono">2</div>
-          <div class="preview-stat-label">Penalties</div>
+        <div class="mock-score-block">
+          <div class="mock-score">78</div>
+          <div class="mock-score-label">+6 over par</div>
         </div>
       </div>
 
-      <div class="preview-sg-section">
-        <div class="preview-sg-title">Strokes Gained vs Scratch</div>
-        <div class="preview-sg-bars">
-          <div class="preview-sg-row">
-            <div class="preview-sg-label">Off the Tee</div>
-            <div class="preview-sg-bar-wrap">
-              <div class="preview-sg-bar preview-sg-bar--best" style="width: 55%">+0.8</div>
-            </div>
+      <div class="mock-tabs" role="tablist">
+        <button class="mock-tab mock-tab--active" role="tab" data-tab="overview">Overview</button>
+        <button class="mock-tab" role="tab" data-tab="ott">Off the Tee</button>
+        <button class="mock-tab" role="tab" data-tab="approach">Approach</button>
+        <button class="mock-tab" role="tab" data-tab="atg">Around the Green</button>
+        <button class="mock-tab" role="tab" data-tab="putting">Putting</button>
+      </div>
+
+      <!-- Overview -->
+      <div class="mock-panel mock-panel--active" data-panel="overview">
+        <div class="mock-stats-row">
+          <div class="mock-stat">
+            <div class="mock-stat-value">9/14</div>
+            <div class="mock-stat-label">Fairways Hit</div>
           </div>
-          <div class="preview-sg-row">
-            <div class="preview-sg-label">Approach</div>
-            <div class="preview-sg-bar-wrap">
-              <div class="preview-sg-bar preview-sg-bar--worst" style="width: 70%">-2.1</div>
-            </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">11/18</div>
+            <div class="mock-stat-label">Greens in Reg</div>
           </div>
-          <div class="preview-sg-row">
-            <div class="preview-sg-label">Around Greens</div>
-            <div class="preview-sg-bar-wrap">
-              <div class="preview-sg-bar preview-sg-bar--neutral" style="width: 30%">-0.9</div>
-            </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">31</div>
+            <div class="mock-stat-label">Total Putts</div>
           </div>
-          <div class="preview-sg-row">
-            <div class="preview-sg-label">Putting</div>
-            <div class="preview-sg-bar-wrap">
-              <div class="preview-sg-bar preview-sg-bar--neutral" style="width: 45%">-1.4</div>
-            </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">2</div>
+            <div class="mock-stat-label">Penalties</div>
           </div>
+        </div>
+        <div class="mock-sg-section">
+          <div class="mock-sg-heading">Strokes Gained vs Scratch</div>
+          <div class="mock-sg-row">
+            <div class="mock-sg-label">Off the Tee</div>
+            <div class="mock-sg-track"><div class="mock-sg-bar mock-sg-bar--pos" style="width:55%">+0.8</div></div>
+          </div>
+          <div class="mock-sg-row">
+            <div class="mock-sg-label">Approach</div>
+            <div class="mock-sg-track"><div class="mock-sg-bar mock-sg-bar--neg" style="width:70%">−2.1</div></div>
+          </div>
+          <div class="mock-sg-row">
+            <div class="mock-sg-label">Around Green</div>
+            <div class="mock-sg-track"><div class="mock-sg-bar mock-sg-bar--neg" style="width:30%">−0.9</div></div>
+          </div>
+          <div class="mock-sg-row">
+            <div class="mock-sg-label">Putting</div>
+            <div class="mock-sg-track"><div class="mock-sg-bar mock-sg-bar--neg" style="width:45%">−1.4</div></div>
+          </div>
+        </div>
+        <div class="mock-takeaway">
+          <div class="mock-takeaway-label">Key Takeaway</div>
+          <p class="mock-takeaway-text">Your driving is the standout strength this round (+0.8 SG). The clear priority
+          is approach play: −2.1 SG is by far the biggest leak. Better distance control
+          into greens would directly convert those bogeys into pars.</p>
         </div>
       </div>
 
-      <div class="preview-insight">
-        <div class="preview-insight-label">Key Takeaway</div>
-        <div class="preview-insight-text">
-          "Your driving off the tee is working (+0.8 SG) — that’s the standout strength this round.
-          The clear priority is approach play: −2.1 SG is by far the biggest leak.
-          Better distance control into greens would directly convert those bogeys into pars."
+      <!-- Off the Tee -->
+      <div class="mock-panel" data-panel="ott">
+        <div class="mock-sg-hero">
+          <div class="mock-sg-hero-value mock-sg-hero-value--pos">+0.8</div>
+          <div class="mock-sg-hero-label">SG: Off the Tee</div>
+        </div>
+        <div class="mock-stats-row">
+          <div class="mock-stat">
+            <div class="mock-stat-value">9/14</div>
+            <div class="mock-stat-label">Fairways Hit</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">64%</div>
+            <div class="mock-stat-label">Fairway Rate</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">3</div>
+            <div class="mock-stat-label">Miss Left</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">2</div>
+            <div class="mock-stat-label">Miss Right</div>
+          </div>
+        </div>
+        <div class="mock-hole-highlights">
+          <div class="mock-highlight-heading">Hole highlights</div>
+          <div class="mock-hole-row mock-hole-row--good">
+            <span class="mock-hole-num">Hole 7</span>
+            <span class="mock-hole-desc">Fairway, 268 yards — +0.31 SG</span>
+          </div>
+          <div class="mock-hole-row mock-hole-row--good">
+            <span class="mock-hole-num">Hole 14</span>
+            <span class="mock-hole-desc">Fairway, 291 yards — +0.41 SG</span>
+          </div>
+          <div class="mock-hole-row mock-hole-row--bad">
+            <span class="mock-hole-num">Hole 3</span>
+            <span class="mock-hole-desc">Rough left, 240 yards — −0.18 SG</span>
+          </div>
+        </div>
+        <div class="mock-takeaway">
+          <div class="mock-takeaway-label">Analysis</div>
+          <p class="mock-takeaway-text">Off the tee is your strongest category this round. 64% fairways hit is
+          solid, and you're generating good distance. Three missed fairways went left — a consistent pattern worth monitoring.</p>
+        </div>
+      </div>
+
+      <!-- Approach -->
+      <div class="mock-panel" data-panel="approach">
+        <div class="mock-sg-hero">
+          <div class="mock-sg-hero-value mock-sg-hero-value--neg">−2.1</div>
+          <div class="mock-sg-hero-label">SG: Approach</div>
+        </div>
+        <div class="mock-stats-row">
+          <div class="mock-stat">
+            <div class="mock-stat-value">11/18</div>
+            <div class="mock-stat-label">GIR</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">61%</div>
+            <div class="mock-stat-label">GIR Rate</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">145 yd</div>
+            <div class="mock-stat-label">Avg Distance</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">5</div>
+            <div class="mock-stat-label">Short of Green</div>
+          </div>
+        </div>
+        <div class="mock-miss-chart">
+          <div class="mock-highlight-heading">Miss distribution (7 misses)</div>
+          <div class="mock-miss-row">
+            <div class="mock-miss-label">Short</div>
+            <div class="mock-miss-track"><div class="mock-miss-bar" style="width:71%">5</div></div>
+          </div>
+          <div class="mock-miss-row">
+            <div class="mock-miss-label">Left</div>
+            <div class="mock-miss-track"><div class="mock-miss-bar" style="width:14%">1</div></div>
+          </div>
+          <div class="mock-miss-row">
+            <div class="mock-miss-label">Right</div>
+            <div class="mock-miss-track"><div class="mock-miss-bar" style="width:14%">1</div></div>
+          </div>
+        </div>
+        <div class="mock-takeaway">
+          <div class="mock-takeaway-label">Analysis</div>
+          <p class="mock-takeaway-text">−2.1 SG is the biggest leak in your game this round. Five approach shots
+          came up short — a clear distance control issue, particularly with mid-irons from 130–160 yards. Taking one more club in this range would be the single biggest improvement available.</p>
+        </div>
+      </div>
+
+      <!-- Around the Green -->
+      <div class="mock-panel" data-panel="atg">
+        <div class="mock-sg-hero">
+          <div class="mock-sg-hero-value mock-sg-hero-value--neg">−0.9</div>
+          <div class="mock-sg-hero-label">SG: Around the Green</div>
+        </div>
+        <div class="mock-stats-row">
+          <div class="mock-stat">
+            <div class="mock-stat-value">4/7</div>
+            <div class="mock-stat-label">Scramble Rate</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">57%</div>
+            <div class="mock-stat-label">Scramble %</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">1/2</div>
+            <div class="mock-stat-label">Sand Saves</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">18 ft</div>
+            <div class="mock-stat-label">Avg Chip to Pin</div>
+          </div>
+        </div>
+        <div class="mock-takeaway">
+          <div class="mock-takeaway-label">Analysis</div>
+          <p class="mock-takeaway-text">Scrambling at 57% is below the scratch benchmark. You're getting up and down
+          when chips finish close, but 3 of the 3 failures left the ball more than 20 feet from
+          the pin. Focus on landing spot selection — getting the ball on the green and running to the hole rather than carrying to the cup.</p>
+        </div>
+      </div>
+
+      <!-- Putting -->
+      <div class="mock-panel" data-panel="putting">
+        <div class="mock-sg-hero">
+          <div class="mock-sg-hero-value mock-sg-hero-value--neg">−1.4</div>
+          <div class="mock-sg-hero-label">SG: Putting</div>
+        </div>
+        <div class="mock-stats-row">
+          <div class="mock-stat">
+            <div class="mock-stat-value">31</div>
+            <div class="mock-stat-label">Total Putts</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">2</div>
+            <div class="mock-stat-label">3-Putts</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">22 ft</div>
+            <div class="mock-stat-label">Avg 1st Putt</div>
+          </div>
+          <div class="mock-stat">
+            <div class="mock-stat-value">1</div>
+            <div class="mock-stat-label">1-Putt</div>
+          </div>
+        </div>
+        <div class="mock-sg-section">
+          <div class="mock-sg-heading">SG by distance band</div>
+          <div class="mock-sg-row">
+            <div class="mock-sg-label">&lt; 5 ft</div>
+            <div class="mock-sg-track"><div class="mock-sg-bar mock-sg-bar--pos" style="width:40%">+0.2</div></div>
+          </div>
+          <div class="mock-sg-row">
+            <div class="mock-sg-label">5–15 ft</div>
+            <div class="mock-sg-track"><div class="mock-sg-bar mock-sg-bar--neg" style="width:50%">−0.8</div></div>
+          </div>
+          <div class="mock-sg-row">
+            <div class="mock-sg-label">15–30 ft</div>
+            <div class="mock-sg-track"><div class="mock-sg-bar mock-sg-bar--neg" style="width:60%">−0.9</div></div>
+          </div>
+          <div class="mock-sg-row">
+            <div class="mock-sg-label">&gt; 30 ft</div>
+            <div class="mock-sg-track"><div class="mock-sg-bar mock-sg-bar--pos" style="width:20%">+0.1</div></div>
+          </div>
+        </div>
+        <div class="mock-takeaway">
+          <div class="mock-takeaway-label">Analysis</div>
+          <p class="mock-takeaway-text">The two 3-putts are costly but the pattern is clear: mid-range putts (5–15 ft)
+          are the biggest leak. You're leaving approach putts short of the hole, leaving tough
+          second putts. Speed control from 10–20 feet should be the putting focus.</p>
         </div>
       </div>
     </div>
@@ -141,18 +314,22 @@
 
 <!-- Features -->
 <section class="features">
+  <div class="features-section-header">
+    <p class="section-eyebrow">Everything you need</p>
+    <h2 class="section-title">Built for the serious amateur</h2>
+  </div>
   <div class="features-grid">
 
     <div class="feature-card">
       <div class="feature-icon">◆</div>
       <h3 class="feature-title">Hole-by-hole logging</h3>
-      <p class="feature-body">Tap through all 18 holes in minutes. Smart fields appear and disappear based on your shots — no clutter, no faff.</p>
+      <p class="feature-body">Tap through all 18 holes in seconds. Smart fields appear and disappear based on your shots — no clutter, no faff.</p>
     </div>
 
     <div class="feature-card">
       <div class="feature-icon">◆</div>
       <h3 class="feature-title">Personalised reports</h3>
-      <p class="feature-body">Every stat from your round is analysed and turned into a narrative coaching report tailored specifically to your game.</p>
+      <p class="feature-body">Every stat from your round is analysed and turned into a coaching report tailored specifically to your game.</p>
     </div>
 
     <div class="feature-card">
@@ -163,8 +340,8 @@
 
     <div class="feature-card">
       <div class="feature-icon">◆</div>
-      <h3 class="feature-title">Season trends</h3>
-      <p class="feature-body">See your progress over time with season-average comparisons in every report. Watch your handicap trend in the right direction.</p>
+      <h3 class="feature-title">Performance trends</h3>
+      <p class="feature-body">See how each category is moving across your last 20 rounds. Watch your handicap trend in the right direction.</p>
     </div>
 
   </div>
@@ -181,10 +358,10 @@
       <div class="plan-price">£7.99<span>/mo</span></div>
       <ul class="plan-features">
         <li>Hole-by-hole round logging</li>
-        <li>Personalised performance report in 30 seconds</li>
+        <li>Personalised performance report in seconds</li>
         <li>Email delivery after every round</li>
         <li>Strokes gained — Off the Tee, Approach, Around the Greens, Putting</li>
-        <li>Season analytics dashboard</li>
+        <li>Performance dashboard tracking your last 20 rounds</li>
         <li>Unlimited rounds</li>
       </ul>
       <a href="{{ url_for('auth.register') }}" class="btn btn--gold btn--full">Get Started</a>
@@ -192,5 +369,21 @@
 
   </div>
 </section>
+
+<script>
+(function () {
+  var tabs = document.querySelectorAll('.mock-tab');
+  var panels = document.querySelectorAll('.mock-panel');
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var target = tab.getAttribute('data-tab');
+      tabs.forEach(function (t) { t.classList.remove('mock-tab--active'); });
+      panels.forEach(function (p) { p.classList.remove('mock-panel--active'); });
+      tab.classList.add('mock-tab--active');
+      document.querySelector('.mock-panel[data-panel="' + target + '"]').classList.add('mock-panel--active');
+    });
+  });
+}());
+</script>
 
 {% endblock %}
