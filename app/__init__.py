@@ -1,7 +1,7 @@
-from flask import Flask
+from flask import Flask, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager, user_logged_in
+from flask_login import LoginManager, user_logged_in, current_user
 from config import config
 
 db = SQLAlchemy()
@@ -42,6 +42,29 @@ def create_app(config_name='default'):
 
     # Recompute stale stats for the user on every login (covers login + register)
     user_logged_in.connect(_recompute_stale_on_login, app)
+
+    # Access gate: redirect unauthenticated visitors to /waitlist
+    @app.before_request
+    def _access_gate():
+        # Always allow static files
+        if request.endpoint and request.endpoint == 'static':
+            return None
+        # Always allow the waitlist page itself
+        if request.endpoint in ('waitlist.index',):
+            return None
+        # Always allow login and the validate-code endpoint
+        if request.endpoint in ('auth.login', 'auth.validate_code', 'auth.logout'):
+            return None
+        # Authenticated users pass through
+        if current_user.is_authenticated:
+            return None
+        # Allow /auth/register only if access has been granted via modal
+        if request.endpoint == 'auth.register':
+            if session.get('access_granted'):
+                return None
+            return redirect(url_for('waitlist.index'))
+        # All other unauthenticated requests → waitlist
+        return redirect(url_for('waitlist.index'))
 
     # Create all tables on startup (safe to call repeatedly)
     with app.app_context():

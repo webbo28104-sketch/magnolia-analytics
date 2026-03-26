@@ -372,6 +372,112 @@
 
     .wl-footer-contact a:hover { color: var(--gold-light); }
 
+    .wl-footer-access {
+      font-size: 12px;
+      color: rgba(255,255,255,0.25);
+    }
+
+    .wl-footer-access a {
+      color: rgba(255,255,255,0.3);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .wl-footer-access a:hover { color: rgba(232,201,122,0.5); }
+
+    /* ── Access modal ────────────────────────────────── */
+    .wl-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .wl-modal-backdrop.open {
+      display: flex;
+    }
+
+    .wl-modal {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 36px 32px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .wl-modal-title {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--green-800);
+      margin-bottom: 8px;
+    }
+
+    .wl-modal-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+    }
+
+    .wl-modal-input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text);
+      background: var(--white);
+      transition: border-color 0.15s;
+      outline: none;
+      margin-bottom: 14px;
+    }
+
+    .wl-modal-input:focus { border-color: var(--green-700); }
+    .wl-modal-input::placeholder { text-transform: none; letter-spacing: normal; color: #b0aa9f; }
+
+    .wl-modal-error {
+      font-size: 13px;
+      color: var(--error);
+      margin-bottom: 12px;
+      min-height: 18px;
+    }
+
+    .wl-modal-btn {
+      width: 100%;
+      padding: 12px 20px;
+      background: var(--green-800);
+      color: var(--white);
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .wl-modal-btn:hover { background: var(--green-700); }
+    .wl-modal-btn:disabled { opacity: 0.6; cursor: default; }
+
+    .wl-modal-cancel {
+      display: block;
+      text-align: center;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .wl-modal-cancel:hover { color: var(--text); }
+
     /* ── Responsive ──────────────────────────────────── */
     @media (max-width: 640px) {
       .wl-form-card { padding: 28px 20px; }
@@ -521,8 +627,99 @@
       <span class="wl-footer-contact">
         <a href="mailto:hello@magnoliaanalytics.com">hello@magnoliaanalytics.com</a>
       </span>
+      <span class="wl-footer-access">
+        <a href="#" id="open-access-modal">Already have access? Enter code →</a>
+      </span>
     </div>
   </footer>
+
+  <!-- Access code modal -->
+  <div class="wl-modal-backdrop" id="access-modal" role="dialog" aria-modal="true" aria-label="Enter invite code">
+    <div class="wl-modal">
+      <p class="wl-modal-title">Enter your invite code</p>
+      <p class="wl-modal-sub">You'll be taken to the sign-up page once your code is verified.</p>
+      <input class="wl-modal-input" id="modal-code-input" type="text"
+             placeholder="GOLF-XXXX-XXXX or MAGNOLIA-XXXX"
+             autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+      <div class="wl-modal-error" id="modal-error" aria-live="polite"></div>
+      <button class="wl-modal-btn" id="modal-submit-btn">Verify code</button>
+      <span class="wl-modal-cancel" id="close-access-modal">Cancel</span>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const backdrop  = document.getElementById('access-modal');
+      const openBtn   = document.getElementById('open-access-modal');
+      const closeBtn  = document.getElementById('close-access-modal');
+      const input     = document.getElementById('modal-code-input');
+      const errorEl   = document.getElementById('modal-error');
+      const submitBtn = document.getElementById('modal-submit-btn');
+
+      function openModal(e) {
+        e.preventDefault();
+        backdrop.classList.add('open');
+        input.value = '';
+        errorEl.textContent = '';
+        input.focus();
+      }
+
+      function closeModal() {
+        backdrop.classList.remove('open');
+      }
+
+      openBtn.addEventListener('click', openModal);
+      closeBtn.addEventListener('click', closeModal);
+      backdrop.addEventListener('click', function (e) {
+        if (e.target === backdrop) closeModal();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeModal();
+      });
+
+      // Auto-format: uppercase, allow only letters/digits/hyphens
+      input.addEventListener('input', function () {
+        const pos = this.selectionStart;
+        this.value = this.value.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+        this.setSelectionRange(pos, pos);
+      });
+
+      submitBtn.addEventListener('click', submitCode);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') submitCode();
+      });
+
+      function submitCode() {
+        const code = input.value.trim();
+        if (!code) { errorEl.textContent = 'Please enter a code.'; return; }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Checking…';
+        errorEl.textContent = '';
+
+        fetch('{{ url_for("auth.validate_code") }}', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: code })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.ok) {
+            window.location.href = '{{ url_for("auth.register") }}';
+          } else {
+            errorEl.textContent = data.error || 'Invalid code.';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Verify code';
+          }
+        })
+        .catch(function () {
+          errorEl.textContent = 'Something went wrong. Please try again.';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Verify code';
+        });
+      }
+    })();
+  </script>
 
 </body>
 </html>

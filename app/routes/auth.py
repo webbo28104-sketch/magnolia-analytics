@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models.user import User
@@ -13,42 +13,32 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.index'))
 
-    invite_only = current_app.config.get('INVITE_ONLY', False)
-
     if request.method == 'POST':
         first_name       = request.form.get('first_name', '').strip()
         last_name        = request.form.get('last_name', '').strip()
         email            = request.form.get('email', '').strip().lower()
         password         = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
-        invite_code_raw  = request.form.get('invite_code', '').strip().upper()
 
         # Basic validation
         if not all([first_name, last_name, email, password]):
             flash('All fields are required.', 'error')
-            return render_template('auth/register.html', invite_only=invite_only)
+            return render_template('auth/register.html')
         if password != confirm_password:
             flash('Passwords do not match.', 'error')
-            return render_template('auth/register.html', invite_only=invite_only)
+            return render_template('auth/register.html')
         if len(password) < 8:
             flash('Password must be at least 8 characters.', 'error')
-            return render_template('auth/register.html', invite_only=invite_only)
+            return render_template('auth/register.html')
         if User.query.filter_by(email=email).first():
             flash('An account with that email already exists.', 'error')
-            return render_template('auth/register.html', invite_only=invite_only)
+            return render_template('auth/register.html')
 
-        # Invite code check (only when INVITE_ONLY is True)
+        # Retrieve the access code stored in session (set by /auth/validate-code)
+        code_in_session = session.get('access_code')
         access_code_obj = None
-        if invite_only:
-            if not invite_code_raw:
-                flash('An invite code is required to create an account.', 'error')
-                return render_template('auth/register.html', invite_only=invite_only)
-
-            access_code_obj = AccessCode.query.filter_by(code=invite_code_raw).first()
-
-            if not access_code_obj or not access_code_obj.is_available:
-                flash('That invite code is invalid or has already been used.', 'error')
-                return render_template('auth/register.html', invite_only=invite_only)
+        if code_in_session:
+            access_code_obj = AccessCode.query.filter_by(code=code_in_session).first()
 
         # Create user
         user = User(first_name=first_name, last_name=last_name, email=email)
@@ -60,11 +50,31 @@ def register():
             access_code_obj.mark_used(email)
 
         db.session.commit()
+
+        # Clear the access session flags
+        session.pop('access_granted', None)
+        session.pop('access_code', None)
+
         login_user(user)
         flash(f'Welcome to Magnolia Analytics, {first_name}!', 'success')
         return redirect(url_for('dashboard.index'))
 
-    return render_template('auth/register.html', invite_only=invite_only)
+    return render_template('auth/register.html')
+
+
+@auth_bp.route('/validate-code', methods=['POST'])
+def validate_code():
+    code = request.get_json(force=True).get('code', '').strip().upper()
+    if not code:
+        return jsonify(ok=False, error='Please enter an invite code.')
+
+    access_code_obj = AccessCode.query.filter_by(code=code).first()
+    if not access_code_obj or not access_code_obj.is_available:
+        return jsonify(ok=False, error='That code is invalid or has already been used.')
+
+    session['access_granted'] = True
+    session['access_code'] = code
+    return jsonify(ok=True)
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
