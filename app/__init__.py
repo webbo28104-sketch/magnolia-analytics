@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, user_logged_in
 from config import config
 
 db = SQLAlchemy()
@@ -38,6 +38,9 @@ def create_app(config_name='default'):
     app.register_blueprint(courses_bp)
     app.register_blueprint(profile_bp, url_prefix='/profile')
 
+    # Recompute stale stats for the user on every login (covers login + register)
+    user_logged_in.connect(_recompute_stale_on_login, app)
+
     # Create all tables on startup (safe to call repeatedly)
     with app.app_context():
         from app.models.user import User            # noqa
@@ -49,7 +52,6 @@ def create_app(config_name='default'):
         from app.models.report import Report        # noqa
         db.create_all()
         _run_column_migrations()
-        _warn_stale_rounds(app)
 
     return app
 
@@ -85,29 +87,41 @@ def _run_column_migrations():
             db.session.rollback()   # column already exists — fine
 
 
-def _warn_stale_rounds(app):
+def _recompute_stale_on_login(sender, user, **kwargs):
     """
-    Log a warning at startup if any complete rounds have stale stored stats.
+    Recompute stored stats for any of the user's rounds that are stale.
 
-    A round is stale when its algo_version is NULL or lower than
-    CURRENT_ALGO_VERSION in app/utils/round_stats.py.  Run
-    `python recompute_sg.py` to bring all rounds up to date.
+    Connected to Flask-Login's user_logged_in signal, so it fires after
+    every successful login_user() call — including new registrations.
+    Runs synchronously on the login thread before the redirect completes;
+    with typical round counts this adds negligible latency.
+
+    Stale = algo_version is NULL or < CURRENT_ALGO_VERSION.
     """
+    from app.utils.round_stats import compute_all_stats, CURRENT_ALGO_VERSION
+    from app.models.round import Round
     try:
-        from app.utils.round_stats import CURRENT_ALGO_VERSION
-        from app.models.round import Round
         stale = Round.query.filter(
+            Round.user_id == user.id,
             Round.status == 'complete',
             db.or_(
                 Round.algo_version.is_(None),
                 Round.algo_version < CURRENT_ALGO_VERSION,
             )
-        ).count()
-        if stale:
-            app.logger.warning(
-                f'[startup] {stale} complete round(s) have stale stored stats '
-                f'(algo_version < {CURRENT_ALGO_VERSION}). '
-                'Run: python recompute_sg.py to update.'
+        ).all()
+
+        if not stale:
+            return
+
+        updated = sum(1 for r in stale if compute_all_stats(r))
+        if updated:
+            db.session.commit()
+            sender.logger.info(
+                f'[login] Recomputed stats for {updated} stale round(s) '
+                f'(user_id={user.id}, algo_version={CURRENT_ALGO_VERSION})'
             )
     except Exception as exc:
-        app.logger.debug(f'[startup] Staleness check skipped: {exc}')
+        db.session.rollback()
+        sender.logger.warning(
+            f'[login] Stale round recompute failed for user_id={user.id}: {exc}'
+        )
