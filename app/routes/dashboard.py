@@ -199,7 +199,7 @@ def _check_personal_best(recent, prev_rounds):
 
     pbs = []
 
-    # Score vs par (lower is better)
+    # Score vs par — lower is better
     recent_svp = recent.score_vs_par()
     if recent_svp is not None:
         prev_svps = [r.score_vs_par() for r in prev_rounds if r.score_vs_par() is not None]
@@ -207,7 +207,7 @@ def _check_personal_best(recent, prev_rounds):
             label = 'E' if recent_svp == 0 else (f'+{recent_svp}' if recent_svp > 0 else str(recent_svp))
             pbs.append({'label': f'Best score vs par ({label})', 'priority': 1})
 
-    # GIR% (higher is better)
+    # GIR% — higher is better
     if recent.gir_count is not None and recent.holes_played:
         recent_gir = recent.gir_count / recent.holes_played * 100
         prev_girs  = [r.gir_count / r.holes_played * 100
@@ -215,11 +215,26 @@ def _check_personal_best(recent, prev_rounds):
         if prev_girs and recent_gir > max(prev_girs):
             pbs.append({'label': f'Best GIR% ({round(recent_gir)}%)', 'priority': 2})
 
-    # SG total (higher is better)
+    # SG total — higher is better (more positive / least negative = more strokes gained)
     if recent.sg_total is not None:
         prev_sg = [r.sg_total for r in prev_rounds if r.sg_total is not None]
         if prev_sg and recent.sg_total > max(prev_sg):
             sign = '+' if recent.sg_total > 0 else ''
             pbs.append({'label': f'Best SG Total ({sign}{round(recent.sg_total, 1)})', 'priority': 3})
+
+    # Individual SG categories — higher is better (same direction as SG total)
+    sg_cat_checks = [
+        ('Putting',          recent.sg_putting,  'sg_putting'),
+        ('Off the Tee',      recent.sg_off_tee,  'sg_off_tee'),
+        ('Approach',         recent.sg_approach, 'sg_approach'),
+        ('Around the Green', recent.sg_atg,      'sg_atg'),
+    ]
+    for cat_name, cat_val, attr in sg_cat_checks:
+        if cat_val is None:
+            continue
+        prev_vals = [getattr(r, attr) for r in prev_rounds if getattr(r, attr) is not None]
+        if prev_vals and cat_val > max(prev_vals):
+            sign = '+' if cat_val > 0 else ''
+            pbs.append({'label': f'Best SG: {cat_name} ({sign}{round(cat_val, 1)})', 'priority': 4})
 
     return min(pbs, key=lambda x: x['priority']) if pbs else None

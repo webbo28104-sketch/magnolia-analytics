@@ -268,7 +268,7 @@ def _personal_best_banner(round_, score_vs_par, sg_data, prev_rounds):
         if prev_girs and gir_pct > max(prev_girs):
             pbs.append({'label': f"Best GIR rate you've ever recorded ({round(gir_pct)}%)", 'priority': 2})
 
-    # 3. Best SG total (live-computed)
+    # 3. Best SG total — higher is better (more positive / least negative = more strokes gained)
     sg_total = sg_data.get('sg_total')
     if sg_total is not None:
         prev_totals = [r.sg_total for r in prev_rounds if r.sg_total is not None]
@@ -276,12 +276,14 @@ def _personal_best_banner(round_, score_vs_par, sg_data, prev_rounds):
             sign = '+' if sg_total > 0 else ''
             pbs.append({'label': f"Best Strokes Gained total you've ever recorded ({sign}{round(sg_total, 1)})", 'priority': 3})
 
-    # 4. Best SG in individual categories
+    # 4. Best SG in individual categories — higher is better (same direction as SG total)
+    putting_dict = sg_data.get('sg_putting')
+    sg_putting_val = putting_dict.get('total') if isinstance(putting_dict, dict) else None
     sg_cat_checks = [
-        ('Putting',          sg_data.get('sg_putting', {}).get('total'), 'sg_putting'),
-        ('Off the Tee',      sg_data.get('sg_off_tee'),                  'sg_off_tee'),
-        ('Approach',         sg_data.get('sg_approach'),                 'sg_approach'),
-        ('Around the Green', sg_data.get('sg_atg'),                      'sg_atg'),
+        ('Putting',          sg_putting_val,             'sg_putting'),
+        ('Off the Tee',      sg_data.get('sg_off_tee'),  'sg_off_tee'),
+        ('Approach',         sg_data.get('sg_approach'), 'sg_approach'),
+        ('Around the Green', sg_data.get('sg_atg'),      'sg_atg'),
     ]
     for cat_name, cat_val, attr in sg_cat_checks:
         if cat_val is None:
