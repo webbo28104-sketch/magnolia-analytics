@@ -161,12 +161,24 @@ def _tee_shot_lie(tee_shot: str) -> str:
     return 'rough'  # left / right / other
 
 
+_SCRAMBLE_BANDS = {
+    'fringe':  2,
+    '0_10':    5,
+    '10_20':  15,
+    '20_40':  30,
+    '40_plus': 45,
+}
+
+
 def _parse_yards(value):
-    """Safely parse a yards value that may be stored as string or int."""
+    """Safely parse a yards value that may be stored as string, int, or band key."""
     if value is None:
         return None
+    s = str(value).strip()
+    if s in _SCRAMBLE_BANDS:
+        return float(_SCRAMBLE_BANDS[s])
     try:
-        return float(str(value).split()[0])
+        return float(s.split()[0])
     except (ValueError, TypeError):
         return None
 
