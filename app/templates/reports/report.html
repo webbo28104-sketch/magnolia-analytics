@@ -301,6 +301,23 @@ body::before {
 .sm-pdf-btn:hover{background:#c9a84c;color:#1a2e1a}
 .sm-pdf-hint{color:#8a9e8a;font-size:.75rem;text-align:center}
 
+/* ── Personal best banner ──────────────────────────────────────── */
+.pb-banner {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(201,168,76,0.08);
+  border: 1px solid rgba(201,168,76,0.28);
+  border-left: 3px solid var(--gold);
+  border-radius: 4px;
+  padding: 11px 18px;
+  margin-top: 22px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--gold-light);
+  line-height: 1.4;
+}
+.pb-banner-icon { font-size: 15px; flex-shrink: 0; }
+.pb-banner strong { color: var(--gold); }
+
 </style>
 {# Dynamic watermark text for hero::before #}
 <style>.hero-gross::before { content: '{{ course_name_upper }}'; }</style>
@@ -371,6 +388,14 @@ body::before {
       <div class="hero-vspar">{{ score_vs_par_label }} to par</div>
     </div>
   </div>
+
+  <!-- PERSONAL BEST BANNER -->
+  {% if pb_banner %}
+  <div class="pb-banner fu d3">
+    <span class="pb-banner-icon">🏆</span>
+    <span><strong>Personal best:</strong> {{ pb_banner.label }}</span>
+  </div>
+  {% endif %}
 
   <!-- CONTEXT BANNER -->
   <div class="context-banner fu d3">

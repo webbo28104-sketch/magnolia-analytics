@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, url_for
 from flask_login import login_required, current_user
+from datetime import date, timedelta
 from app.models.round import Round
 from app.models.hole import Hole
 
@@ -8,22 +9,17 @@ dashboard_bp = Blueprint('dashboard', __name__)
 @dashboard_bp.route('/')
 @login_required
 def index():
-    recent_rounds = (
+    # Single query for all complete rounds — used for stats, glance, and recent list
+    all_complete = (
         Round.query
         .filter_by(user_id=current_user.id, status='complete')
         .order_by(Round.date_played.desc())
-        .limit(10)
         .all()
     )
 
-    last_20 = (
-        Round.query
-        .filter_by(user_id=current_user.id, status='complete')
-        .order_by(Round.date_played.desc())
-        .limit(20)
-        .all()
-    )
-    stats = _compute_stats(last_20) if last_20 else None
+    recent_rounds = all_complete[:10]
+    stats  = _compute_stats(all_complete[:20]) if all_complete else None
+    glance = _compute_glance(all_complete) if all_complete else None
 
     # In-progress rounds â find the next unplayed hole for each
     in_progress = (
@@ -57,6 +53,7 @@ def index():
     return render_template('dashboard/index.html',
         recent_rounds=recent_rounds,
         stats=stats,
+        glance=glance,
         in_progress_rounds=in_progress_rounds)
 
 
@@ -117,3 +114,112 @@ def _compute_stats(rounds):
         'scramble_pct': scramble_pct,
         'putts_per_hole': putts_per_hole,
     }
+
+
+def _compute_glance(all_rounds):
+    """Compute 'Your Game at a Glance' engagement metrics from all complete rounds."""
+    if not all_rounds:
+        return None
+
+    today = date.today()
+    glance = {}
+
+    # 1. Streak — consecutive weeks (ISO) going back from most recent round's week
+    weeks_with_rounds = set()
+    for r in all_rounds:
+        iso = r.date_played.isocalendar()
+        weeks_with_rounds.add((iso[0], iso[1]))
+
+    streak = 0
+    check = all_rounds[0].date_played          # start from most recent round
+    while True:
+        iso = check.isocalendar()
+        if (iso[0], iso[1]) in weeks_with_rounds:
+            streak += 1
+            check -= timedelta(weeks=1)
+        else:
+            break
+    glance['streak'] = streak                  # always >= 1
+
+    # 2. Rounds this month vs last month
+    glance['this_month'] = sum(
+        1 for r in all_rounds
+        if r.date_played.year == today.year and r.date_played.month == today.month
+    )
+    last_month_year = today.year if today.month > 1 else today.year - 1
+    last_month_num  = today.month - 1 if today.month > 1 else 12
+    glance['prev_month'] = sum(
+        1 for r in all_rounds
+        if r.date_played.year == last_month_year and r.date_played.month == last_month_num
+    )
+
+    # 3. Best SG category across last 5 rounds with trend (need >= 2 rounds with SG data)
+    sg_cats = {
+        'Putting':          'sg_putting',
+        'Off the Tee':      'sg_off_tee',
+        'Approach':         'sg_approach',
+        'Around the Green': 'sg_atg',
+    }
+    last5_sg = [r for r in all_rounds[:5] if any(getattr(r, a) is not None for a in sg_cats.values())]
+
+    if len(last5_sg) >= 2:
+        avgs = {}
+        for cat_name, attr in sg_cats.items():
+            vals = [getattr(r, attr) for r in last5_sg if getattr(r, attr) is not None]
+            if vals:
+                avgs[cat_name] = sum(vals) / len(vals)
+
+        if avgs:
+            best_cat = max(avgs, key=avgs.get)
+            attr     = sg_cats[best_cat]
+            newest   = getattr(last5_sg[0], attr)
+            oldest   = getattr(last5_sg[-1], attr)
+            trend    = ('up' if newest > oldest else 'down') if (newest is not None and oldest is not None) else None
+            glance['best_sg_cat']    = best_cat
+            glance['best_sg_trend']  = trend
+            glance['sg_rounds_count'] = len(last5_sg)
+        else:
+            glance['best_sg_cat'] = None
+    else:
+        glance['best_sg_cat'] = None
+
+    # 4. Personal best from the most recent round vs all previous
+    glance['recent_pb'] = (
+        _check_personal_best(all_rounds[0], all_rounds[1:])
+        if len(all_rounds) >= 2 else None
+    )
+
+    return glance
+
+
+def _check_personal_best(recent, prev_rounds):
+    """Return the most impressive personal best set by recent vs prev_rounds, or None."""
+    if not prev_rounds:
+        return None
+
+    pbs = []
+
+    # Score vs par (lower is better)
+    recent_svp = recent.score_vs_par()
+    if recent_svp is not None:
+        prev_svps = [r.score_vs_par() for r in prev_rounds if r.score_vs_par() is not None]
+        if prev_svps and recent_svp < min(prev_svps):
+            label = 'E' if recent_svp == 0 else (f'+{recent_svp}' if recent_svp > 0 else str(recent_svp))
+            pbs.append({'label': f'Best score vs par ({label})', 'priority': 1})
+
+    # GIR% (higher is better)
+    if recent.gir_count is not None and recent.holes_played:
+        recent_gir = recent.gir_count / recent.holes_played * 100
+        prev_girs  = [r.gir_count / r.holes_played * 100
+                      for r in prev_rounds if r.gir_count is not None and r.holes_played]
+        if prev_girs and recent_gir > max(prev_girs):
+            pbs.append({'label': f'Best GIR% ({round(recent_gir)}%)', 'priority': 2})
+
+    # SG total (higher is better)
+    if recent.sg_total is not None:
+        prev_sg = [r.sg_total for r in prev_rounds if r.sg_total is not None]
+        if prev_sg and recent.sg_total > max(prev_sg):
+            sign = '+' if recent.sg_total > 0 else ''
+            pbs.append({'label': f'Best SG Total ({sign}{round(recent.sg_total, 1)})', 'priority': 3})
+
+    return min(pbs, key=lambda x: x['priority']) if pbs else None

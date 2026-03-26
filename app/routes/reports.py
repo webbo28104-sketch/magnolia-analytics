@@ -241,6 +241,61 @@ def _weakest_sg_category(sg_data: dict) -> str:
     return min(categories, key=categories.get)
 
 
+def _personal_best_banner(round_, score_vs_par, sg_data, prev_rounds):
+    """
+    Check if round_ sets any personal bests vs prev_rounds.
+    Returns the most impressive PB dict {'label': str} or None.
+    score_vs_par: pre-computed integer for the current round.
+    sg_data: live-computed SG dict for the current round.
+    """
+    if not prev_rounds:
+        return None
+
+    pbs = []
+
+    # 1. Lowest score vs par
+    if score_vs_par is not None:
+        prev_svps = [r.score_vs_par() for r in prev_rounds if r.score_vs_par() is not None]
+        if prev_svps and score_vs_par < min(prev_svps):
+            label = 'E' if score_vs_par == 0 else (f'+{score_vs_par}' if score_vs_par > 0 else str(score_vs_par))
+            pbs.append({'label': f"Best score vs par you've ever recorded ({label})", 'priority': 1})
+
+    # 2. Highest GIR%
+    if round_.gir_count is not None and round_.holes_played:
+        gir_pct   = round_.gir_count / round_.holes_played * 100
+        prev_girs = [r.gir_count / r.holes_played * 100
+                     for r in prev_rounds if r.gir_count is not None and r.holes_played]
+        if prev_girs and gir_pct > max(prev_girs):
+            pbs.append({'label': f"Best GIR rate you've ever recorded ({round(gir_pct)}%)", 'priority': 2})
+
+    # 3. Best SG total (live-computed)
+    sg_total = sg_data.get('sg_total')
+    if sg_total is not None:
+        prev_totals = [r.sg_total for r in prev_rounds if r.sg_total is not None]
+        if prev_totals and sg_total > max(prev_totals):
+            sign = '+' if sg_total > 0 else ''
+            pbs.append({'label': f"Best Strokes Gained total you've ever recorded ({sign}{round(sg_total, 1)})", 'priority': 3})
+
+    # 4. Best SG in individual categories
+    sg_cat_checks = [
+        ('Putting',          sg_data.get('sg_putting', {}).get('total'), 'sg_putting'),
+        ('Off the Tee',      sg_data.get('sg_off_tee'),                  'sg_off_tee'),
+        ('Approach',         sg_data.get('sg_approach'),                 'sg_approach'),
+        ('Around the Green', sg_data.get('sg_atg'),                      'sg_atg'),
+    ]
+    for cat_name, cat_val, attr in sg_cat_checks:
+        if cat_val is None:
+            continue
+        prev_vals = [getattr(r, attr) for r in prev_rounds if getattr(r, attr) is not None]
+        if prev_vals and cat_val > max(prev_vals):
+            sign = '+' if cat_val > 0 else ''
+            pbs.append({'label': f"Best SG: {cat_name} you've ever recorded ({sign}{round(cat_val, 1)})", 'priority': 4})
+
+    if pbs:
+        return min(pbs, key=lambda x: x['priority'])
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -325,6 +380,16 @@ def view_report(round_id):
 
     db.session.commit()
 
+    # ---- Personal best banner ----
+    prev_rounds = (
+        Round.query
+        .filter(Round.user_id == current_user.id,
+                Round.status == 'complete',
+                Round.id != round_.id)
+        .order_by(Round.date_played.desc())
+        .all()
+    )
+
     # ---- Derived display values ----
     score_vs_par = round_.score_vs_par()
     # Par: sum actual hole pars (from CourseHole API data, stored on each Hole record).
@@ -339,6 +404,8 @@ def view_report(round_id):
     else:
         par = 72
     course_name = round_.course.name if round_.course else 'Unknown Course'
+
+    pb_banner = _personal_best_banner(round_, score_vs_par, sg_data, prev_rounds)
 
     return render_template(
         'reports/report.html',
@@ -373,6 +440,9 @@ def view_report(round_id):
         weather      = weather,
         calendar_ctx = calendar_ctx,
         narrative    = narrative,
+
+        # Personal best
+        pb_banner    = pb_banner,
     )
 
 
