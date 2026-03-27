@@ -343,7 +343,19 @@ body::before {
 {% set one_putt_holes  = holes_data | selectattr('putts', 'equalto', 1) | map(attribute='hole_number') | list %}
 {% set three_putt_holes = holes_data | selectattr('putts', 'ge', 3) | map(attribute='hole_number') | list %}
 {% set avg_fpd_holes   = holes_data | selectattr('first_putt_distance') | list %}
-{% set avg_fpd = (avg_fpd_holes | map(attribute='first_putt_distance') | sum / avg_fpd_holes | length) | round | int if avg_fpd_holes else 0 %}
+{% set avg_fpd = (avg_fpd_holes | map(attribute='first_putt_distance') | sum / avg_fpd_holes | length) | round | int if avg_fpd_holes else none %}
+
+{# SG data sufficiency flags — suppress display when minimum data thresholds are not met #}
+{% set _sg_ott_holes  = holes_data | selectattr('par','in',[4,5]) | selectattr('tee_shot') | selectattr('approach_distance') | list %}
+{% set _sg_app_holes  = holes_data | selectattr('approach_distance') | list %}
+{% set _sg_atg_holes  = holes_data | selectattr('gir','equalto',false) | selectattr('scramble_distance') | list %}
+{% set _sg_putt_holes = holes_data | selectattr('first_putt_distance') | list %}
+{% set sg_ott_ok  = _sg_ott_holes  | length >= 3 %}
+{% set sg_app_ok  = _sg_app_holes  | length >= 3 %}
+{% set sg_atg_ok  = _sg_atg_holes  | length >= 2 %}
+{% set sg_putt_ok = _sg_putt_holes | length >= 3 %}
+{% set _sg_ok_count = (1 if sg_ott_ok else 0) + (1 if sg_app_ok else 0) + (1 if sg_atg_ok else 0) + (1 if sg_putt_ok else 0) %}
+{% set sg_total_ok = _sg_ok_count >= 2 %}
 
 {# SG bar width macro — scale 5 matches original visual proportions #}
 {% macro sgw(val) %}{{ [[((val | abs) / 5 * 100) | round | int, 0] | max, 100] | min }}{% endmacro %}
@@ -675,7 +687,7 @@ body::before {
       {% endif %}
       <div class="stat-row">
         <span class="sk">SG Off the Tee</span>
-        <span class="sv {{ 'c-grn' if sg_data.sg_off_tee >= 0 else 'c-red' }}">{{ sgfmt(sg_data.sg_off_tee) }}</span>
+        <span class="sv {{ 'c-grn' if (sg_ott_ok and sg_data.sg_off_tee >= 0) else 'c-red' if sg_ott_ok }}">{{ sgfmt(sg_data.sg_off_tee) if sg_ott_ok else '—' }}</span>
       </div>
     </div>
   </div>
@@ -739,7 +751,7 @@ body::before {
             <span class="mg-pop">Strokes Gained: Approach — measures how many strokes your approach shots gain or lose compared to the PGA Tour average, based on distance to the hole.</span>
           </span>
         </span>
-        <span class="sv {{ 'c-grn' if sg_data.sg_approach >= 0 else 'c-red' }}">{{ sgfmt(sg_data.sg_approach) }}</span>
+        <span class="sv {{ 'c-grn' if (sg_app_ok and sg_data.sg_approach >= 0) else 'c-red' if sg_app_ok }}">{{ sgfmt(sg_data.sg_approach) if sg_app_ok else '—' }}</span>
       </div>
     </div>
   </div>
@@ -774,7 +786,7 @@ body::before {
             <span class="mg-pop">Strokes Gained: Around the Green — measures performance on shots within ~30 yards of the green (chips, pitches, bunker shots) versus the PGA Tour average.</span>
           </span>
         </span>
-        <span class="sv {{ 'c-grn' if sg_data.sg_atg >= 0 else 'c-red' }}">{{ sgfmt(sg_data.sg_atg) }}</span>
+        <span class="sv {{ 'c-grn' if (sg_atg_ok and sg_data.sg_atg >= 0) else 'c-red' if sg_atg_ok }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</span>
       </div>
       {% if scramble.save_pct is not none %}
       <div class="insight">
@@ -825,14 +837,14 @@ body::before {
       {% endif %}
       <div class="stat-row"><span class="sk">Total Putts</span><span class="sv">{{ round.total_putts }}</span></div>
       <div class="stat-row"><span class="sk">Avg per hole</span><span class="sv">{{ putts_ph }}</span></div>
-      <div class="stat-row"><span class="sk">Avg 1st putt distance</span><span class="sv">{{ avg_fpd }}ft</span></div>
+      <div class="stat-row"><span class="sk">Avg 1st putt distance</span><span class="sv">{{ avg_fpd ~ 'ft' if avg_fpd is not none else '—' }}</span></div>
       <div class="stat-row">
         <span class="sk">
           <span class="mg-tip">SG Putting<span class="mg-tip-icon">ⓘ</span>
             <span class="mg-pop">Strokes Gained: Putting — how many strokes your putting gained or lost versus the PGA Tour average, calculated from first-putt distances. Positive = fewer putts than tour average.</span>
           </span>
         </span>
-        <span class="sv {{ 'c-grn' if sg_data.sg_putting.total >= 0 else 'c-red' }}">{{ sgfmt(sg_data.sg_putting.total) }}</span>
+        <span class="sv {{ 'c-grn' if (sg_putt_ok and sg_data.sg_putting.total >= 0) else 'c-red' if sg_putt_ok }}">{{ sgfmt(sg_data.sg_putting.total) if sg_putt_ok else '—' }}</span>
       </div>
     </div>
     <div class="a-card">
@@ -859,12 +871,14 @@ body::before {
       {% else %}
       <div style="color:var(--cream-faint); font-size:10px;">No first-putt distance data recorded for this round.</div>
       {% endif %}
-      {% if sg_data.sg_putting.bands %}
+      {% if sg_putt_ok and sg_data.sg_putting.bands %}
       <div class="insight">
         {% set worst_band = sg_data.sg_putting.bands.items() | list | sort(attribute='1.sg') | first %}
         {% if worst_band %}Most strokes lost in the <strong>{{ worst_band[0] }}</strong> band.{% endif %}
         {% if three_putt_holes %}Three-putt on H{{ three_putt_holes | join(', H') }} — lag putting pace is the key fix.{% endif %}
       </div>
+      {% elif three_putt_holes %}
+      <div class="insight">Three-putt on H{{ three_putt_holes | join(', H') }} — lag putting pace is the key fix.</div>
       {% endif %}
     </div>
   </div>
@@ -877,24 +891,32 @@ body::before {
     </span>
     &nbsp;vs PGA Tour Average
   </div>
-  {# Rank-based colour: best category → green, worst → red, middle two → amber #}
-  {% set _sg_sorted = [sg_data.sg_off_tee, sg_data.sg_approach, sg_data.sg_atg, sg_data.sg_putting.total] | sort %}
-  {% macro rankclr(val) -%}
-    {%- if val == _sg_sorted[-1] -%}var(--green-soft)
-    {%- elif val == _sg_sorted[0] -%}var(--red-soft)
+  {# Rank-based colour: only rank categories with sufficient data #}
+  {% set _sg_valid = [] %}
+  {% if sg_ott_ok  %}{% set _sg_valid = _sg_valid + [sg_data.sg_off_tee] %}{% endif %}
+  {% if sg_app_ok  %}{% set _sg_valid = _sg_valid + [sg_data.sg_approach] %}{% endif %}
+  {% if sg_atg_ok  %}{% set _sg_valid = _sg_valid + [sg_data.sg_atg] %}{% endif %}
+  {% if sg_putt_ok %}{% set _sg_valid = _sg_valid + [sg_data.sg_putting.total] %}{% endif %}
+  {% set _sg_sorted = _sg_valid | sort %}
+  {% macro rankclr(val, ok=True) -%}
+    {%- if not ok or not _sg_sorted -%}var(--cream-dim)
+    {%- elif val == _sg_sorted | last -%}var(--green-soft)
+    {%- elif val == _sg_sorted | first and _sg_sorted | length > 1 -%}var(--red-soft)
     {%- else -%}#c9a84c
     {%- endif -%}
   {%- endmacro %}
 
-  {% macro hcplabel(sg) -%}
-    {%- if sg > 0 -%}
-      <div class="sg-hcp">Tour level</div>
-    {%- else -%}
-      {%- set hcp = ((sg + 1) * -6 + 6) | round | int -%}
-      {%- if hcp < 0 -%}
-        <div class="sg-hcp c-grn">Plays to +{{ hcp | abs }}</div>
+  {% macro hcplabel(sg, ok=True) -%}
+    {%- if ok -%}
+      {%- if sg > 0 -%}
+        <div class="sg-hcp">Tour level</div>
       {%- else -%}
-        <div class="sg-hcp">Plays to {{ hcp }} hcp</div>
+        {%- set hcp = ((sg + 1) * -6 + 6) | round | int -%}
+        {%- if hcp < 0 -%}
+          <div class="sg-hcp c-grn">Plays to +{{ hcp | abs }}</div>
+        {%- else -%}
+          <div class="sg-hcp">Plays to {{ hcp }} hcp</div>
+        {%- endif -%}
       {%- endif -%}
     {%- endif -%}
   {%- endmacro %}
@@ -906,9 +928,9 @@ body::before {
           <span class="mg-pop">Measures tee-shot performance on par-4s and par-5s. Based on fairway/rough/penalty outcome vs. the PGA Tour average, using Broadie's SG model.</span>
         </span>
       </div>
-      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_off_tee) }}">{{ sgfmt(sg_data.sg_off_tee) }}</div>
+      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_off_tee, sg_ott_ok) }}">{{ sgfmt(sg_data.sg_off_tee) if sg_ott_ok else '—' }}</div>
       <div class="sg-sub">{{ fw_pct }}% fairways</div>
-      {{ hcplabel(sg_data.sg_off_tee) }}
+      {{ hcplabel(sg_data.sg_off_tee, sg_ott_ok) }}
     </div>
     <div class="sg-card">
       <div class="sg-cat">
@@ -916,9 +938,9 @@ body::before {
           <span class="mg-pop">Measures approach shot performance. Based on GIR rate and approach distance versus expected strokes to hole out from that distance.</span>
         </span>
       </div>
-      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_approach) }}">{{ sgfmt(sg_data.sg_approach) }}</div>
+      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_approach, sg_app_ok) }}">{{ sgfmt(sg_data.sg_approach) if sg_app_ok else '—' }}</div>
       <div class="sg-sub">{{ gir_pct }}% GIR</div>
-      {{ hcplabel(sg_data.sg_approach) }}
+      {{ hcplabel(sg_data.sg_approach, sg_app_ok) }}
     </div>
     <div class="sg-card">
       <div class="sg-cat">
@@ -926,9 +948,9 @@ body::before {
           <span class="mg-pop">Measures short-game performance on chips, pitches, and bunker shots (within ~30 yards of the green). Based on scramble rate and sand-save percentage.</span>
         </span>
       </div>
-      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_atg) }}">{{ sgfmt(sg_data.sg_atg) }}</div>
+      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_atg, sg_atg_ok) }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</div>
       <div class="sg-sub">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% scramble</div>
-      {{ hcplabel(sg_data.sg_atg) }}
+      {{ hcplabel(sg_data.sg_atg, sg_atg_ok) }}
     </div>
     <div class="sg-card">
       <div class="sg-cat">
@@ -936,18 +958,17 @@ body::before {
           <span class="mg-pop">Measures putting performance from first-putt distances versus expected putts to hole out from those distances, compared to the PGA Tour average.</span>
         </span>
       </div>
-      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_putting.total) }}">{{ sgfmt(sg_data.sg_putting.total) }}</div>
+      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_putting.total, sg_putt_ok) }}">{{ sgfmt(sg_data.sg_putting.total) if sg_putt_ok else '—' }}</div>
       <div class="sg-sub">{{ round.total_putts }} total putts</div>
-      {{ hcplabel(sg_data.sg_putting.total) }}
+      {{ hcplabel(sg_data.sg_putting.total, sg_putt_ok) }}
     </div>
   </div>
   <div class="sg-bars fu d7">
-    {% set sg_rows = [
-      ('Off Tee',      sg_data.sg_off_tee),
-      ('Approach',     sg_data.sg_approach),
-      ('Around Green', sg_data.sg_atg),
-      ('Putting',      sg_data.sg_putting.total),
-    ] %}
+    {% set sg_rows = [] %}
+    {% if sg_ott_ok  %}{% set sg_rows = sg_rows + [('Off Tee',      sg_data.sg_off_tee)] %}{% endif %}
+    {% if sg_app_ok  %}{% set sg_rows = sg_rows + [('Approach',     sg_data.sg_approach)] %}{% endif %}
+    {% if sg_atg_ok  %}{% set sg_rows = sg_rows + [('Around Green', sg_data.sg_atg)] %}{% endif %}
+    {% if sg_putt_ok %}{% set sg_rows = sg_rows + [('Putting',      sg_data.sg_putting.total)] %}{% endif %}
     {% for label, val in sg_rows %}
     {% set w = [[((val | abs) / 8 * 50) | round | int, 0] | max, 50] | min %}
     {% set cls = 'p' if val >= 0 else 'n' %}
@@ -961,9 +982,14 @@ body::before {
     </div>
     {% endfor %}
   </div>
+  {% if sg_total_ok %}
   <div class="insight fu d7" style="margin-top:12px; padding:12px 16px; background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px;">
     <strong>Key insight:</strong>
-    {% set sg_vals = {'Off the Tee': sg_data.sg_off_tee, 'Approach': sg_data.sg_approach, 'Around the Green': sg_data.sg_atg, 'Putting': sg_data.sg_putting.total} %}
+    {% set sg_vals = {} %}
+    {% if sg_ott_ok  %}{% set sg_vals = sg_vals | combine({'Off the Tee':      sg_data.sg_off_tee}) %}{% endif %}
+    {% if sg_app_ok  %}{% set sg_vals = sg_vals | combine({'Approach':         sg_data.sg_approach}) %}{% endif %}
+    {% if sg_atg_ok  %}{% set sg_vals = sg_vals | combine({'Around the Green': sg_data.sg_atg}) %}{% endif %}
+    {% if sg_putt_ok %}{% set sg_vals = sg_vals | combine({'Putting':          sg_data.sg_putting.total}) %}{% endif %}
     {% set best_cat  = sg_vals | dictsort(by='value') | last %}
     {% set worst_cat = sg_vals | dictsort(by='value') | first %}
     Strongest area: <strong>{{ best_cat[0] }}</strong> ({{ sgfmt(best_cat[1]) }}).
@@ -974,6 +1000,7 @@ body::before {
     {% elif worst_cat[0] == 'Around the Green' %}Short game is the priority — one more scramble conversion per round is worth a full shot.
     {% else %}Putting is the focus — pace control and first-putt distance reduction will have the highest immediate impact.{% endif %}
   </div>
+  {% endif %}
 
   <!-- COACHING NARRATIVE -->
   <div class="sec-divider"></div>
@@ -1010,7 +1037,7 @@ body::before {
         <div class="pri-desc">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% scramble rate from {{ scramble.attempts }} attempts. Spend 15 minutes per session on bump-and-run technique from 10–20y — the most common scramble distance in UK golf. One additional conversion per round is a free stroke.</div>
         {% else %}
         <div class="pri-title">Lag Putting — Distance Control</div>
-        <div class="pri-desc">{{ round.total_putts }} putts this round, {{ avg_fpd }}ft average first putt.
+        <div class="pri-desc">{{ round.total_putts }} putts this round{% if avg_fpd is not none %}, {{ avg_fpd }}ft average first putt{% endif %}.
           {% if three_putt_holes %}Three-putt on H{{ three_putt_holes | join(', H') }}.{% endif %}
           Ten minutes per session on putts from 20–35ft, focusing on pace rather than line. Lag putting improvement reduces blow-up holes without requiring technical swing changes.</div>
         {% endif %}

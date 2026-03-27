@@ -429,9 +429,10 @@
         <div class="round-score">
           {% if round.total_score %}
             <span class="score-number">{{ round.total_score }}</span>
-            {% if round.score_vs_par() is not none %}
-              <span class="score-diff {% if round.score_vs_par() < 0 %}score-diff--under{% elif round.score_vs_par() == 0 %}score-diff--even{% else %}score-diff--over{% endif %}">
-                {% if round.score_vs_par() > 0 %}+{% endif %}{{ round.score_vs_par() }}
+            {% set _svp = round.score_vs_par() %}
+            {% if _svp is not none %}
+              <span class="score-diff {% if _svp < 0 %}score-diff--under{% elif _svp == 0 %}score-diff--even{% else %}score-diff--over{% endif %}">
+                {% if _svp == 0 %}E{% elif _svp > 0 %}+{{ _svp }}{% else %}{{ _svp }}{% endif %}
               </span>
             {% endif %}
           {% else %}
