@@ -92,7 +92,7 @@ def recompute(dry_run: bool = False, stale_only: bool = False) -> None:
                     sg_atg  = strokes_gained_around_green(holes)
                     sg_tot  = sg_ott + sg_app + sg_atg + sg_putt['total']
                     gir     = sum(1 for h in holes if h.gir)
-                    fw_h    = [h for h in holes if h.par in (4, 5)]
+                    fw_h    = [h for h in holes if h.par in (4, 5) and h.tee_shot is not None]
                     fw_hit  = sum(1 for h in fw_h if h.tee_shot == 'fairway')
                     putts   = sum(h.putts for h in holes if h.putts is not None)
                     print(
