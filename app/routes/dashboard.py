@@ -219,10 +219,17 @@ def _compute_sg_avgs(rounds):
     if len(sg_rounds) < 3:
         return None
 
-    # Compute averages (preserve original display order)
+    # Compute averages normalised to an 18-hole equivalent so that 9-hole and
+    # 18-hole rounds are comparable.  For each round we convert the raw SG value
+    # to a per-hole rate (÷ holes_played) then scale back to 18 holes (× 18).
+    # Averaging these 18-hole equivalents gives a fair cross-format mean.
     categories = []
     for name, attr in SG_ATTRS:
-        vals = [getattr(r, attr) for r in sg_rounds if getattr(r, attr) is not None]
+        vals = [
+            getattr(r, attr) / r.holes_played * 18
+            for r in sg_rounds
+            if getattr(r, attr) is not None and r.holes_played
+        ]
         if not vals:
             continue
         categories.append({'name': name, 'avg': round(sum(vals) / len(vals), 2)})
