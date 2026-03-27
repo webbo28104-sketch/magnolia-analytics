@@ -57,7 +57,7 @@ class Round(db.Model):
         self.total_putts        = sum(h.putts       for h in holes if h.putts      is not None)
         self.gir_count          = sum(1             for h in holes if h.gir)
         self.penalties          = sum(h.penalties   for h in holes if h.penalties)
-        fw_holes                = [h for h in holes if h.par in (4, 5)]
+        fw_holes                = [h for h in holes if h.par in (4, 5) and h.tee_shot is not None]
         self.fairways_available = len(fw_holes)
         self.fairways_hit       = sum(1 for h in fw_holes if h.tee_shot == 'fairway')
 

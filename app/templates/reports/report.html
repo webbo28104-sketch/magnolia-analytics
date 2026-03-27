@@ -101,8 +101,8 @@ body::before {
 .sec-label   { font-size:9px; letter-spacing:.25em; text-transform:uppercase; color:var(--gold); opacity:.65; margin-bottom:14px; margin-top:40px; }
 .sec-divider { height:1px; background:var(--border); margin-top:38px; }
 .sum-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-.sum-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:16px 14px 14px; position:relative; overflow:hidden; }
-.sum-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); opacity:.45; }
+.sum-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:16px 14px 14px; position:relative; overflow:visible; }
+.sum-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); opacity:.45; border-radius:3px 3px 0 0; }
 .sum-card-lbl { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:9px; }
 .sum-card-val { font-family:'Playfair Display',serif; font-size:30px; font-weight:500; line-height:1; }
 .sum-card-sub { font-size:10px; color:var(--cream-faint); margin-top:5px; letter-spacing:.04em; }
@@ -205,10 +205,11 @@ body::before {
 .ft-brand { font-family:'Playfair Display',serif; font-size:13px; color:var(--gold); opacity:.55; }
 .ft-meta  { font-size:9px; letter-spacing:.14em; color:rgba(245,240,232,0.22); }
 /* Glossary tooltips */
-.mg-tip { position:relative; display:inline; cursor:help; border-bottom:1px dotted rgba(201,168,76,0.35); }
+.mg-tip { position:relative; display:inline-block; cursor:help; border-bottom:1px dotted rgba(201,168,76,0.35); }
 .mg-tip-icon { font-size:9px; color:var(--gold); opacity:.55; margin-left:2px; vertical-align:super; }
-.mg-pop { display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:var(--forest-light); border:1px solid var(--border-mid); border-radius:4px; padding:9px 12px; font-size:10px; color:var(--cream-dim); font-family:'DM Sans',sans-serif; line-height:1.5; width:220px; z-index:999; pointer-events:none; white-space:normal; }
-.mg-tip:hover .mg-pop { display:block; }
+.mg-pop { display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:var(--forest-light); border:1px solid var(--border-mid); border-radius:4px; padding:9px 12px; font-size:10px; color:var(--cream-dim); font-family:'DM Sans',sans-serif; line-height:1.5; width:220px; z-index:9999; pointer-events:none; white-space:normal; }
+.mg-tip:hover .mg-pop,
+.mg-tip.mg-open .mg-pop { display:block; }
 @media(max-width:640px){
   .sum-grid,.sg-cards{grid-template-columns:repeat(2,1fr);}
   .two-col,.split-grid{grid-template-columns:1fr;}
@@ -1106,6 +1107,19 @@ document.addEventListener('DOMContentLoaded', () => {
       el.style.transition = 'width 1.1s cubic-bezier(.4,0,.2,1)';
       el.style.width = target;
     }, 700);
+  });
+
+  // Tooltip touch support — tap to open, tap elsewhere or same tip to close
+  document.querySelectorAll('.mg-tip').forEach(tip => {
+    tip.addEventListener('click', e => {
+      e.stopPropagation();
+      const isOpen = tip.classList.contains('mg-open');
+      document.querySelectorAll('.mg-tip.mg-open').forEach(t => t.classList.remove('mg-open'));
+      if (!isOpen) tip.classList.add('mg-open');
+    });
+  });
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.mg-tip.mg-open').forEach(t => t.classList.remove('mg-open'));
   });
 });
 </script>

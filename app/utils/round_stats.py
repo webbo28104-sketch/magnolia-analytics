@@ -79,7 +79,7 @@ def compute_all_stats(round_):
     round_.total_putts        = sum(h.putts     for h in holes if h.putts is not None)
     round_.gir_count          = sum(1           for h in holes if h.gir)
     round_.penalties          = sum(h.penalties for h in holes if h.penalties)
-    fw_holes                  = [h for h in holes if h.par in (4, 5)]
+    fw_holes                  = [h for h in holes if h.par in (4, 5) and h.tee_shot is not None]
     round_.fairways_available = len(fw_holes)
     round_.fairways_hit       = sum(1 for h in fw_holes if h.tee_shot == 'fairway')
 
