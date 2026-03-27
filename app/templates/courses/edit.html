@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% block title %}Edit Course — {{ course.name }}{% endblock %}
+
+{% block head %}
+<style>
+  .ce-page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+
+  .ce-back {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .82rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+    text-decoration: none;
+  }
+  .ce-back:hover { color: var(--green-800); }
+
+  .ce-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.7rem;
+    font-weight: 600;
+    color: var(--green-800);
+    margin-bottom: .25rem;
+  }
+  .ce-subtitle {
+    font-size: .88rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+  }
+
+  .ce-section {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .ce-section-title {
+    font-size: .8rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+
+  .ce-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+  @media (max-width: 560px) {
+    .ce-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .ce-benefit {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    background: var(--green-100);
+    border: 1px solid rgba(45,106,79,.15);
+    border-radius: 8px;
+    padding: .9rem 1rem;
+    margin-bottom: 1.25rem;
+    font-size: .84rem;
+    color: var(--green-800);
+    line-height: 1.55;
+  }
+  .ce-benefit-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: .05rem; }
+
+  /* Hole table */
+  .ce-hole-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .875rem;
+  }
+  .ce-hole-table th {
+    text-align: left;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: .4rem .5rem .6rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .ce-hole-table th:first-child { width: 52px; }
+  .ce-hole-table td {
+    padding: .3rem .5rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .ce-hole-table tr:last-child td { border-bottom: none; }
+  .ce-hole-num {
+    font-family: 'DM Mono', monospace;
+    font-size: .78rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .ce-hole-input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-family: var(--font-sans);
+    font-size: .875rem;
+    color: var(--text);
+    background: var(--white);
+    transition: border-color .15s;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+  .ce-hole-input:focus { border-color: var(--green-700); }
+  .ce-hole-input::-webkit-inner-spin-button,
+  .ce-hole-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  .ce-par-btn-group {
+    display: flex;
+    gap: 3px;
+  }
+  .ce-par-btn {
+    flex: 1;
+    padding: 5px 2px;
+    border: 1.5px solid var(--border);
+    border-radius: 5px;
+    background: var(--white);
+    font-size: .8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: center;
+    transition: border-color .12s, background .12s, color .12s;
+  }
+  .ce-par-btn:hover { border-color: var(--green-700); color: var(--green-800); }
+  .ce-par-btn.active {
+    background: var(--green-800);
+    border-color: var(--green-800);
+    color: #fff;
+  }
+
+  .ce-submit-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: .75rem;
+    margin-top: 1.5rem;
+    align-items: center;
+  }
+  .ce-hint {
+    font-size: .8rem;
+    color: var(--text-muted);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ce-page">
+  <a href="{{ url_for('dashboard.index') }}" class="ce-back">← Back to dashboard</a>
+
+  <h1 class="ce-title">{{ course.name }}</h1>
+  <p class="ce-subtitle">{{ course.location_string or 'Manual course' }} &mdash; edit course data below</p>
+
+  <form method="POST" action="{{ url_for('courses.edit_course', course_id=course.id) }}">
+
+    <!-- Course stats -->
+    <div class="ce-section">
+      <div class="ce-section-title">Course stats</div>
+      <div class="ce-stats-grid">
+        <div class="form-group">
+          <label class="form-label">Course rating</label>
+          <input type="number" name="course_rating" class="form-input ce-hole-input"
+                 value="{{ tee_set.course_rating if tee_set else '' }}"
+                 step="0.1" min="55" max="82" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Slope rating</label>
+          <input type="number" name="slope_rating" class="form-input ce-hole-input"
+                 value="{{ tee_set.slope_rating if tee_set else '' }}"
+                 min="55" max="155" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Total par</label>
+          <input type="number" name="total_par" class="form-input ce-hole-input"
+                 value="{{ course.par }}" min="27" max="80" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Holes</label>
+          <select name="holes" class="form-input form-select">
+            <option value="18" {% if course.holes == 18 %}selected{% endif %}>18 holes</option>
+            <option value="9"  {% if course.holes == 9  %}selected{% endif %}>9 holes</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hole-by-hole data -->
+    <div class="ce-section">
+      <div class="ce-section-title">Hole-by-hole data</div>
+
+      <div class="ce-benefit">
+        <span class="ce-benefit-icon">⛳</span>
+        <span>Adding hole-by-hole data unlocks more accurate strokes gained calculations and detailed hole statistics. Par is required per hole; yardage and stroke index are optional.</span>
+      </div>
+
+      <table class="ce-hole-table">
+        <thead>
+          <tr>
+            <th>Hole</th>
+            <th>Par</th>
+            <th>Yardage</th>
+            <th>Stroke Index</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in hole_range %}
+          {% set ch = existing_holes.get(i) %}
+          <tr>
+            <td><span class="ce-hole-num">{{ i }}</span></td>
+            <td>
+              <div class="ce-par-btn-group" data-hole="{{ i }}">
+                {% for p in [3, 4, 5] %}
+                <button type="button" class="ce-par-btn {% if ch and ch.par == p %}active{% endif %}"
+                        data-par="{{ p }}"
+                        onclick="setPar({{ i }}, {{ p }}, this)">{{ p }}</button>
+                {% endfor %}
+              </div>
+              <input type="hidden" name="hole_{{ i }}_par"
+                     id="par-input-{{ i }}"
+                     value="{{ ch.par if ch else '' }}">
+            </td>
+            <td>
+              <input type="number" name="hole_{{ i }}_yardage" class="ce-hole-input"
+                     value="{{ ch.yardage if ch and ch.yardage else '' }}"
+                     placeholder="—" min="50" max="700">
+            </td>
+            <td>
+              <input type="number" name="hole_{{ i }}_si" class="ce-hole-input"
+                     value="{{ ch.stroke_index if ch and ch.stroke_index else '' }}"
+                     placeholder="—" min="1" max="{{ course.holes }}">
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="ce-submit-row">
+      <span class="ce-hint">Changes apply to all future rounds on this course.</span>
+      <button type="submit" class="btn btn--gold">Save course data →</button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+function setPar(holeNum, par, btn) {
+  document.getElementById('par-input-' + holeNum).value = par;
+  const group = btn.closest('.ce-par-btn-group');
+  group.querySelectorAll('.ce-par-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.par === String(par));
+  });
+}
+</script>
+{% endblock %}

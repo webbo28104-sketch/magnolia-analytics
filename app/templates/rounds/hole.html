@@ -18,6 +18,22 @@
   /* ── Page shell ────────────────────────────────────────────────────────── */
   body { background: var(--he-cream) !important; }
 
+  .he-course-prompt {
+    background: rgba(201,168,76,.09);
+    border-bottom: 1px solid rgba(201,168,76,.22);
+    padding: 9px 16px;
+    text-align: center;
+  }
+  .he-course-prompt-link {
+    font-size: .75rem;
+    color: var(--he-gold);
+    text-decoration: none;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: .03em;
+    opacity: .85;
+  }
+  .he-course-prompt-link:hover { opacity: 1; }
+
   .he-page {
     max-width: 480px;
     margin: 0 auto;
@@ -426,6 +442,14 @@
 {% set init_penalties = existing.penalties if existing else 0 %}
 
 <div class="he-page">
+
+  {% if show_hole_prompt and course_edit_url %}
+  <div class="he-course-prompt">
+    <a href="{{ course_edit_url }}" class="he-course-prompt-link">
+      ⛳ Add course hole data for more accurate stats →
+    </a>
+  </div>
+  {% endif %}
 
   <!-- ── Sticky header ──────────────────────────────────────────────────── -->
   <header class="he-header">

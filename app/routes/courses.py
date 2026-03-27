@@ -14,7 +14,7 @@ GET /api/debug/raw-course/<id>
 """
 
 import logging
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app import db
 from app.models.course import Course
@@ -307,6 +307,8 @@ def add_manual_course():
     course_rating = data.get('course_rating')
     slope_rating  = data.get('slope_rating')
     total_par     = data.get('total_par', 72)
+    holes         = data.get('holes', 18)
+    hole_data     = data.get('hole_data', [])   # [{par, yardage, si}, ...]
 
     if not name:
         return jsonify({'error': 'Course name is required.'}), 400
@@ -317,6 +319,9 @@ def add_manual_course():
         course_rating = float(course_rating)
         slope_rating  = int(slope_rating)
         total_par     = int(total_par)
+        holes         = int(holes)
+        if holes not in (9, 18):
+            holes = 18
     except (TypeError, ValueError):
         return jsonify({'error': 'Invalid rating or slope value.'}), 400
 
@@ -326,7 +331,7 @@ def add_manual_course():
         name=name,
         country=country,
         city=city,
-        holes=18,
+        holes=holes,
         par=total_par,
     )
     db.session.add(course)
@@ -342,11 +347,32 @@ def add_manual_course():
         total_par=total_par,
     )
     db.session.add(ts)
+    db.session.flush()
+
+    # Store hole-by-hole data if provided
+    for idx, hd in enumerate(hole_data[:holes], start=1):
+        par_val = hd.get('par')
+        if not par_val:
+            continue
+        try:
+            yardage = int(hd['yardage']) if hd.get('yardage') else None
+            si      = int(hd['si'])      if hd.get('si')      else None
+            db.session.add(CourseHole(
+                course_id=course.id,
+                tee_set_id=ts.id,
+                hole_number=idx,
+                par=int(par_val),
+                yardage=yardage,
+                stroke_index=si,
+            ))
+        except (TypeError, ValueError):
+            pass
+
     db.session.commit()
 
     current_app.logger.info(
-        f"[manual_course] Created '{name}' (course {course.id}, tee {ts.id}) "
-        f"by user {current_user.id}"
+        f"[manual_course] Created '{name}' (course {course.id}, tee {ts.id}, "
+        f"{holes}h, {len(hole_data)} holes entered) by user {current_user.id}"
     )
     return jsonify({'course': {'id': course.external_id, 'name': name, 'city': city, 'country': country},
                     'tee': _tee_to_dict(ts)})
@@ -360,6 +386,82 @@ def add_manual_course():
 @login_required
 def get_countries():
     return jsonify(SUPPORTED_COUNTRIES)
+
+
+# ---------------------------------------------------------------------------
+# Course edit (manual courses only)
+# ---------------------------------------------------------------------------
+
+@courses_bp.route('/courses/<int:course_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_course(course_id):
+    """Edit hole-by-hole data for a manually added course."""
+    course = Course.query.get_or_404(course_id)
+
+    if not (course.external_id and course.external_id.startswith('manual_')):
+        flash('Only manually added courses can be edited here.', 'error')
+        return redirect(url_for('dashboard.index'))
+
+    tee_set = course.tee_sets.first()
+
+    if request.method == 'POST':
+        try:
+            total_par     = int(request.form.get('total_par', course.par))
+            holes         = int(request.form.get('holes', course.holes))
+            if holes not in (9, 18):
+                holes = 18
+            course_rating = float(request.form.get('course_rating',
+                                  tee_set.course_rating if tee_set else 72.0))
+            slope_rating  = int(request.form.get('slope_rating',
+                                tee_set.slope_rating if tee_set else 113))
+        except (TypeError, ValueError):
+            flash('Invalid rating or par value — please check your inputs.', 'error')
+            return redirect(url_for('courses.edit_course', course_id=course_id))
+
+        course.par   = total_par
+        course.holes = holes
+
+        if tee_set:
+            tee_set.course_rating = course_rating
+            tee_set.slope_rating  = slope_rating
+            tee_set.total_par     = total_par
+
+            # Rebuild hole records
+            CourseHole.query.filter_by(tee_set_id=tee_set.id).delete()
+            for i in range(1, holes + 1):
+                par_val = request.form.get(f'hole_{i}_par', '').strip()
+                if not par_val:
+                    continue
+                try:
+                    yardage_raw = request.form.get(f'hole_{i}_yardage', '').strip()
+                    si_raw      = request.form.get(f'hole_{i}_si', '').strip()
+                    db.session.add(CourseHole(
+                        course_id=course.id,
+                        tee_set_id=tee_set.id,
+                        hole_number=i,
+                        par=int(par_val),
+                        yardage=int(yardage_raw) if yardage_raw else None,
+                        stroke_index=int(si_raw) if si_raw else None,
+                    ))
+                except ValueError:
+                    pass
+
+        db.session.commit()
+        flash('Course data saved successfully.', 'success')
+        return redirect(url_for('courses.edit_course', course_id=course_id))
+
+    existing_holes = {}
+    if tee_set:
+        for ch in tee_set.course_holes.all():
+            existing_holes[ch.hole_number] = ch
+
+    return render_template(
+        'courses/edit.html',
+        course=course,
+        tee_set=tee_set,
+        existing_holes=existing_holes,
+        hole_range=range(1, course.holes + 1),
+    )
 
 
 # ---------------------------------------------------------------------------

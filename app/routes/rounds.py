@@ -164,6 +164,18 @@ def enter_hole(round_id, hole_number):
     if course_par is None and round_.course and round_.course.par_list:
         course_par = round_.course.par_list[actual_hole_number - 1]
 
+    # Prompt to add hole data for manual courses that have none (shown on hole 1 only)
+    show_hole_prompt = False
+    course_edit_url  = None
+    if hole_number == 1 and round_.course:
+        ext_id = round_.course.external_id or ''
+        if ext_id.startswith('manual_') and round_.tee_set_id:
+            has_data = CourseHole.query.filter_by(tee_set_id=round_.tee_set_id).count() > 0
+            if not has_data:
+                show_hole_prompt = True
+                course_edit_url  = url_for('courses.edit_course',
+                                           course_id=round_.course.id)
+
     if request.method == 'POST':
         data = request.form
         if not existing:
@@ -220,6 +232,8 @@ def enter_hole(round_id, hole_number):
         holes_completed=holes_completed,
         is_edit=is_edit,
         completed_hole_numbers=completed_hole_numbers,
+        show_hole_prompt=show_hole_prompt,
+        course_edit_url=course_edit_url,
     )
 
 
