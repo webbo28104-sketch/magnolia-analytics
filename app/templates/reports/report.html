@@ -131,9 +131,9 @@ body::before {
 .sp-bo { background:rgba(201,168,76,0.11); color:var(--gold-light); border:1px solid rgba(201,168,76,0.22); }
 .sp-d  { background:rgba(232,160,144,0.18); color:var(--red-soft); border:1px solid rgba(232,160,144,0.32); }
 .td { display:inline-block; width:8px; height:8px; border-radius:50%; }
-.td-f { background:var(--green-mid); } .td-l { background:var(--red-soft); }
-.td-r { background:var(--gold); }     .td-p { background:#c0392b; }
-.td-p3{ background:rgba(245,240,232,0.18); border:1px solid rgba(245,240,232,0.28); }
+.td-f    { background:var(--green-mid); }
+.td-miss { background:var(--red-soft); }
+.td-p3   { background:rgba(245,240,232,0.18); border:1px solid rgba(245,240,232,0.28); }
 .gir-y { color:var(--green-soft); font-size:11px; } .gir-n { color:rgba(245,240,232,0.22); font-size:11px; }
 .putt-v { font-family:'Playfair Display',serif; font-size:14px; }
 .p1 { color:var(--green-soft); } .p2 { color:var(--cream-dim); } .p3 { color:var(--red-soft); }
@@ -326,8 +326,9 @@ body::before {
 
 {# ── Derived template variables ── #}
 {% set fw_pct     = (round.fairways_hit / round.fairways_available * 100) | round | int if round.fairways_available else 0 %}
-{% set gir_pct    = (round.gir_count / round.holes_played * 100) | round | int %}
-{% set putts_ph   = (round.total_putts / round.holes_played) | round(2) %}
+{% set _gir_denom = holes_data | length %}
+{% set gir_pct    = (round.gir_count / _gir_denom * 100) | round | int if (_gir_denom and round.gir_count is not none) else 0 %}
+{% set putts_ph   = (round.total_putts / round.holes_played) | round(2) if round.total_putts is not none else '—' %}
 
 {# tee shot dispersion counts #}
 {% set disp_left   = tee_gir.get('left',    {}).get('attempts', 0) %}
@@ -454,7 +455,7 @@ body::before {
           <span class="mg-pop">Fairway in Regulation — tee shot lands in the fairway on a par-4 or par-5. Measured against all driveable holes (par-4s and par-5s).</span>
         </span>
       </div>
-      <div class="sum-card-val">{{ round.fairways_hit }}/{{ round.fairways_available }}</div>
+      <div class="sum-card-val">{{ round.fairways_hit if round.fairways_hit is not none else '—' }}/{{ round.fairways_available if round.fairways_available is not none else '—' }}</div>
       <div class="sum-card-sub">{{ fw_pct }}% of available</div>
     </div>
     <div class="sum-card">
@@ -463,12 +464,12 @@ body::before {
           <span class="mg-pop">Green In Regulation — reaching the putting surface in par minus 2 strokes. A par-4 means on the green in 2 or fewer shots. Tour average is ~65%; scratch golfer ~60–65%.</span>
         </span>
       </div>
-      <div class="sum-card-val">{{ round.gir_count }}/18</div>
+      <div class="sum-card-val">{{ round.gir_count if round.gir_count is not none else '—' }}/{{ _gir_denom }}</div>
       <div class="sum-card-sub">{{ gir_pct }}%</div>
     </div>
     <div class="sum-card">
       <div class="sum-card-lbl">Total Putts</div>
-      <div class="sum-card-val">{{ round.total_putts }}</div>
+      <div class="sum-card-val">{{ round.total_putts if round.total_putts is not none else '—' }}</div>
       <div class="sum-card-sub">{{ putts_ph }} avg · {{ three_putt_holes | length }} three-putt{{ 's' if three_putt_holes | length != 1 }}</div>
     </div>
   </div>
@@ -486,15 +487,24 @@ body::before {
         </span>
       </div>
       <div>
+        {% set front_holes    = holes_data | selectattr('hole_number','le',9) | list %}
+        {% set front_n        = front_holes | length %}
         <div class="split-row"><span class="split-key">Par</span><span class="split-v">{{ split.front.par }}</span></div>
-        <div class="split-row"><span class="split-key">GIR</span><span class="split-v">{{ split.front.gir }}/9 ({{ (split.front.gir / 9 * 100) | round | int }}%)</span></div>
-        {% set front_fw_holes = holes_data | selectattr('hole_number', 'le', 9) | selectattr('par', 'in', [4, 5]) | list %}
+        <div class="split-row"><span class="split-key">GIR</span><span class="split-v">{{ split.front.gir }}/{{ front_n }}{% if front_n %} ({{ (split.front.gir / front_n * 100) | round | int }}%){% endif %}</span></div>
+        {% set front_fw_holes = front_holes | selectattr('par', 'in', [4, 5]) | list %}
         {% set front_fw_hit   = front_fw_holes | selectattr('tee_shot', 'equalto', 'fairway') | list | length %}
         <div class="split-row"><span class="split-key">Fairways</span><span class="split-v">{{ front_fw_hit }}/{{ front_fw_holes | length }}{% if front_fw_holes %} ({{ (front_fw_hit / front_fw_holes | length * 100) | round | int }}%){% endif %}</span></div>
         <div class="split-row"><span class="split-key">Putts</span><span class="split-v">{{ split.front.putts }}</span></div>
-        {% set front_birdies = holes_data | selectattr('hole_number','le',9) | selectattr('score_vs_par','lt',0) | list | length %}
-        {% set front_bogeys  = holes_data | selectattr('hole_number','le',9) | selectattr('score_vs_par','gt',0) | list | length %}
-        <div class="split-row"><span class="split-key">Birdies / Bogeys</span><span class="split-v">{{ front_birdies }} / {{ front_bogeys }}</span></div>
+        {% set front_eagles  = front_holes | selectattr('score_vs_par','le',-2) | list | length %}
+        {% set front_birdies = front_holes | selectattr('score_vs_par','equalto',-1) | list | length %}
+        {% set front_pars    = front_holes | selectattr('score_vs_par','equalto',0) | list | length %}
+        {% set front_bogeys  = front_holes | selectattr('score_vs_par','equalto',1) | list | length %}
+        {% set front_doubles = front_holes | selectattr('score_vs_par','ge',2) | list | length %}
+        {% if front_eagles  %}<div class="split-row"><span class="split-key">Eagles or better</span><span class="split-v c-grn">{{ front_eagles }}</span></div>{% endif %}
+        {% if front_birdies %}<div class="split-row"><span class="split-key">Birdies</span><span class="split-v c-grn">{{ front_birdies }}</span></div>{% endif %}
+        {% if front_pars    %}<div class="split-row"><span class="split-key">Pars</span><span class="split-v">{{ front_pars }}</span></div>{% endif %}
+        {% if front_bogeys  %}<div class="split-row"><span class="split-key">Bogeys</span><span class="split-v c-red">{{ front_bogeys }}</span></div>{% endif %}
+        {% if front_doubles %}<div class="split-row"><span class="split-key">Doubles or worse</span><span class="split-v c-red">{{ front_doubles }}</span></div>{% endif %}
       </div>
     </div>
     {% endif %}
@@ -507,17 +517,24 @@ body::before {
         </span>
       </div>
       <div>
+        {% set back_holes    = holes_data | selectattr('hole_number','gt',9) | list %}
+        {% set back_n        = back_holes | length %}
         <div class="split-row"><span class="split-key">Par</span><span class="split-v">{{ split.back.par }}</span></div>
-        <div class="split-row"><span class="split-key">G!R</span><span class="split-v">{{ split.back.gir }}/9 ({{ (split.back.gir / 9 * 100) | round | int }}%)</span></div>
-        {% set back_fw_holes = holes_data | selectattr('hole_number', 'gt', 9) | selectattr('par', 'in', [4, 5]) | list %}
+        <div class="split-row"><span class="split-key">GIR</span><span class="split-v">{{ split.back.gir }}/{{ back_n }}{% if back_n %} ({{ (split.back.gir / back_n * 100) | round | int }}%){% endif %}</span></div>
+        {% set back_fw_holes = back_holes | selectattr('par', 'in', [4, 5]) | list %}
         {% set back_fw_hit   = back_fw_holes | selectattr('tee_shot', 'equalto', 'fairway') | list | length %}
         <div class="split-row"><span class="split-key">Fairways</span><span class="split-v">{{ back_fw_hit }}/{{ back_fw_holes | length }}{% if back_fw_holes %} ({{ (back_fw_hit / back_fw_holes | length * 100) | round | int }}%){% endif %}</span></div>
         <div class="split-row"><span class="split-key">Putts</span><span class="split-v">{{ split.back.putts }}</span></div>
-        {% set back_birdies = holes_data | selectattr('hole_number','gt',9) | selectattr('score_vs_par','lt',0) | list | length %}
-        {% set back_bogeys  = holes_data | selectattr('hole_number','gt',9) | selectattr('score_vs_par','gt',0) | list | length %}
-        <div class="split-row"><span class="split-key">Birdies / Bogeys</span>
-          <span class="split-v {{ 'c-grn' if back_birdies > back_bogeys else 'c-red' if back_bogeys > back_birdies }}">{{ back_birdies }} / {{ back_bogeys }}</span>
-        </div>
+        {% set back_eagles  = back_holes | selectattr('score_vs_par','le',-2) | list | length %}
+        {% set back_birdies = back_holes | selectattr('score_vs_par','equalto',-1) | list | length %}
+        {% set back_pars    = back_holes | selectattr('score_vs_par','equalto',0) | list | length %}
+        {% set back_bogeys  = back_holes | selectattr('score_vs_par','equalto',1) | list | length %}
+        {% set back_doubles = back_holes | selectattr('score_vs_par','ge',2) | list | length %}
+        {% if back_eagles  %}<div class="split-row"><span class="split-key">Eagles or better</span><span class="split-v c-grn">{{ back_eagles }}</span></div>{% endif %}
+        {% if back_birdies %}<div class="split-row"><span class="split-key">Birdies</span><span class="split-v c-grn">{{ back_birdies }}</span></div>{% endif %}
+        {% if back_pars    %}<div class="split-row"><span class="split-key">Pars</span><span class="split-v">{{ back_pars }}</span></div>{% endif %}
+        {% if back_bogeys  %}<div class="split-row"><span class="split-key">Bogeys</span><span class="split-v c-red">{{ back_bogeys }}</span></div>{% endif %}
+        {% if back_doubles %}<div class="split-row"><span class="split-key">Doubles or worse</span><span class="split-v c-red">{{ back_doubles }}</span></div>{% endif %}
       </div>
     </div>
     {% endif %}
@@ -542,15 +559,13 @@ body::before {
         {% elif h.score_vs_par == 0 %}{% set sc = 'sp-p' %}
         {% elif h.score_vs_par == 1 %}{% set sc = 'sp-bo' %}
         {% else %}{% set sc = 'sp-d' %}{% endif %}
-        {# Tee shot dot class #}
-        {% if h.par == 3 %}{% set tc = 'td-p3' %}
+        {# Tee shot dot class — green for fairway, red for any miss, grey for par 3 / no data #}
+        {% if h.par == 3 or not h.tee_shot %}{% set tc = 'td-p3' %}
         {% elif h.tee_shot == 'fairway' %}{% set tc = 'td-f' %}
-        {% elif h.tee_shot == 'left' %}{% set tc = 'td-l' %}
-        {% elif h.tee_shot == 'right' %}{% set tc = 'td-r' %}
-        {% elif h.tee_shot == 'penalty' %}{% set tc = 'td-p' %}
-        {% else %}{% set tc = 'td-p3' %}{% endif %}
-        {# Putt colour #}
-        {% if h.putts == 1 %}{% set pc = 'p1' %}
+        {% else %}{% set tc = 'td-miss' %}{% endif %}
+        {# Putt colour — guard against None #}
+        {% if h.putts is none %}{% set pc = '' %}
+        {% elif h.putts == 1 %}{% set pc = 'p1' %}
         {% elif h.putts == 2 %}{% set pc = 'p2' %}
         {% else %}{% set pc = 'p3' %}{% endif %}
         <tr>
@@ -560,7 +575,7 @@ body::before {
           <td><span class="sp {{ sc }}">{{ h.score }}</span></td>
           <td><span class="td {{ tc }}"></span></td>
           <td><span class="{{ 'gir-y' if h.gir else 'gir-n' }}">{{ '✓' if h.gir else '✕' }}</span></td>
-          <td><span class="putt-v {{ pc }}">{{ h.putts }}</span></td>
+          <td><span class="putt-v {{ pc }}">{{ h.putts if h.putts is not none else '—' }}</span></td>
           <td>{{ h.first_putt_distance ~ 'ft' if h.first_putt_distance else '—' }}</td>
           <td>{{ h.approach_distance ~ 'y' if h.approach_distance else '—' }}</td>
         </tr>
@@ -568,7 +583,7 @@ body::before {
         <tr class="sub-row">
           <td colspan="3">Front 9</td>
           <td>{{ split.front.score }}</td>
-          <td colspan="2">{{ split.front.gir }}/9 GIR</td>
+          <td colspan="2">{{ split.front.gir }}/{{ holes_data | selectattr('hole_number','le',9) | list | length }} GIR</td>
           <td>{{ split.front.putts }}</td>
           <td colspan="2">{{ split.front.score_label }} vs par {{ split.front.par }}</td>
         </tr>
@@ -578,7 +593,7 @@ body::before {
         <tr class="sub-row">
           <td colspan="3">Back 9</td>
           <td>{{ split.back.score }}</td>
-          <td colspan="2">{{ split.back.gir }}/9 GIR</td>
+          <td colspan="2">{{ split.back.gir }}/{{ holes_data | selectattr('hole_number','gt',9) | list | length }} GIR</td>
           <td>{{ split.back.putts }}</td>
           <td colspan="2">{{ split.back.score_label }} vs par {{ split.back.par }}</td>
         </tr>
@@ -586,7 +601,7 @@ body::before {
         <tr class="tot-row">
           <td colspan="3">Total</td>
           <td>{{ round.total_score }}</td>
-          <td colspan="2">{{ round.gir_count }}/18 GIR</td>
+          <td colspan="2">{{ round.gir_count }}/{{ _gir_denom }} GIR</td>
           <td>{{ round.total_putts }}</td>
           <td colspan="2">{{ score_vs_par_label }} vs par {{ par }}</td>
         </tr>

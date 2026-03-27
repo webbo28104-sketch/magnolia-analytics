@@ -81,9 +81,9 @@ def _split_totals(holes_data: list) -> dict:
     """Compute front 9 / back 9 / total summary rows."""
     def _sum(subset):
         return {
-            'score':   sum(h['score'] for h in subset),
-            'par':     sum(h['par']   for h in subset),
-            'putts':   sum(h['putts'] for h in subset),
+            'score':   sum(h['score']        for h in subset),
+            'par':     sum(h['par']          for h in subset),
+            'putts':   sum(h['putts'] or 0   for h in subset),
             'gir':     sum(1 for h in subset if h['gir']),
             'yardage': sum(h['yardage'] or 0 for h in subset),
         }
