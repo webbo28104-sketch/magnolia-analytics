@@ -95,6 +95,31 @@
     </div>
   </footer>
 
+  <script>
+  (function () {
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('.pw-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var input = btn.closest('.pw-wrap').querySelector('input');
+          var eyeOn  = btn.querySelector('.pw-eye');
+          var eyeOff = btn.querySelector('.pw-eye-off');
+          if (input.type === 'password') {
+            input.type = 'text';
+            eyeOn.style.display  = 'none';
+            eyeOff.style.display = '';
+            btn.setAttribute('aria-label', 'Hide password');
+          } else {
+            input.type = 'password';
+            eyeOn.style.display  = '';
+            eyeOff.style.display = 'none';
+            btn.setAttribute('aria-label', 'Show password');
+          }
+        });
+      });
+    });
+  }());
+  </script>
+
   {% block scripts %}{% endblock %}
 </body>
 </html>

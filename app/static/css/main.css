@@ -1044,6 +1044,24 @@ h1, h2, h3, h4 {
   box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
 }
 
+.pw-wrap { position: relative; }
+.pw-wrap .form-input { padding-right: 42px; }
+.pw-toggle {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 3px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+.pw-toggle:hover { color: var(--green-800); }
+
 .form-select { cursor: pointer; }
 
 .checkbox-label {
