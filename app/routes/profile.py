@@ -55,10 +55,16 @@ def index():
         ),
     }
 
-    personal_bests = compute_all_personal_bests(completed)
+    pb_18 = compute_all_personal_bests(completed, holes_played=18)
+    pb_9  = compute_all_personal_bests(completed, holes_played=9)
+    has_18 = any(r.holes_played == 18 for r in completed)
+    has_9  = any(r.holes_played == 9  for r in completed)
 
     return render_template(
         'profile/index.html',
         lifetime=lifetime,
-        personal_bests=personal_bests,
+        pb_18=pb_18,
+        pb_9=pb_9,
+        has_18=has_18,
+        has_9=has_9,
     )

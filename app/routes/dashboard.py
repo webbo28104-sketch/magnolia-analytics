@@ -188,11 +188,17 @@ def _compute_glance(all_rounds):
     else:
         glance['best_sg_cat'] = None
 
-    # 4. Personal best from the most recent round vs all previous
-    glance['recent_pb'] = (
-        check_recent_personal_best(all_rounds[0], all_rounds[1:])
-        if len(all_rounds) >= 2 else None
-    )
+    # 4. Personal best — scan the last 5 rounds, each vs same-format previous rounds.
+    # Checking 5 rounds catches cases where the most recent round isn't the relevant
+    # format (e.g. the last 9-hole PB was 3 rounds ago after two 18-hole rounds).
+    recent_pb = None
+    for i, r in enumerate(all_rounds[:5]):
+        prev = all_rounds[i + 1:]
+        pb = check_recent_personal_best(r, prev)
+        if pb:
+            recent_pb = pb
+            break
+    glance['recent_pb'] = recent_pb
 
     return glance
 

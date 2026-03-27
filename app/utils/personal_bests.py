@@ -5,14 +5,19 @@ def _pb(value, round_):
     return {'value': value, 'date_set': round_.date_played, 'round_id': round_.id}
 
 
-def compute_all_personal_bests(rounds):
+def compute_all_personal_bests(rounds, holes_played=None):
     """
     Compute all-time personal bests across a list of complete Round objects.
     Uses stored Round fields only (no live recomputation).
 
+    If holes_played is 9 or 18, only rounds matching that format are considered.
+
     Returns a dict keyed by PB name. Each value is
     {'value': ..., 'date_set': date, 'round_id': int} or None.
     """
+    if holes_played is not None:
+        rounds = [r for r in rounds if r.holes_played == holes_played]
+
     pbs = {
         'lowest_score_vs_par': None,
         'best_gir_pct':        None,
@@ -82,11 +87,16 @@ def compute_all_personal_bests(rounds):
 def check_recent_personal_best(recent, prev_rounds):
     """
     Check if `recent` sets any personal best vs `prev_rounds`.
+
+    Only compares against rounds of the same format (holes_played) as `recent`,
+    so 9-hole rounds are never judged against 18-hole benchmarks and vice versa.
     Uses stored Round fields only (no live recomputation).
 
     Returns the most impressive PB dict {'label': str, 'priority': int} or None.
     """
-    if not prev_rounds:
+    # Filter to same format — this is the critical correctness guard
+    same_fmt = [r for r in prev_rounds if r.holes_played == recent.holes_played]
+    if not same_fmt:
         return None
 
     pbs = []
@@ -94,7 +104,7 @@ def check_recent_personal_best(recent, prev_rounds):
     # 1. Lowest score vs par (lower is better)
     svp = recent.score_vs_par()
     if svp is not None:
-        prev_svps = [r.score_vs_par() for r in prev_rounds if r.score_vs_par() is not None]
+        prev_svps = [r.score_vs_par() for r in same_fmt if r.score_vs_par() is not None]
         if prev_svps and svp < min(prev_svps):
             label = 'E' if svp == 0 else (f'+{svp}' if svp > 0 else str(svp))
             pbs.append({'label': f"Best score vs par you've ever recorded ({label})", 'priority': 1})
@@ -103,13 +113,13 @@ def check_recent_personal_best(recent, prev_rounds):
     if recent.gir_count is not None and recent.holes_played:
         gir_pct   = recent.gir_count / recent.holes_played * 100
         prev_girs = [r.gir_count / r.holes_played * 100
-                     for r in prev_rounds if r.gir_count is not None and r.holes_played]
+                     for r in same_fmt if r.gir_count is not None and r.holes_played]
         if prev_girs and gir_pct > max(prev_girs):
             pbs.append({'label': f"Best GIR rate you've ever recorded ({round(gir_pct)}%)", 'priority': 2})
 
     # 3. Best SG total (higher is better)
     if recent.sg_total is not None:
-        prev_totals = [r.sg_total for r in prev_rounds if r.sg_total is not None]
+        prev_totals = [r.sg_total for r in same_fmt if r.sg_total is not None]
         if prev_totals and recent.sg_total > max(prev_totals):
             sign = '+' if recent.sg_total > 0 else ''
             pbs.append({'label': f"Best Strokes Gained total you've ever recorded ({sign}{round(recent.sg_total, 1)})", 'priority': 3})
@@ -125,7 +135,7 @@ def check_recent_personal_best(recent, prev_rounds):
         cat_val = getattr(recent, attr, None)
         if cat_val is None:
             continue
-        prev_vals = [getattr(r, attr) for r in prev_rounds if getattr(r, attr) is not None]
+        prev_vals = [getattr(r, attr) for r in same_fmt if getattr(r, attr) is not None]
         if prev_vals and cat_val > max(prev_vals):
             sign = '+' if cat_val > 0 else ''
             pbs.append({'label': f"Best SG: {cat_name} you've ever recorded ({sign}{round(cat_val, 1)})", 'priority': 4})

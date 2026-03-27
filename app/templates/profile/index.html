@@ -163,104 +163,105 @@
     </div>
   </div>
 
-  <!-- Personal Bests -->
-  {% if lifetime.total_rounds > 0 %}
-  <div class="profile-section">
-    <div class="profile-section-title">Personal Bests</div>
-    <div class="pb-grid">
-
-      {% if personal_bests.lowest_score_vs_par %}
-      {% set pb = personal_bests.lowest_score_vs_par %}
-      {% set v = pb.value %}
-      <div class="pb-card">
-        <div class="pb-label">Best Score vs Par</div>
-        <div class="pb-value">{% if v == 0 %}E{% elif v > 0 %}+{{ v }}{% else %}{{ v }}{% endif %}</div>
-        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
-      </div>
-      {% endif %}
-
-      {% if personal_bests.most_birdies %}
-      {% set pb = personal_bests.most_birdies %}
-      <div class="pb-card">
-        <div class="pb-label">Most Birdies in a Round</div>
-        <div class="pb-value">{{ pb.value }}</div>
-        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
-      </div>
-      {% endif %}
-
-      {% if personal_bests.best_gir_pct %}
-      {% set pb = personal_bests.best_gir_pct %}
-      <div class="pb-card">
-        <div class="pb-label">Best GIR%</div>
-        <div class="pb-value">{{ pb.value | round | int }}%</div>
-        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
-      </div>
-      {% endif %}
-
-      {% if personal_bests.best_fir_pct %}
-      {% set pb = personal_bests.best_fir_pct %}
-      <div class="pb-card">
-        <div class="pb-label">Best FIR%</div>
-        <div class="pb-value">{{ pb.value | round | int }}%</div>
-        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
-      </div>
-      {% endif %}
-
-      {% if personal_bests.lowest_putts %}
-      {% set pb = personal_bests.lowest_putts %}
-      <div class="pb-card">
-        <div class="pb-label">Fewest Putts</div>
-        <div class="pb-value">{{ pb.value }}</div>
-        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
-      </div>
-      {% endif %}
-
-      {% if personal_bests.best_sg_total %}
-      {% set pb = personal_bests.best_sg_total %}
-      <div class="pb-card">
-        <div class="pb-label">Best SG Total</div>
-        <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
-        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
-      </div>
-      {% endif %}
-
-      {% if personal_bests.best_sg_off_tee %}
-      {% set pb = personal_bests.best_sg_off_tee %}
-      <div class="pb-card">
-        <div class="pb-label">Best SG: Off the Tee</div>
-        <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
-        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
-      </div>
-      {% endif %}
-
-      {% if personal_bests.best_sg_approach %}
-      {% set pb = personal_bests.best_sg_approach %}
-      <div class="pb-card">
-        <div class="pb-label">Best SG: Approach</div>
-        <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
-        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
-      </div>
-      {% endif %}
-
-      {% if personal_bests.best_sg_atg %}
-      {% set pb = personal_bests.best_sg_atg %}
-      <div class="pb-card">
-        <div class="pb-label">Best SG: Around the Green</div>
-        <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
-        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
-      </div>
-      {% endif %}
-
-      {% if personal_bests.best_sg_putting %}
-      {% set pb = personal_bests.best_sg_putting %}
-      <div class="pb-card">
-        <div class="pb-label">Best SG: Putting</div>
-        <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
-        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
-      </div>
-      {% endif %}
-
+  <!-- Personal Bests macro — renders a pb-grid for a given pbs dict -->
+  {% macro pb_grid(pbs) %}
+  <div class="pb-grid">
+    {% if pbs.lowest_score_vs_par %}
+    {% set pb = pbs.lowest_score_vs_par %}{% set v = pb.value %}
+    <div class="pb-card">
+      <div class="pb-label">Best Score vs Par</div>
+      <div class="pb-value">{% if v == 0 %}E{% elif v > 0 %}+{{ v }}{% else %}{{ v }}{% endif %}</div>
+      <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
     </div>
+    {% endif %}
+    {% if pbs.most_birdies %}
+    {% set pb = pbs.most_birdies %}
+    <div class="pb-card">
+      <div class="pb-label">Most Birdies in a Round</div>
+      <div class="pb-value">{{ pb.value }}</div>
+      <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+    </div>
+    {% endif %}
+    {% if pbs.best_gir_pct %}
+    {% set pb = pbs.best_gir_pct %}
+    <div class="pb-card">
+      <div class="pb-label">Best GIR%</div>
+      <div class="pb-value">{{ pb.value | round | int }}%</div>
+      <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+    </div>
+    {% endif %}
+    {% if pbs.best_fir_pct %}
+    {% set pb = pbs.best_fir_pct %}
+    <div class="pb-card">
+      <div class="pb-label">Best FIR%</div>
+      <div class="pb-value">{{ pb.value | round | int }}%</div>
+      <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+    </div>
+    {% endif %}
+    {% if pbs.lowest_putts %}
+    {% set pb = pbs.lowest_putts %}
+    <div class="pb-card">
+      <div class="pb-label">Fewest Putts</div>
+      <div class="pb-value">{{ pb.value }}</div>
+      <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+    </div>
+    {% endif %}
+    {% if pbs.best_sg_total %}
+    {% set pb = pbs.best_sg_total %}
+    <div class="pb-card">
+      <div class="pb-label">Best SG Total</div>
+      <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
+      <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+    </div>
+    {% endif %}
+    {% if pbs.best_sg_off_tee %}
+    {% set pb = pbs.best_sg_off_tee %}
+    <div class="pb-card">
+      <div class="pb-label">Best SG: Off the Tee</div>
+      <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
+      <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+    </div>
+    {% endif %}
+    {% if pbs.best_sg_approach %}
+    {% set pb = pbs.best_sg_approach %}
+    <div class="pb-card">
+      <div class="pb-label">Best SG: Approach</div>
+      <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
+      <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+    </div>
+    {% endif %}
+    {% if pbs.best_sg_atg %}
+    {% set pb = pbs.best_sg_atg %}
+    <div class="pb-card">
+      <div class="pb-label">Best SG: Around the Green</div>
+      <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
+      <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+    </div>
+    {% endif %}
+    {% if pbs.best_sg_putting %}
+    {% set pb = pbs.best_sg_putting %}
+    <div class="pb-card">
+      <div class="pb-label">Best SG: Putting</div>
+      <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
+      <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+    </div>
+    {% endif %}
+  </div>
+  {% endmacro %}
+
+  <!-- 18-Hole Personal Bests -->
+  {% if has_18 %}
+  <div class="profile-section">
+    <div class="profile-section-title">18-Hole Personal Bests</div>
+    {{ pb_grid(pb_18) }}
+  </div>
+  {% endif %}
+
+  <!-- 9-Hole Personal Bests -->
+  {% if has_9 %}
+  <div class="profile-section">
+    <div class="profile-section-title">9-Hole Personal Bests</div>
+    {{ pb_grid(pb_9) }}
   </div>
   {% endif %}
 
