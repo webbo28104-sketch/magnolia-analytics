@@ -142,6 +142,68 @@
 .glance-value { font-weight: 600; font-size: 0.875rem; color: var(--text, #111); line-height: 1.3; }
 .glance-label { font-size: 0.74rem; color: var(--color-text-muted, #888); margin-top: 2px; line-height: 1.35; }
 @media (max-width: 480px) { .glance-grid { grid-template-columns: 1fr; } }
+
+/* ── Strokes Gained chart ────────────────────────────────────── */
+.sg-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-top: 10px;
+}
+.sg-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sg-lbl {
+  width: 128px;
+  font-size: .78rem;
+  color: var(--text-muted, #888);
+  flex-shrink: 0;
+  text-align: right;
+  line-height: 1.3;
+}
+.sg-track {
+  flex: 1;
+  position: relative;
+  height: 7px;
+  background: var(--cream-mid, #ede9e1);
+  border-radius: 999px;
+  overflow: visible;
+}
+.sg-zero {
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 1.5px;
+  background: var(--border, #e2ddd5);
+  transform: translateX(-50%);
+  border-radius: 1px;
+}
+.sg-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 999px;
+  min-width: 2px;
+  transition: width .3s ease;
+}
+.sg-bar--pos { left: 50%; background: var(--color-gold, #c9a84c); }
+.sg-bar--neg { right: 50%; background: #c0635a; }
+.sg-val {
+  width: 42px;
+  font-size: .78rem;
+  font-weight: 600;
+  font-family: 'DM Mono', monospace;
+  flex-shrink: 0;
+}
+.sg-val--pos { color: var(--color-gold, #c9a84c); }
+.sg-val--neg { color: #c0635a; }
+@media (max-width: 480px) {
+  .sg-lbl { width: 90px; font-size: .72rem; }
+  .sg-val { width: 36px; font-size: .72rem; }
+}
 </style>
 {% endblock %}
 
@@ -310,6 +372,7 @@
       <div class="stat-value">{{ stats.fir_pct ~ '%' if stats.fir_pct is not none else '—' }}</div>
       <div class="stat-label">FIR%</div>
     </div>
+
     <div class="stat-card">
       <div class="stat-value">{{ stats.scramble_pct ~ '%' if stats.scramble_pct is not none else '—' }}</div>
       <div class="stat-label">Scramble%</div>
@@ -319,6 +382,32 @@
       <div class="stat-label">Putts / Hole</div>
     </div>
   </div>
+  </div>
+  {% endif %}
+
+  <!-- Strokes Gained averages -->
+  {% if sg_avgs %}
+  <div class="section">
+    <h2 class="section-title">Strokes Gained</h2>
+    <p class="stats-note">Average across {{ sg_avgs.rounds_count }} round{{ 's' if sg_avgs.rounds_count != 1 }} &middot; vs tour baseline</p>
+    <div class="sg-chart">
+      {% for cat in sg_avgs.categories %}
+      <div class="sg-row">
+        <div class="sg-lbl">{{ cat.name }}</div>
+        <div class="sg-track">
+          <div class="sg-zero"></div>
+          {% if cat.positive %}
+          <div class="sg-bar sg-bar--pos" style="width:{{ cat.width_pct }}%"></div>
+          {% else %}
+          <div class="sg-bar sg-bar--neg" style="width:{{ cat.width_pct }}%"></div>
+          {% endif %}
+        </div>
+        <div class="sg-val {% if cat.positive %}sg-val--pos{% else %}sg-val--neg{% endif %}">
+          {{ '+' if cat.avg > 0 else '' }}{{ '%.2f'|format(cat.avg) }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
   </div>
   {% endif %}
 

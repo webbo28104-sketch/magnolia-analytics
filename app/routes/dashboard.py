@@ -50,11 +50,14 @@ def index():
             'holes_done': len(saved_holes),
         })
 
+    sg_avgs = _compute_sg_avgs(all_complete[:20])
+
     return render_template('dashboard/index.html',
         recent_rounds=recent_rounds,
         stats=stats,
         glance=glance,
-        in_progress_rounds=in_progress_rounds)
+        in_progress_rounds=in_progress_rounds,
+        sg_avgs=sg_avgs)
 
 
 def _compute_stats(rounds):
@@ -238,3 +241,37 @@ def _check_personal_best(recent, prev_rounds):
             pbs.append({'label': f'Best SG: {cat_name} ({sign}{round(cat_val, 1)})', 'priority': 4})
 
     return min(pbs, key=lambda x: x['priority']) if pbs else None
+
+
+def _compute_sg_avgs(rounds):
+    """Average SG per category across up to 20 rounds. Returns None if < 3 rounds have data."""
+    SG_ATTRS = [
+        ('Off the Tee',      'sg_off_tee'),
+        ('Approach',         'sg_approach'),
+        ('Around the Green', 'sg_atg'),
+        ('Putting',          'sg_putting'),
+    ]
+    MAX_SG = 3.0   # cap for bar width normalisation
+
+    sg_rounds = [
+        r for r in rounds
+        if any(getattr(r, attr) is not None for _, attr in SG_ATTRS)
+    ]
+    if len(sg_rounds) < 3:
+        return None
+
+    categories = []
+    for name, attr in SG_ATTRS:
+        vals = [getattr(r, attr) for r in sg_rounds if getattr(r, attr) is not None]
+        if not vals:
+            continue
+        avg = sum(vals) / len(vals)
+        width_pct = min(abs(avg) / MAX_SG * 50, 50)
+        categories.append({
+            'name':      name,
+            'avg':       round(avg, 2),
+            'width_pct': round(width_pct, 2),
+            'positive':  avg >= 0,
+        })
+
+    return {'categories': categories, 'rounds_count': len(sg_rounds)} if categories else None
