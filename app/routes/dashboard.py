@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, url_for
 from flask_login import login_required, current_user
+import math
 from datetime import date, timedelta
 from app.models.round import Round
 from app.models.hole import Hole
@@ -280,28 +281,32 @@ def _compute_sg_avgs(rounds):
         else:
             cat['color'] = 'mid'
 
-    # Dynamic scale — zero line at 15 % from left; most negative bar fills 85 % of track
+    # Dynamic scale — zero near the RIGHT (negative bars extend left, positive right)
     avgs    = [c['avg'] for c in categories]
     min_val = min(avgs)
     max_val = max(avgs)
 
-    zero_pct = 15.0          # zero line position as % from left edge
-    neg_space = 85.0         # % of track to the right of zero (for negative bars)
-    pos_space = zero_pct     # % of track to the left of zero (for positive bars)
+    # Round the most negative value DOWN to nearest integer for the left-edge anchor.
+    # e.g. -2.68 → -3, -3.1 → -4. This guarantees the worst bar never fully
+    # reaches the left edge — there is always a small visual gap.
+    floor_min = math.floor(min_val)   # always ≤ min_val
 
-    if min_val < 0:
-        scale = abs(min_val) / neg_space   # SG units per 1 % of track width
-    else:
-        # All positive (unusual) — bars extend left from zero
-        scale = max_val / pos_space if max_val > 0 else 1.0
+    # Right-side allowance: at least 0.5 SG of space beyond zero for positive values
+    right_range = max(max_val, 0.0) + 0.5
+
+    # Total scale range and zero position (% from left edge)
+    total_range = abs(floor_min) + right_range
+    zero_pct    = round(abs(floor_min) / total_range * 100, 1)   # ~80–85 % from left
 
     for cat in categories:
         v = cat['avg']
         if v < 0:
-            cat['width_pct'] = round(min(abs(v) / scale, neg_space), 2)
+            # Negative bar: extends LEFT from zero line
+            cat['width_pct'] = round(abs(v) / total_range * 100, 2)
             cat['positive']  = False
         else:
-            cat['width_pct'] = round(min(v / scale, pos_space), 2)
+            # Positive bar: extends RIGHT from zero line
+            cat['width_pct'] = round(v / total_range * 100, 2)
             cat['positive']  = True
 
     return {

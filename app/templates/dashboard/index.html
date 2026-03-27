@@ -401,10 +401,10 @@
           <div class="sg-zero" style="left:{{ sg_avgs.zero_pct }}%"></div>
           {% if cat.positive %}
           <div class="sg-bar sg-bar--{{ cat.color }}"
-               style="right:{{ 100 - sg_avgs.zero_pct }}%;width:{{ cat.width_pct }}%"></div>
+               style="left:{{ sg_avgs.zero_pct }}%;width:{{ cat.width_pct }}%"></div>
           {% else %}
           <div class="sg-bar sg-bar--{{ cat.color }}"
-               style="left:{{ sg_avgs.zero_pct }}%;width:{{ cat.width_pct }}%"></div>
+               style="right:{{ 100 - sg_avgs.zero_pct }}%;width:{{ cat.width_pct }}%"></div>
           {% endif %}
         </div>
         <div class="sg-val sg-val--{{ cat.color }}">
