@@ -251,7 +251,6 @@ def _compute_sg_avgs(rounds):
         ('Around the Green', 'sg_atg'),
         ('Putting',          'sg_putting'),
     ]
-    MAX_SG = 3.0   # cap for bar width normalisation
 
     sg_rounds = [
         r for r in rounds
@@ -260,18 +259,53 @@ def _compute_sg_avgs(rounds):
     if len(sg_rounds) < 3:
         return None
 
+    # Compute averages (preserve original display order)
     categories = []
     for name, attr in SG_ATTRS:
         vals = [getattr(r, attr) for r in sg_rounds if getattr(r, attr) is not None]
         if not vals:
             continue
-        avg = sum(vals) / len(vals)
-        width_pct = min(abs(avg) / MAX_SG * 50, 50)
-        categories.append({
-            'name':      name,
-            'avg':       round(avg, 2),
-            'width_pct': round(width_pct, 2),
-            'positive':  avg >= 0,
-        })
+        categories.append({'name': name, 'avg': round(sum(vals) / len(vals), 2)})
 
-    return {'categories': categories, 'rounds_count': len(sg_rounds)} if categories else None
+    if not categories:
+        return None
+
+    # Relative colour ranking: best (highest avg) → green, worst → red, middle → gold
+    ranked = sorted(categories, key=lambda c: c['avg'])
+    for i, cat in enumerate(ranked):
+        if i == len(ranked) - 1:
+            cat['color'] = 'best'
+        elif i == 0:
+            cat['color'] = 'worst'
+        else:
+            cat['color'] = 'mid'
+
+    # Dynamic scale — zero line at 15 % from left; most negative bar fills 85 % of track
+    avgs    = [c['avg'] for c in categories]
+    min_val = min(avgs)
+    max_val = max(avgs)
+
+    zero_pct = 15.0          # zero line position as % from left edge
+    neg_space = 85.0         # % of track to the right of zero (for negative bars)
+    pos_space = zero_pct     # % of track to the left of zero (for positive bars)
+
+    if min_val < 0:
+        scale = abs(min_val) / neg_space   # SG units per 1 % of track width
+    else:
+        # All positive (unusual) — bars extend left from zero
+        scale = max_val / pos_space if max_val > 0 else 1.0
+
+    for cat in categories:
+        v = cat['avg']
+        if v < 0:
+            cat['width_pct'] = round(min(abs(v) / scale, neg_space), 2)
+            cat['positive']  = False
+        else:
+            cat['width_pct'] = round(min(v / scale, pos_space), 2)
+            cat['positive']  = True
+
+    return {
+        'categories':   categories,
+        'rounds_count': len(sg_rounds),
+        'zero_pct':     zero_pct,
+    }

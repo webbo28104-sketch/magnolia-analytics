@@ -189,8 +189,10 @@
   min-width: 2px;
   transition: width .3s ease;
 }
-.sg-bar--pos { left: 50%; background: var(--color-gold, #c9a84c); }
-.sg-bar--neg { right: 50%; background: #c0635a; }
+/* Bars anchor at zero via inline left/right style; colour = relative rank */
+.sg-bar--best  { background: #2d6a4f; }
+.sg-bar--mid   { background: #c9a84c; }
+.sg-bar--worst { background: #c0635a; }
 .sg-val {
   width: 42px;
   font-size: .78rem;
@@ -198,8 +200,9 @@
   font-family: 'DM Mono', monospace;
   flex-shrink: 0;
 }
-.sg-val--pos { color: var(--color-gold, #c9a84c); }
-.sg-val--neg { color: #c0635a; }
+.sg-val--best  { color: #2d6a4f; }
+.sg-val--mid   { color: #c9a84c; }
+.sg-val--worst { color: #c0635a; }
 @media (max-width: 480px) {
   .sg-lbl { width: 90px; font-size: .72rem; }
   .sg-val { width: 36px; font-size: .72rem; }
@@ -365,12 +368,12 @@
       <div class="stat-label">Par 5 Avg</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">{{ stats.gir_pct ~ '%' if stats.gir_pct is not none else '—' }}</div>
-      <div class="stat-label">GIR%</div>
-    </div>
-    <div class="stat-card">
       <div class="stat-value">{{ stats.fir_pct ~ '%' if stats.fir_pct is not none else '—' }}</div>
       <div class="stat-label">FIR%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.gir_pct ~ '%' if stats.gir_pct is not none else '—' }}</div>
+      <div class="stat-label">GIR%</div>
     </div>
 
     <div class="stat-card">
@@ -395,14 +398,16 @@
       <div class="sg-row">
         <div class="sg-lbl">{{ cat.name }}</div>
         <div class="sg-track">
-          <div class="sg-zero"></div>
+          <div class="sg-zero" style="left:{{ sg_avgs.zero_pct }}%"></div>
           {% if cat.positive %}
-          <div class="sg-bar sg-bar--pos" style="width:{{ cat.width_pct }}%"></div>
+          <div class="sg-bar sg-bar--{{ cat.color }}"
+               style="right:{{ 100 - sg_avgs.zero_pct }}%;width:{{ cat.width_pct }}%"></div>
           {% else %}
-          <div class="sg-bar sg-bar--neg" style="width:{{ cat.width_pct }}%"></div>
+          <div class="sg-bar sg-bar--{{ cat.color }}"
+               style="left:{{ sg_avgs.zero_pct }}%;width:{{ cat.width_pct }}%"></div>
           {% endif %}
         </div>
-        <div class="sg-val {% if cat.positive %}sg-val--pos{% else %}sg-val--neg{% endif %}">
+        <div class="sg-val sg-val--{{ cat.color }}">
           {{ '+' if cat.avg > 0 else '' }}{{ '%.2f'|format(cat.avg) }}
         </div>
       </div>
