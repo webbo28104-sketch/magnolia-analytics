@@ -28,6 +28,9 @@ class User(UserMixin, db.Model):
     square_customer_id = db.Column(db.String(255), nullable=True)
     subscription_expires_at = db.Column(db.DateTime, nullable=True)
 
+    # Access
+    invite_code = db.Column(db.String(50), nullable=True)
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)

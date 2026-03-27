@@ -43,6 +43,8 @@ def register():
         # Create user
         user = User(first_name=first_name, last_name=last_name, email=email)
         user.set_password(password)
+        if code_in_session:
+            user.invite_code = code_in_session
         db.session.add(user)
 
         # Mark code as used

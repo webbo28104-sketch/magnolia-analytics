@@ -960,11 +960,11 @@ body::before {
     {% else %}Putting is the focus — pace control and first-putt distance reduction will have the highest immediate impact.{% endif %}
   </div>
 
-  <!-- AI NARRATIVE -->
+  <!-- COACHING NARRATIVE -->
   <div class="sec-divider"></div>
   <div class="sec-label fu d7">Coaching Analysis</div>
   <div class="ai-block fu d7">
-    <div class="ai-eyebrow">AI-Generated · Powered by Claude</div>
+    <div class="ai-eyebrow">Performance Insights</div>
     <div class="ai-body">
       {% if narrative and narrative != 'Your round data has been saved. Add your Anthropic API key to activate the personalised coaching narrative.' %}
         {% for para in narrative.split('\n\n') %}
@@ -974,9 +974,6 @@ body::before {
         <p>{{ narrative }}</p>
       {% endif %}
     </div>
-    {% if not narrative or 'API key' in narrative %}
-    <div class="ai-cta">⚙ Set ANTHROPIC_API_KEY in Railway environment variables to activate →</div>
-    {% endif %}
   </div>
 
   <!-- PRACTICE PRIORITIES -->
