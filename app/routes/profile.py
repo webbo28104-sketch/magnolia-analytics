@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from app import db
 from app.models.round import Round
+from app.utils.personal_bests import compute_all_personal_bests
 
 profile_bp = Blueprint('profile', __name__)
 
@@ -54,7 +55,10 @@ def index():
         ),
     }
 
+    personal_bests = compute_all_personal_bests(completed)
+
     return render_template(
         'profile/index.html',
         lifetime=lifetime,
+        personal_bests=personal_bests,
     )

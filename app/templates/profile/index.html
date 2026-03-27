@@ -53,6 +53,51 @@
   .lifetime-val { font-size: 1.25rem; }
   .lifetime-row { gap: .5rem; }
 }
+
+/* Personal bests grid */
+.pb-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem;
+  margin-top: .25rem;
+}
+.pb-card {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .85rem 1rem;
+}
+.pb-label {
+  font-family: 'DM Mono', monospace;
+  font-size: .6rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: .4rem;
+}
+.pb-value {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--green, #1a2e1a);
+  line-height: 1;
+}
+.pb-meta {
+  font-family: 'DM Mono', monospace;
+  font-size: .6rem;
+  color: var(--text-muted);
+  margin-top: .35rem;
+}
+.pb-meta a {
+  color: var(--gold, #c9a84c);
+  text-decoration: none;
+}
+.pb-meta a:hover { text-decoration: underline; }
+
+@media (max-width: 420px) {
+  .pb-grid { grid-template-columns: 1fr; }
+  .pb-value { font-size: 1.25rem; }
+}
 </style>
 {% endblock %}
 
@@ -117,7 +162,107 @@
       </div>
     </div>
   </div>
+
+  <!-- Personal Bests -->
+  {% if lifetime.total_rounds > 0 %}
+  <div class="profile-section">
+    <div class="profile-section-title">Personal Bests</div>
+    <div class="pb-grid">
+
+      {% if personal_bests.lowest_score_vs_par %}
+      {% set pb = personal_bests.lowest_score_vs_par %}
+      {% set v = pb.value %}
+      <div class="pb-card">
+        <div class="pb-label">Best Score vs Par</div>
+        <div class="pb-value">{% if v == 0 %}E{% elif v > 0 %}+{{ v }}{% else %}{{ v }}{% endif %}</div>
+        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+      </div>
+      {% endif %}
+
+      {% if personal_bests.most_birdies %}
+      {% set pb = personal_bests.most_birdies %}
+      <div class="pb-card">
+        <div class="pb-label">Most Birdies in a Round</div>
+        <div class="pb-value">{{ pb.value }}</div>
+        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+      </div>
+      {% endif %}
+
+      {% if personal_bests.best_gir_pct %}
+      {% set pb = personal_bests.best_gir_pct %}
+      <div class="pb-card">
+        <div class="pb-label">Best GIR%</div>
+        <div class="pb-value">{{ pb.value | round | int }}%</div>
+        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+      </div>
+      {% endif %}
+
+      {% if personal_bests.best_fir_pct %}
+      {% set pb = personal_bests.best_fir_pct %}
+      <div class="pb-card">
+        <div class="pb-label">Best FIR%</div>
+        <div class="pb-value">{{ pb.value | round | int }}%</div>
+        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+      </div>
+      {% endif %}
+
+      {% if personal_bests.lowest_putts %}
+      {% set pb = personal_bests.lowest_putts %}
+      <div class="pb-card">
+        <div class="pb-label">Fewest Putts</div>
+        <div class="pb-value">{{ pb.value }}</div>
+        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+      </div>
+      {% endif %}
+
+      {% if personal_bests.best_sg_total %}
+      {% set pb = personal_bests.best_sg_total %}
+      <div class="pb-card">
+        <div class="pb-label">Best SG Total</div>
+        <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
+        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+      </div>
+      {% endif %}
+
+      {% if personal_bests.best_sg_off_tee %}
+      {% set pb = personal_bests.best_sg_off_tee %}
+      <div class="pb-card">
+        <div class="pb-label">Best SG: Off the Tee</div>
+        <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
+        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+      </div>
+      {% endif %}
+
+      {% if personal_bests.best_sg_approach %}
+      {% set pb = personal_bests.best_sg_approach %}
+      <div class="pb-card">
+        <div class="pb-label">Best SG: Approach</div>
+        <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
+        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+      </div>
+      {% endif %}
+
+      {% if personal_bests.best_sg_atg %}
+      {% set pb = personal_bests.best_sg_atg %}
+      <div class="pb-card">
+        <div class="pb-label">Best SG: Around the Green</div>
+        <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
+        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+      </div>
+      {% endif %}
+
+      {% if personal_bests.best_sg_putting %}
+      {% set pb = personal_bests.best_sg_putting %}
+      <div class="pb-card">
+        <div class="pb-label">Best SG: Putting</div>
+        <div class="pb-value">{% if pb.value > 0 %}+{% endif %}{{ '%.1f' | format(pb.value) }}</div>
+        <div class="pb-meta">{{ pb.date_set.strftime('%d %b %Y') }} &middot; <a href="{{ url_for('reports.view_report', round_id=pb.round_id) }}">View report →</a></div>
+      </div>
+      {% endif %}
+
+    </div>
   </div>
+  {% endif %}
 
   <!-- Personal details + preferences -->
   <form method="POST" action="{{ url_for('profile.index') }}">
