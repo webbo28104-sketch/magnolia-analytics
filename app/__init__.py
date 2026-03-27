@@ -106,6 +106,7 @@ def _run_column_migrations():
         ('rounds',    'algo_version',           'INTEGER'),
         ('rounds',    'counts_for_official_hc', 'BOOLEAN DEFAULT TRUE'),
         ('users',     'official_handicap_index', 'REAL'),
+        ('users',     'invite_code',             'VARCHAR(50)'),
     ]
     for table, column, col_type in migrations:
         try:
