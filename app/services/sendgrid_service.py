@@ -5,15 +5,12 @@ Templates live in app/templates/email/.  Each send_* function renders the
 appropriate template and calls _send_email.  When SENDGRID_API_KEY is not set,
 emails are printed to stdout so local development still exercises the flow.
 """
-import logging
 import os
 from datetime import datetime
 
-from flask import render_template, url_for
+from flask import current_app, render_template, url_for
 
 from app import db
-
-log = logging.getLogger(__name__)
 
 ADMIN_EMAIL = 'team@magnoliaanalytics.golf'
 
@@ -37,14 +34,15 @@ def _send_email(to_email: str, subject: str, html_content: str) -> bool:
                 subject=subject,
                 html_content=html_content,
             )
+            current_app.logger.info('[SendGrid] calling API to=%s subject=%s', to_email, subject)
             response = SendGridAPIClient(api_key).send(message)
             return response.status_code in (200, 202)
         except Exception as exc:
-            log.warning('[SendGrid] send failed to %s: %s', to_email, exc)
+            current_app.logger.error('[SendGrid] send failed to=%s subject=%s: %s', to_email, subject, exc, exc_info=True)
             return False
 
     # No API key — log and return success so callers don't break in dev
-    log.info('[SendGrid] PLACEHOLDER  to=%-40s  subject=%s', to_email, subject)
+    current_app.logger.info('[SendGrid] PLACEHOLDER  to=%-40s  subject=%s', to_email, subject)
     return True
 
 
@@ -240,6 +238,7 @@ def send_password_reset(user, reset_url: str) -> bool:
         first_name = user.first_name,
         reset_url  = reset_url,
     )
+    current_app.logger.info('Sending password reset email to %s', user.email)
     return _send_email(user.email, 'Reset your Magnolia Analytics password', html)
 
 

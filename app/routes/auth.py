@@ -65,8 +65,8 @@ def register():
         # Send welcome email (non-blocking — failure doesn't break registration)
         try:
             send_welcome(user)
-        except Exception:
-            current_app.logger.warning('[register] Welcome email failed for %s', email)
+        except Exception as exc:
+            current_app.logger.error('[register] Welcome email failed for %s: %s', email, exc, exc_info=True)
 
         flash(f'Welcome to Magnolia Analytics, {first_name}!', 'success')
         return redirect(url_for('dashboard.index'))
@@ -122,8 +122,8 @@ def forgot_password():
             reset_url = url_for('auth.reset_password', token=token, _external=True)
             try:
                 send_password_reset(user, reset_url)
-            except Exception:
-                current_app.logger.warning('[forgot_password] Reset email failed for %s', email)
+            except Exception as exc:
+                current_app.logger.error('[forgot_password] Reset email failed for %s: %s', email, exc, exc_info=True)
         # Always show the same message — don't reveal whether email exists
         flash("If that email is registered, a reset link is on its way. Check your inbox.", 'success')
         return redirect(url_for('auth.forgot_password'))
@@ -154,8 +154,8 @@ def reset_password(token):
             db.session.commit()
             try:
                 send_password_changed(user)
-            except Exception:
-                current_app.logger.warning('[reset_password] Confirmation email failed for %s', user.email)
+            except Exception as exc:
+                current_app.logger.error('[reset_password] Confirmation email failed for %s: %s', user.email, exc, exc_info=True)
             flash('Your password has been reset. Please sign in.', 'success')
             return redirect(url_for('auth.login'))
 
