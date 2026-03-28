@@ -147,6 +147,17 @@ def test_email():
             first_name='Test',
             changed_at=datetime.utcnow().strftime('%d %B %Y at %H:%M UTC'),
         ),
+        'admin_waitlist': _try_render(
+            'email/admin_waitlist.html',
+            entry=SimpleNamespace(
+                name='Test User',
+                email=to_email,
+                handicap=12.4,
+                rounds_per_month=4,
+            ),
+            position=319,
+            real_count=1,
+        ),
     }
 
     # ------------------------------------------------------------------
