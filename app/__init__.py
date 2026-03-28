@@ -30,9 +30,11 @@ def create_app(config_name='default'):
     from app.routes.courses import courses_bp
     from app.routes.profile import profile_bp
     from app.routes.waitlist import waitlist_bp
+    from app.routes.admin import admin_bp  # temporary — remove after SendGrid confirmed
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(admin_bp)  # temporary — remove after SendGrid confirmed
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
     app.register_blueprint(rounds_bp, url_prefix='/rounds')
     app.register_blueprint(reports_bp, url_prefix='/reports')

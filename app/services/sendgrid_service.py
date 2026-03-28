@@ -21,8 +21,10 @@ ADMIN_EMAIL = 'team@magnoliaanalytics.golf'
 
 def _send_email(to_email: str, subject: str, html_content: str) -> bool:
     """Core delivery function.  Uses SendGrid when API key is present."""
-    api_key   = os.environ.get('SENDGRID_API_KEY', '')
-    from_email = os.environ.get('SENDGRID_FROM_EMAIL', 'hello@magnoliaanalytics.golf')
+    # Strip whitespace — a trailing newline or space in a Railway env var is a
+    # common copy-paste mistake that makes the key silently falsy or invalid.
+    api_key    = os.environ.get('SENDGRID_API_KEY', '').strip()
+    from_email = os.environ.get('SENDGRID_FROM_EMAIL', 'hello@magnoliaanalytics.golf').strip()
 
     if api_key:
         try:
