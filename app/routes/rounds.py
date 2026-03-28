@@ -7,8 +7,9 @@ from app.models.course import Course
 from app.models.tee_set import TeeSet
 from app.models.course_hole import CourseHole
 from app.services.claude_service import generate_report
-from app.services.sendgrid_service import send_report_email
+from app.services.sendgrid_service import send_report_email, send_personal_best
 from app.utils.round_stats import compute_all_stats
+from app.utils.personal_bests import check_recent_personal_best
 from datetime import datetime, date
 
 rounds_bp = Blueprint('rounds', __name__)
@@ -263,6 +264,23 @@ def submit_round(round_id):
             flash('Your round has been saved and your report is on its way!', 'success')
         except Exception:
             flash('Round saved! Report generation is in the queue.', 'info')
+
+        # Personal best check — runs after the report email so it lands separately
+        try:
+            prev_rounds = (
+                Round.query
+                .filter(Round.user_id == current_user.id,
+                        Round.status == 'complete',
+                        Round.id != round_.id)
+                .order_by(Round.date_played.desc())
+                .all()
+            )
+            pb_banner = check_recent_personal_best(round_, prev_rounds)
+            if pb_banner:
+                send_personal_best(round_, pb_banner)
+        except Exception:
+            current_app.logger.warning('[submit_round] PB email failed for round %s', round_.id)
+
         return redirect(url_for('dashboard.index'))
 
     holes = round_.holes.all()

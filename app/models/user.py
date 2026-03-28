@@ -31,6 +31,10 @@ class User(UserMixin, db.Model):
     # Access
     invite_code = db.Column(db.String(50), nullable=True)
 
+    # Password reset
+    password_reset_token   = db.Column(db.String(100), nullable=True)
+    password_reset_expires = db.Column(db.DateTime, nullable=True)
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)

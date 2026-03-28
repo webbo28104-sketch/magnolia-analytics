@@ -6,6 +6,11 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.waitlist import WaitingList
 from app.models.access_code import AccessCode
+from app.services.sendgrid_service import (
+    send_waitlist_confirm,
+    send_admin_waitlist_notification,
+    send_invite_code,
+)
 
 waitlist_bp = Blueprint('waitlist', __name__)
 
@@ -61,6 +66,18 @@ def index():
             db.session.commit()
             success = True
 
+            # Emails — failures are non-fatal
+            real_count  = WaitingList.query.count()
+            position    = real_count * 7 + 312
+            try:
+                send_waitlist_confirm(entry)
+            except Exception:
+                current_app.logger.warning('[waitlist] Confirm email failed for %s', email)
+            try:
+                send_admin_waitlist_notification(entry, position, real_count)
+            except Exception:
+                current_app.logger.warning('[waitlist] Admin notif failed for %s', email)
+
     # ── Stats ──────────────────────────────────────────────────────────────
     real_count  = WaitingList.query.count()
     shown_count = real_count * 7 + 312
@@ -92,4 +109,14 @@ def generate_invite():
     code     = AccessCode(code=code_str, is_admin=False)
     db.session.add(code)
     db.session.commit()
+
+    # Optionally email the code directly — pass ?email=foo@example.com
+    to_email   = request.args.get('email', '').strip()
+    first_name = request.args.get('name', '').strip() or None
+    if to_email:
+        try:
+            send_invite_code(to_email, code_str, first_name=first_name)
+        except Exception:
+            current_app.logger.warning('[generate_invite] Invite email failed for %s', to_email)
+
     return jsonify({'code': code_str})

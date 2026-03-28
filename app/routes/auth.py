@@ -1,9 +1,12 @@
+import secrets
+
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models.user import User
 from app.models.access_code import AccessCode
-from datetime import datetime
+from app.services.sendgrid_service import send_welcome, send_password_reset, send_password_changed
+from datetime import datetime, timedelta
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -58,6 +61,13 @@ def register():
         session.pop('access_code', None)
 
         login_user(user)
+
+        # Send welcome email (non-blocking — failure doesn't break registration)
+        try:
+            send_welcome(user)
+        except Exception:
+            current_app.logger.warning('[register] Welcome email failed for %s', email)
+
         flash(f'Welcome to Magnolia Analytics, {first_name}!', 'success')
         return redirect(url_for('dashboard.index'))
 
@@ -99,9 +109,57 @@ def login():
     return render_template('auth/login.html')
 
 
-@auth_bp.route('/forgot-password', methods=['GET'])
+@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        user  = User.query.filter_by(email=email).first()
+        if user:
+            token  = secrets.token_urlsafe(32)
+            user.password_reset_token   = token
+            user.password_reset_expires = datetime.utcnow() + timedelta(hours=1)
+            db.session.commit()
+            reset_url = url_for('auth.reset_password', token=token, _external=True)
+            try:
+                send_password_reset(user, reset_url)
+            except Exception:
+                current_app.logger.warning('[forgot_password] Reset email failed for %s', email)
+        # Always show the same message — don't reveal whether email exists
+        flash("If that email is registered, a reset link is on its way. Check your inbox.", 'success')
+        return redirect(url_for('auth.forgot_password'))
     return render_template('auth/forgot_password.html')
+
+
+@auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    user = User.query.filter_by(password_reset_token=token).first()
+    now  = datetime.utcnow()
+
+    if not user or not user.password_reset_expires or user.password_reset_expires < now:
+        flash('That reset link has expired or is invalid. Please request a new one.', 'error')
+        return redirect(url_for('auth.forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        confirm  = request.form.get('confirm_password', '')
+
+        if len(password) < 8:
+            flash('Password must be at least 8 characters.', 'error')
+        elif password != confirm:
+            flash('Passwords do not match.', 'error')
+        else:
+            user.set_password(password)
+            user.password_reset_token   = None
+            user.password_reset_expires = None
+            db.session.commit()
+            try:
+                send_password_changed(user)
+            except Exception:
+                current_app.logger.warning('[reset_password] Confirmation email failed for %s', user.email)
+            flash('Your password has been reset. Please sign in.', 'success')
+            return redirect(url_for('auth.login'))
+
+    return render_template('auth/reset_password.html', token=token)
 
 
 @auth_bp.route('/logout')

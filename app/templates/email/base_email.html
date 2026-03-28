@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>{% block email_title %}Magnolia Analytics{% endblock %}</title>
+  <!--[if mso]>
+  <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+  <![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#f7f5f0;font-family:'DM Sans',Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+
+  <!-- Invisible preheader text -->
+  <div style="display:none;font-size:1px;color:#f7f5f0;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    {% block email_preheader %}Magnolia Analytics — Track every shot. Understand every round.{% endblock %}
+  </div>
+
+  <!-- Outer wrapper -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f7f5f0;">
+    <tr>
+      <td align="center" style="padding:28px 16px;">
+
+        <!-- Email container -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
+
+          <!-- ── Header ──────────────────────────────────────────────── -->
+          <tr>
+            <td style="background-color:#1a3a24;padding:30px 40px 28px;text-align:center;border-radius:6px 6px 0 0;">
+              <div style="font-family:Georgia,'Times New Roman',serif;font-size:18px;font-weight:700;color:#c9a84c;letter-spacing:0.16em;text-transform:uppercase;margin:0;">
+                Magnolia Analytics
+              </div>
+            </td>
+          </tr>
+
+          <!-- ── Gold accent line ────────────────────────────────────── -->
+          <tr>
+            <td style="height:3px;background:linear-gradient(90deg,#c9a84c 0%,#e8c97a 100%);font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+
+          <!-- ── Body card ──────────────────────────────────────────── -->
+          <tr>
+            <td style="background-color:#ffffff;padding:36px 40px 32px;border-left:1px solid #e8e4dc;border-right:1px solid #e8e4dc;">
+              {% block email_body %}{% endblock %}
+            </td>
+          </tr>
+
+          <!-- ── Footer ─────────────────────────────────────────────── -->
+          <tr>
+            <td style="background-color:#1a3a24;padding:22px 40px;text-align:center;border-radius:0 0 6px 6px;">
+              <div style="font-family:Georgia,'Times New Roman',serif;font-size:13px;color:#c9a84c;opacity:0.8;margin-bottom:8px;letter-spacing:0.1em;">
+                Magnolia Analytics
+              </div>
+              <div style="font-size:12px;color:#7aaa90;line-height:1.8;">
+                <a href="https://magnoliaanalytics.golf" style="color:#c9a84c;text-decoration:none;">magnoliaanalytics.golf</a>
+                &nbsp;&middot;&nbsp;
+                <a href="https://magnoliaanalytics.golf/unsubscribe" style="color:#7aaa90;text-decoration:none;">Unsubscribe</a>
+              </div>
+            </td>
+          </tr>
+
+        </table>
+        <!-- /Email container -->
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

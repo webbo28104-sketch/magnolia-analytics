@@ -52,8 +52,11 @@ def create_app(config_name='default'):
         # Always allow the waitlist page itself
         if request.endpoint in ('waitlist.index',):
             return None
-        # Always allow login and the validate-code endpoint
-        if request.endpoint in ('auth.login', 'auth.validate_code', 'auth.logout'):
+        # Always allow login, validate-code, and the password-reset flow
+        if request.endpoint in (
+            'auth.login', 'auth.validate_code', 'auth.logout',
+            'auth.forgot_password', 'auth.reset_password',
+        ):
             return None
         # Authenticated users pass through
         if current_user.is_authenticated:
@@ -105,8 +108,10 @@ def _run_column_migrations():
         ('rounds',    'sg_total',               'REAL'),
         ('rounds',    'algo_version',           'INTEGER'),
         ('rounds',    'counts_for_official_hc', 'BOOLEAN DEFAULT TRUE'),
-        ('users',     'official_handicap_index', 'REAL'),
-        ('users',     'invite_code',             'VARCHAR(50)'),
+        ('users',     'official_handicap_index',  'REAL'),
+        ('users',     'invite_code',              'VARCHAR(50)'),
+        ('users',     'password_reset_token',     'VARCHAR(100)'),
+        ('users',     'password_reset_expires',   'DATETIME'),
     ]
     for table, column, col_type in migrations:
         try:

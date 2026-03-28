@@ -1,105 +1,301 @@
 """
-SendGrid email service — delivers branded HTML reports to golfers.
-Placeholder implementation: replace with live SendGrid SDK call
-when your API key is ready.
+SendGrid email service — delivers all transactional emails via Jinja2 templates.
+
+Templates live in app/templates/email/.  Each send_* function renders the
+appropriate template and calls _send_email.  When SENDGRID_API_KEY is not set,
+emails are printed to stdout so local development still exercises the flow.
 """
+import logging
 import os
 from datetime import datetime
+
+from flask import render_template, url_for
+
 from app import db
 
+log = logging.getLogger(__name__)
 
-REPORT_EMAIL_SUBJECT = "Your Magnolia Analytics Round Report 🏌️"
+ADMIN_EMAIL = 'team@magnoliaanalytics.golf'
 
 
-def _build_email_html(round_, report_html: str) -> str:
-    """Wrap the report HTML fragment in a full branded email template."""
-    user = round_.golfer
-    course_name = round_.course.name if round_.course else 'Your Course'
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
 
-    return f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Magnolia Analytics — Round Report</title>
-  <style>
-    body {{ margin: 0; padding: 0; background-color: #f4f1eb; font-family: Georgia, serif; }}
-    .wrapper {{ max-width: 640px; margin: 0 auto; background: #fff; }}
-    .header {{ background-color: #1B4332; padding: 32px 40px; text-align: center; }}
-    .header h1 {{ color: #C9A84C; font-size: 28px; margin: 0; letter-spacing: 2px; }}
-    .header p {{ color: #a8c5b5; margin: 8px 0 0; font-size: 14px; }}
-    .body {{ padding: 40px; }}
-    .footer {{ background-color: #1B4332; padding: 24px 40px; text-align: center; }}
-    .footer p {{ color: #a8c5b5; font-size: 12px; margin: 0; }}
-    .footer a {{ color: #C9A84C; text-decoration: none; }}
-  </style>
-</head>
-<body>
-  <div class="wrapper">
-    <div class="header">
-      <h1>MAGNOLIA ANALYTICS</h1>
-      <p>{round_.date_played} &nbsp;·&nbsp; {course_name}</p>
-    </div>
-    <div class="body">
-      <p style="color: #1B4332;">Hello {user.first_name},</p>
-      <p style="color: #555;">Here is your performance report from today's round.</p>
-      {report_html}
-    </div>
-    <div class="footer">
-      <p>
-        Magnolia Analytics &nbsp;·&nbsp;
-        <a href="#">View in browser</a> &nbsp;·&nbsp;
-        <a href="#">Unsubscribe</a>
-      </p>
-    </div>
-  </div>
-</body>
-</html>
-"""
+def _send_email(to_email: str, subject: str, html_content: str) -> bool:
+    """Core delivery function.  Uses SendGrid when API key is present."""
+    api_key   = os.environ.get('SENDGRID_API_KEY', '')
+    from_email = os.environ.get('SENDGRID_FROM_EMAIL', 'hello@magnoliaanalytics.golf')
 
+    if api_key:
+        try:
+            from sendgrid import SendGridAPIClient
+            from sendgrid.helpers.mail import Mail
+            message = Mail(
+                from_email=from_email,
+                to_emails=to_email,
+                subject=subject,
+                html_content=html_content,
+            )
+            response = SendGridAPIClient(api_key).send(message)
+            return response.status_code in (200, 202)
+        except Exception as exc:
+            log.warning('[SendGrid] send failed to %s: %s', to_email, exc)
+            return False
+
+    # No API key — log and return success so callers don't break in dev
+    log.info('[SendGrid] PLACEHOLDER  to=%-40s  subject=%s', to_email, subject)
+    return True
+
+
+def _sg_color(val) -> str:
+    """Bar colour matching dashboard: green / gold / warm-red."""
+    if val is None:
+        return '#c9a84c'
+    if val >= 0.3:
+        return '#2d6a4f'
+    if val <= -0.3:
+        return '#c0635a'
+    return '#c9a84c'
+
+
+def _sg_bar_pct(val, scale: float = 4.0) -> int:
+    """0–100 integer representing abs(val) relative to ±scale."""
+    if val is None:
+        return 0
+    return min(100, int(abs(val) / scale * 100))
+
+
+def _fmt_sg(val) -> str:
+    if val is None:
+        return '—'
+    return f'+{val:.2f}' if val >= 0 else f'{val:.2f}'
+
+
+# ---------------------------------------------------------------------------
+# 1. Round report
+# ---------------------------------------------------------------------------
 
 def send_report_email(round_) -> bool:
-    """
-    Send the generated report to the golfer via SendGrid.
+    """Send the post-submission round performance report to the golfer."""
+    user        = round_.golfer
+    course_name = round_.course.name if round_.course else 'Unknown Course'
+    round_type  = 'Casual' if round_.counts_for_official_hc is False else 'Official'
 
-    Returns True on success, False on failure.
-    Replace the placeholder block with the live SendGrid SDK call.
-    """
-    api_key = os.environ.get('SENDGRID_API_KEY', '')
-    from_email = os.environ.get('SENDGRID_FROM_EMAIL', 'reports@magnoliaanalytics.com')
+    # Score vs par display string
+    svp = round_.score_vs_par()
+    if svp is None:
+        svp_display = '—'
+    elif svp == 0:
+        svp_display = 'E'
+    elif svp > 0:
+        svp_display = f'+{svp}'
+    else:
+        svp_display = str(svp)
 
-    report = round_.report
-    if not report or not report.html_content:
-        return False
+    # Hole-level stats not stored on Round
+    holes      = round_.holes.all()
+    gir_misses = [h for h in holes if not h.gir]
+    scramble_pct = None
+    if gir_misses:
+        saves = sum(
+            1 for h in gir_misses
+            if h.score is not None and h.par is not None and h.score - h.par <= 0
+        )
+        scramble_pct = round(saves / len(gir_misses) * 100)
 
-    user = round_.golfer
-    email_html = _build_email_html(round_, report.html_content)
+    fir_pct = None
+    if round_.fairways_available:
+        fir_pct = round((round_.fairways_hit or 0) / round_.fairways_available * 100)
 
-    # ------------------------------------------------------------------ #
-    # LIVE IMPLEMENTATION — uncomment when SendGrid key is available       #
-    # ------------------------------------------------------------------ #
-    # from sendgrid import SendGridAPIClient
-    # from sendgrid.helpers.mail import Mail
-    #
-    # message = Mail(
-    #     from_email=from_email,
-    #     to_emails=user.email,
-    #     subject=REPORT_EMAIL_SUBJECT,
-    #     html_content=email_html
-    # )
-    # sg = SendGridAPIClient(api_key)
-    # response = sg.send(message)
-    # success = response.status_code in (200, 202)
-    # ------------------------------------------------------------------ #
+    gir_pct = None
+    if round_.holes_played and round_.gir_count is not None:
+        gir_pct = round(round_.gir_count / round_.holes_played * 100)
 
-    # PLACEHOLDER
-    print(f'[SendGrid Placeholder] Would send report to {user.email}')
-    success = True
+    putts_per_hole = None
+    if round_.total_putts and round_.holes_played:
+        putts_per_hole = round(round_.total_putts / round_.holes_played, 1)
 
-    if success:
-        report.emailed_at = datetime.utcnow()
-        report.email_status = 'sent'
+    # Strokes Gained bar data
+    sg_cats = []
+    for label, attr in [
+        ('Off the Tee',      'sg_off_tee'),
+        ('Approach',         'sg_approach'),
+        ('Around the Green', 'sg_atg'),
+        ('Putting',          'sg_putting'),
+    ]:
+        val = getattr(round_, attr, None)
+        sg_cats.append({
+            'label':   label,
+            'value':   val,
+            'display': _fmt_sg(val),
+            'color':   _sg_color(val),
+            'bar_pct': _sg_bar_pct(val, 4.0),
+            'positive': val is not None and val >= 0,
+        })
+
+    sg_total_color   = _sg_color(round_.sg_total)
+    sg_total_bar_pct = _sg_bar_pct(round_.sg_total, 8.0)
+    sg_total_display = _fmt_sg(round_.sg_total)
+    sg_total_positive = round_.sg_total is not None and round_.sg_total >= 0
+
+    # First paragraph of coaching narrative only (if already generated)
+    narrative = None
+    if round_.report and round_.report.narrative_text:
+        paras = [p.strip() for p in round_.report.narrative_text.split('\n\n') if p.strip()]
+        narrative = paras[0] if paras else round_.report.narrative_text
+
+    report_url = url_for('reports.view_report', round_id=round_.id, _external=True)
+
+    html = render_template(
+        'email/round_report.html',
+        user               = user,
+        course_name        = course_name,
+        date_played        = round_.date_played.strftime('%d %B %Y'),
+        round_type         = round_type,
+        total_score        = round_.total_score,
+        score_vs_par_display = svp_display,
+        fir_pct            = fir_pct,
+        gir_pct            = gir_pct,
+        putts_per_hole     = putts_per_hole,
+        scramble_pct       = scramble_pct,
+        sg_cats            = sg_cats,
+        sg_total_display   = sg_total_display,
+        sg_total_color     = sg_total_color,
+        sg_total_bar_pct   = sg_total_bar_pct,
+        sg_total_positive  = sg_total_positive,
+        narrative          = narrative,
+        report_url         = report_url,
+    )
+
+    subject = f'Your round at {course_name} — {round_.date_played.strftime("%d %b")}'
+    success = _send_email(user.email, subject, html)
+
+    if success and round_.report:
+        round_.report.emailed_at  = datetime.utcnow()
+        round_.report.email_status = 'sent'
         db.session.commit()
 
     return success
+
+
+# ---------------------------------------------------------------------------
+# 2. Waitlist confirmation
+# ---------------------------------------------------------------------------
+
+def send_waitlist_confirm(entry) -> bool:
+    """Confirm a new waitlist signup to the applicant."""
+    from app.models.waitlist import WaitingList
+    real_count = WaitingList.query.count()
+    position   = real_count * 7 + 312
+    first_name = entry.name.split()[0] if entry.name else 'there'
+
+    html = render_template(
+        'email/waitlist_confirm.html',
+        name     = first_name,
+        position = position,
+    )
+    return _send_email(entry.email, "You're on the Magnolia Analytics list", html)
+
+
+# ---------------------------------------------------------------------------
+# 3. Invite code delivery
+# ---------------------------------------------------------------------------
+
+def send_invite_code(to_email: str, code: str, first_name: str = None) -> bool:
+    """Send a GOLF-XXXX-XXXX invite code to a prospective member."""
+    register_url = url_for('waitlist.index', _external=True)
+    html = render_template(
+        'email/invite_code.html',
+        first_name   = first_name or 'Golfer',
+        code         = code,
+        register_url = register_url,
+    )
+    return _send_email(to_email, "You're in — your Magnolia Analytics access code", html)
+
+
+# ---------------------------------------------------------------------------
+# 4. Welcome after registration
+# ---------------------------------------------------------------------------
+
+def send_welcome(user) -> bool:
+    """Welcome email sent immediately after a new user registers."""
+    new_round_url = url_for('rounds.new_round', _external=True)
+    html = render_template(
+        'email/welcome.html',
+        first_name    = user.first_name,
+        new_round_url = new_round_url,
+    )
+    return _send_email(user.email, f'Welcome to Magnolia Analytics, {user.first_name}', html)
+
+
+# ---------------------------------------------------------------------------
+# 5. Password reset
+# ---------------------------------------------------------------------------
+
+def send_password_reset(user, reset_url: str) -> bool:
+    """Send a password reset link (1-hour expiry)."""
+    html = render_template(
+        'email/password_reset.html',
+        first_name = user.first_name,
+        reset_url  = reset_url,
+    )
+    return _send_email(user.email, 'Reset your Magnolia Analytics password', html)
+
+
+# ---------------------------------------------------------------------------
+# 6. Personal best notification
+# ---------------------------------------------------------------------------
+
+def send_personal_best(round_, pb_banner: dict) -> bool:
+    """Notify the golfer that they set a personal best in their last round."""
+    user        = round_.golfer
+    course_name = round_.course.name if round_.course else 'Unknown Course'
+    report_url  = url_for('reports.view_report', round_id=round_.id, _external=True)
+
+    html = render_template(
+        'email/personal_best.html',
+        first_name  = user.first_name,
+        pb_label    = pb_banner['label'],
+        course_name = course_name,
+        date_played = round_.date_played.strftime('%d %B %Y'),
+        report_url  = report_url,
+    )
+    return _send_email(user.email, f'Personal best at {course_name}!', html)
+
+
+# ---------------------------------------------------------------------------
+# 7. Password changed confirmation
+# ---------------------------------------------------------------------------
+
+def send_password_changed(user) -> bool:
+    """Security confirmation sent after a successful password reset."""
+    html = render_template(
+        'email/password_changed.html',
+        first_name = user.first_name,
+        changed_at = datetime.utcnow().strftime('%d %B %Y at %H:%M UTC'),
+    )
+    return _send_email(
+        user.email,
+        'Your Magnolia Analytics password has been changed',
+        html,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 8. Admin waitlist notification
+# ---------------------------------------------------------------------------
+
+def send_admin_waitlist_notification(entry, position: int, real_count: int) -> bool:
+    """Notify the Magnolia team of every new waitlist signup."""
+    html = render_template(
+        'email/admin_waitlist.html',
+        entry      = entry,
+        position   = position,
+        real_count = real_count,
+    )
+    return _send_email(
+        ADMIN_EMAIL,
+        f'New waitlist signup: {entry.name}',
+        html,
+    )

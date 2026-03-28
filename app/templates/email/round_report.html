@@ -1,0 +1,129 @@
+{% extends 'email/base_email.html' %}
+
+{% block email_title %}Your round report — Magnolia Analytics{% endblock %}
+{% block email_preheader %}{{ course_name }}, {{ date_played }} — your performance report is ready.{% endblock %}
+
+{% block email_body %}
+
+  <!-- Greeting -->
+  <p style="font-size:15px;color:#6b7a6b;line-height:1.65;margin:0 0 4px;">Hello {{ user.first_name }},</p>
+
+  <!-- Round meta line -->
+  <p style="font-size:13px;color:#8a9a7a;letter-spacing:0.06em;margin:0 0 24px;">
+    {{ course_name | upper }}&nbsp;&nbsp;&middot;&nbsp;&nbsp;{{ date_played }}&nbsp;&nbsp;&middot;&nbsp;&nbsp;{{ round_type }}
+  </p>
+
+  <!-- Score hero -->
+  <div style="background:#f7f5f0;border:1px solid #e8e4dc;border-radius:6px;padding:22px 28px;margin-bottom:24px;text-align:center;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:8px;">Gross Score</div>
+    <div style="display:inline-block;">
+      <span style="font-family:Georgia,serif;font-size:52px;font-weight:700;color:#1a3a24;line-height:1;">{{ total_score or '—' }}</span>
+      {% if score_vs_par_display != '—' %}
+      <span style="font-family:Georgia,serif;font-size:24px;font-weight:600;color:{% if score_vs_par_display.startswith('+') %}#c0635a{% elif score_vs_par_display == 'E' %}#2d6a4f{% else %}#2d6a4f{% endif %};margin-left:10px;vertical-align:middle;">{{ score_vs_par_display }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Stats grid -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+    <tr>
+      <td style="padding:0 6px 0 0;">
+        <div style="background:#f7f5f0;border:1px solid #e8e4dc;border-radius:6px;padding:14px 16px;text-align:center;">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:6px;">FIR%</div>
+          <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1a3a24;">{{ fir_pct ~ '%' if fir_pct is not none else '—' }}</div>
+        </div>
+      </td>
+      <td style="padding:0 3px;">
+        <div style="background:#f7f5f0;border:1px solid #e8e4dc;border-radius:6px;padding:14px 16px;text-align:center;">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:6px;">GIR%</div>
+          <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1a3a24;">{{ gir_pct ~ '%' if gir_pct is not none else '—' }}</div>
+        </div>
+      </td>
+      <td style="padding:0 3px;">
+        <div style="background:#f7f5f0;border:1px solid #e8e4dc;border-radius:6px;padding:14px 16px;text-align:center;">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:6px;">Putts / Hole</div>
+          <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1a3a24;">{{ putts_per_hole or '—' }}</div>
+        </div>
+      </td>
+      <td style="padding:0 0 0 6px;">
+        <div style="background:#f7f5f0;border:1px solid #e8e4dc;border-radius:6px;padding:14px 16px;text-align:center;">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:6px;">Scramble%</div>
+          <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1a3a24;">{{ scramble_pct ~ '%' if scramble_pct is not none else '—' }}</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Strokes Gained section -->
+  <div style="border:1px solid #e8e4dc;border-radius:6px;padding:20px 22px;margin-bottom:24px;">
+    <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:16px;">Strokes Gained</div>
+
+    {% for cat in sg_cats %}
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:11px;">
+      <tr>
+        <td style="width:130px;padding-right:10px;font-size:11px;color:#8a9a7a;letter-spacing:0.08em;text-align:right;vertical-align:middle;">{{ cat.label }}</td>
+        <td style="vertical-align:middle;">
+          <!-- Track -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="height:7px;">
+            <tr>
+              {% if cat.positive %}
+              <td style="width:50%;height:7px;background:#ede9e1;border-radius:4px 0 0 4px;"></td>
+              <td style="width:{{ cat.bar_pct // 2 }}%;height:7px;background:{{ cat.color }};"></td>
+              <td style="height:7px;background:#ede9e1;border-radius:0 4px 4px 0;"></td>
+              {% else %}
+              <td style="height:7px;background:#ede9e1;border-radius:4px 0 0 4px;"></td>
+              <td style="width:{{ cat.bar_pct // 2 }}%;height:7px;background:{{ cat.color }};"></td>
+              <td style="width:50%;height:7px;background:#ede9e1;border-radius:0 4px 4px 0;"></td>
+              {% endif %}
+            </tr>
+          </table>
+        </td>
+        <td style="width:46px;padding-left:10px;font-size:12px;font-weight:600;color:{{ cat.color }};font-family:'Courier New',monospace;text-align:right;vertical-align:middle;">{{ cat.display }}</td>
+      </tr>
+    </table>
+    {% endfor %}
+
+    <!-- Divider -->
+    <div style="border-top:1px solid #e8e4dc;margin:10px 0;"></div>
+
+    <!-- SG Total -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td style="width:130px;padding-right:10px;font-size:11px;font-weight:600;color:#1a3a24;letter-spacing:0.08em;text-align:right;vertical-align:middle;">Total</td>
+        <td style="vertical-align:middle;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="height:8px;">
+            <tr>
+              {% if sg_total_bar_pct > 0 and sg_total_display and not sg_total_display.startswith('-') %}
+              <td style="width:50%;height:8px;background:#ede9e1;border-radius:4px 0 0 4px;"></td>
+              <td style="width:{{ sg_total_bar_pct // 2 }}%;height:8px;background:{{ sg_total_color }};"></td>
+              <td style="height:8px;background:#ede9e1;border-radius:0 4px 4px 0;"></td>
+              {% else %}
+              <td style="height:8px;background:#ede9e1;border-radius:4px 0 0 4px;"></td>
+              <td style="width:{{ sg_total_bar_pct // 2 }}%;height:8px;background:{{ sg_total_color }};"></td>
+              <td style="width:50%;height:8px;background:#ede9e1;border-radius:0 4px 4px 0;"></td>
+              {% endif %}
+            </tr>
+          </table>
+        </td>
+        <td style="width:46px;padding-left:10px;font-size:13px;font-weight:700;color:{{ sg_total_color }};font-family:'Courier New',monospace;text-align:right;vertical-align:middle;">{{ sg_total_display }}</td>
+      </tr>
+    </table>
+
+  </div>
+
+  <!-- Coaching insight -->
+  {% if narrative %}
+  <div style="border-left:3px solid #c9a84c;padding:14px 18px;margin-bottom:24px;background:#fdfcfa;">
+    <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:8px;">Performance Analysis</div>
+    <p style="font-size:14px;color:#6b7a6b;line-height:1.7;margin:0;">{{ narrative }}</p>
+  </div>
+  {% endif %}
+
+  <!-- CTA -->
+  <div style="text-align:center;margin-top:28px;">
+    <a href="{{ report_url }}" style="display:inline-block;background-color:#c9a84c;color:#1a3a24;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:6px;letter-spacing:0.04em;">
+      View Full Report &rarr;
+    </a>
+  </div>
+
+{% endblock %}

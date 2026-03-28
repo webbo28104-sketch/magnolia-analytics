@@ -1,0 +1,68 @@
+{% extends 'email/base_email.html' %}
+
+{% block email_title %}You're in — Magnolia Analytics{% endblock %}
+{% block email_preheader %}Your access code for Magnolia Analytics is ready.{% endblock %}
+
+{% block email_body %}
+
+  <!-- Hero -->
+  <div style="text-align:center;padding-bottom:28px;border-bottom:1px solid #e8e4dc;margin-bottom:28px;">
+    <div style="font-family:Georgia,'Times New Roman',serif;font-size:30px;font-weight:700;color:#1a3a24;margin-bottom:10px;">You're in, {{ first_name }}.</div>
+    <p style="font-size:15px;color:#6b7a6b;line-height:1.65;margin:0;">
+      Your access code is ready. Use it to create your account and start tracking.
+    </p>
+  </div>
+
+  <!-- Code block -->
+  <div style="margin-bottom:28px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:12px;text-align:center;">Your Access Code</div>
+    <div style="border:2px dashed #c9a84c;border-radius:6px;padding:20px;text-align:center;background:#fdfcfa;">
+      <div style="font-family:'Courier New',Courier,monospace;font-size:26px;font-weight:700;color:#1a3a24;letter-spacing:0.12em;">{{ code }}</div>
+    </div>
+  </div>
+
+  <!-- Instructions -->
+  <div style="border:1px solid #e8e4dc;border-radius:6px;padding:20px 22px;margin-bottom:28px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:14px;">How to get started</div>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td style="width:28px;padding-right:10px;vertical-align:top;padding-top:1px;">
+          <div style="width:22px;height:22px;background:#1a3a24;border-radius:50%;text-align:center;line-height:22px;font-size:11px;font-weight:700;color:#c9a84c;">1</div>
+        </td>
+        <td style="font-size:14px;color:#6b7a6b;line-height:1.6;padding-bottom:12px;">
+          Visit <a href="https://magnoliaanalytics.golf" style="color:#c9a84c;text-decoration:none;">magnoliaanalytics.golf</a> and click <strong style="color:#1a3a24;">Already have access?</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style="width:28px;padding-right:10px;vertical-align:top;padding-top:1px;">
+          <div style="width:22px;height:22px;background:#1a3a24;border-radius:50%;text-align:center;line-height:22px;font-size:11px;font-weight:700;color:#c9a84c;">2</div>
+        </td>
+        <td style="font-size:14px;color:#6b7a6b;line-height:1.6;padding-bottom:12px;">
+          Enter your code — <span style="font-family:'Courier New',monospace;color:#1a3a24;font-weight:600;">{{ code }}</span> — in the access code field.
+        </td>
+      </tr>
+      <tr>
+        <td style="width:28px;padding-right:10px;vertical-align:top;padding-top:1px;">
+          <div style="width:22px;height:22px;background:#1a3a24;border-radius:50%;text-align:center;line-height:22px;font-size:11px;font-weight:700;color:#c9a84c;">3</div>
+        </td>
+        <td style="font-size:14px;color:#6b7a6b;line-height:1.6;">
+          Fill in your details and create your account.
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- CTA -->
+  <div style="text-align:center;margin-bottom:28px;">
+    <a href="{{ register_url }}" style="display:inline-block;background-color:#c9a84c;color:#1a3a24;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:6px;letter-spacing:0.04em;">
+      Create Your Account &rarr;
+    </a>
+  </div>
+
+  <!-- Beta note -->
+  <p style="font-size:12px;color:#a0b0a0;text-align:center;margin:0;line-height:1.7;">
+    You're joining during our beta. If you find anything that doesn't look right,
+    drop us a note at <a href="mailto:hello@magnoliaanalytics.golf" style="color:#c9a84c;text-decoration:none;">hello@magnoliaanalytics.golf</a> — we'd love to hear from you.
+  </p>
+
+{% endblock %}
