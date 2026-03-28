@@ -111,7 +111,7 @@ def _run_column_migrations():
         ('users',     'official_handicap_index',  'REAL'),
         ('users',     'invite_code',              'VARCHAR(50)'),
         ('users',     'password_reset_token',     'VARCHAR(100)'),
-        ('users',     'password_reset_expires',   'DATETIME'),
+        ('users',     'password_reset_expires',   'TIMESTAMP'),
     ]
     for table, column, col_type in migrations:
         try:
