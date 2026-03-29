@@ -109,6 +109,7 @@ def _run_column_migrations():
         ('reports',   'narrative_text',        'TEXT'),
         ('reports',   'weather_json',          'TEXT'),
         ('reports',   'insights_json',         'TEXT'),
+        ('reports',   'summary_text',          'TEXT'),
         ('rounds',    'sg_off_tee',             'REAL'),
         ('rounds',    'sg_approach',            'REAL'),
         ('rounds',    'sg_atg',                 'REAL'),
