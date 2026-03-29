@@ -237,7 +237,8 @@ body::before {
 }
 .share-btn:hover { background: rgba(201,168,76,.12); border-color: var(--gold); }
 /* ── Print / Save as PDF ───────────────────────────────────────── */
-@page { size: A4; margin: 14mm 12mm; }
+/* Zero out browser print margins so the dark background bleeds to the page edge */
+@page { size: A4; margin: 0; }
 
 @media print {
   /* Force every element to use its specified background and colour —
@@ -246,6 +247,13 @@ body::before {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
+  }
+
+  /* Remove browser default margins/padding from root elements */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
   }
 
   /* Restore dark root — previous rule used undefined var(--bg), collapsing to white.
@@ -271,8 +279,8 @@ body::before {
   .share-btn,
   .back-link { display: none !important; }
 
-  /* Layout */
-  .page { padding: 0 0 20px; max-width: 100%; }
+  /* Layout — @page margin is 0 so give .page internal breathing room instead */
+  .page { margin: 0 !important; padding: 12mm 14mm 14mm; max-width: 100%; width: 100%; }
   .hero { break-inside: avoid; }
   h2, h3 { break-after: avoid; }
   .sec-divider { break-after: avoid; }
