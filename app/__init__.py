@@ -71,6 +71,11 @@ def create_app(config_name='default'):
         # All other unauthenticated requests → waitlist
         return redirect(url_for('waitlist.index'))
 
+    # Custom Jinja2 filters
+    @app.template_filter('combine')
+    def _combine_filter(d, other):
+        return {**d, **other}
+
     # Create all tables on startup (safe to call repeatedly)
     with app.app_context():
         from app.models.user import User                    # noqa
