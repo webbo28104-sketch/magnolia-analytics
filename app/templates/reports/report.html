@@ -287,6 +287,22 @@ body::before {
   .section { break-inside: avoid; margin-bottom: 1.5rem; }
   .sum-grid, .sc-wrap, .sg-cards, .sg-bars,
   .a-card, .sum-card, .split-card { break-inside: avoid; }
+
+  /* Tab nav is screen-only */
+  .tab-nav { display: none !important; }
+
+  /* All panels visible in print, in tab order */
+  .tab-panel { display: block !important; padding-top: 0 !important; }
+  .tab-panel:not(#tab-overview) .fu { opacity: 1 !important; transform: none !important; animation: none !important; }
+
+  /* Each panel after Overview starts on a new page */
+  .tab-panel + .tab-panel { break-before: page; page-break-before: always; }
+
+  /* Leading dividers show in print since panels are sequential */
+  .tab-panel > .sec-divider:first-child { display: block !important; }
+
+  /* Prevent key blocks from splitting mid-page */
+  .ai-block, .pri-item, .two-col { break-inside: avoid; }
 }
 
 /* ---- Share modal ---- */
@@ -326,6 +342,54 @@ body::before {
 }
 .pb-banner-icon { font-size: 15px; flex-shrink: 0; }
 .pb-banner strong { color: var(--gold); }
+
+/* ── Tab navigation ────────────────────────────────────────────── */
+.tab-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  gap: 0;
+  background: var(--forest);
+  border-bottom: 1px solid var(--border);
+  margin: 28px -28px 0;
+  padding: 0 28px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(245,240,232,0.38);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  padding: 14px 18px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+  margin-bottom: -1px;
+}
+.tab-btn:hover { color: var(--gold-light); }
+.tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* Tab panels — only the active panel visible on screen */
+.tab-panel { display: none; padding-top: 24px; }
+.tab-panel.active { display: block; }
+
+/* Hide the leading sec-divider at the top of each panel (only used between sections within a panel) */
+.tab-panel > .sec-divider:first-child { display: none; }
+
+/* Non-overview panels: skip fadeUp animations — content appears instantly on tab switch */
+.tab-panel:not(#tab-overview) .fu {
+  opacity: 1 !important;
+  transform: none !important;
+  animation: none !important;
+}
 
 </style>
 {# Dynamic watermark text for hero::before #}
@@ -418,6 +482,19 @@ body::before {
     <span><strong>Personal best:</strong> {{ pb_banner.label }}</span>
   </div>
   {% endif %}
+
+  <!-- TAB NAVIGATION -->
+  <nav class="tab-nav no-print" id="report-tab-nav" role="tablist" aria-label="Report sections">
+    <button class="tab-btn active" data-tab="overview" role="tab" aria-selected="true">Overview</button>
+    <button class="tab-btn" data-tab="off-the-tee" role="tab" aria-selected="false">Off the Tee</button>
+    <button class="tab-btn" data-tab="approach" role="tab" aria-selected="false">Approach</button>
+    <button class="tab-btn" data-tab="atg" role="tab" aria-selected="false">Around the Green</button>
+    <button class="tab-btn" data-tab="putting" role="tab" aria-selected="false">Putting</button>
+    <button class="tab-btn" data-tab="coaching" role="tab" aria-selected="false">Coaching</button>
+  </nav>
+
+  <!-- OVERVIEW PANEL -->
+  <div id="tab-overview" class="tab-panel active" role="tabpanel">
 
   <!-- CONTEXT BANNER -->
   <div class="context-banner fu d3">
@@ -630,7 +707,10 @@ body::before {
     </table>
   </div>
 
-  <!-- OFF THE TEE -->
+  </div><!-- /tab-overview -->
+
+  <!-- OFF THE TEE PANEL -->
+  <div id="tab-off-the-tee" class="tab-panel" role="tabpanel">
   <div class="sec-divider"></div>
   <div class="sec-label fu d5">Off the Tee</div>
   <div class="two-col fu d5">
@@ -701,7 +781,10 @@ body::before {
     </div>
   </div>
 
-  <!-- APPROACH -->
+  </div><!-- /tab-off-the-tee -->
+
+  <!-- APPROACH PANEL -->
+  <div id="tab-approach" class="tab-panel" role="tabpanel">
   <div class="sec-divider"></div>
   <div class="sec-label fu d5">Approach Play</div>
   <div class="two-col fu d5">
@@ -765,7 +848,10 @@ body::before {
     </div>
   </div>
 
-  <!-- AROUND THE GREEN -->
+  </div><!-- /tab-approach -->
+
+  <!-- AROUND THE GREEN PANEL -->
+  <div id="tab-atg" class="tab-panel" role="tabpanel">
   <div class="sec-divider"></div>
   <div class="sec-label fu d6">Around the Green</div>
   <div class="two-col fu d6">
@@ -826,7 +912,10 @@ body::before {
     </div>
   </div>
 
-  <!-- PUTTING -->
+  </div><!-- /tab-atg -->
+
+  <!-- PUTTING PANEL -->
+  <div id="tab-putting" class="tab-panel" role="tabpanel">
   <div class="sec-divider"></div>
   <div class="sec-label fu d6">Putting</div>
   <div class="two-col fu d6">
@@ -891,6 +980,11 @@ body::before {
       {% endif %}
     </div>
   </div>
+
+  </div><!-- /tab-putting -->
+
+  <!-- COACHING PANEL -->
+  <div id="tab-coaching" class="tab-panel" role="tabpanel">
 
   <!-- STROKES GAINED -->
   <div class="sec-divider"></div>
@@ -1095,39 +1189,90 @@ body::before {
     <div class="ft-meta">Round Report · {{ round.date_played.strftime('%d %B %Y') }} · {{ course_name }} · v2.0</div>
   </div>
 
+  </div><!-- /tab-coaching -->
+
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.bar-fill').forEach(el => {
-    const w = el.style.getPropertyValue('--w');
+// ── Tab switching ─────────────────────────────────────────────────
+(function () {
+  var TABS = ['overview', 'off-the-tee', 'approach', 'atg', 'putting', 'coaching'];
+
+  function activateTab(tabId, pushHash) {
+    if (TABS.indexOf(tabId) === -1) tabId = 'overview';
+
+    // Update buttons
+    document.querySelectorAll('.tab-btn').forEach(function (btn) {
+      var active = btn.dataset.tab === tabId;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+
+    // Update panels
+    document.querySelectorAll('.tab-panel').forEach(function (panel) {
+      panel.classList.toggle('active', panel.id === 'tab-' + tabId);
+    });
+
+    // Update URL hash without scrolling
+    if (pushHash) {
+      history.replaceState(null, '', window.location.pathname + '#' + tabId);
+    }
+  }
+
+  // Wire up buttons
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      activateTab(btn.dataset.tab, true);
+    });
+  });
+
+  // Activate on load from hash
+  var hash = window.location.hash.replace('#', '');
+  // 'share' is handled by the share modal script — don't treat it as a tab
+  if (hash && hash !== 'share' && TABS.indexOf(hash) !== -1) {
+    activateTab(hash, false);
+  }
+
+  // React to back/forward navigation
+  window.addEventListener('hashchange', function () {
+    var h = window.location.hash.replace('#', '');
+    if (TABS.indexOf(h) !== -1) activateTab(h, false);
+  });
+})();
+
+// ── Bar animations & tooltips ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.bar-fill').forEach(function (el) {
+    var w = el.style.getPropertyValue('--w');
+    el.dataset.targetW = w;
     el.style.width = '0%';
-    setTimeout(() => {
+    setTimeout(function () {
       el.style.transition = 'width 1.1s cubic-bezier(.4,0,.2,1)';
       el.style.width = w;
     }, 550);
   });
-  // Animate SG bars (set via inline style width, not --w)
-  document.querySelectorAll('.sg-bf').forEach(el => {
-    const target = el.style.width;
+
+  document.querySelectorAll('.sg-bf').forEach(function (el) {
+    var target = el.style.width;
+    el.dataset.targetW = target;
     el.style.width = '0%';
-    setTimeout(() => {
+    setTimeout(function () {
       el.style.transition = 'width 1.1s cubic-bezier(.4,0,.2,1)';
       el.style.width = target;
     }, 700);
   });
 
-  // Tooltip touch support — tap to open, tap elsewhere or same tip to close
-  document.querySelectorAll('.mg-tip').forEach(tip => {
-    tip.addEventListener('click', e => {
+  // Tooltip touch support
+  document.querySelectorAll('.mg-tip').forEach(function (tip) {
+    tip.addEventListener('click', function (e) {
       e.stopPropagation();
-      const isOpen = tip.classList.contains('mg-open');
-      document.querySelectorAll('.mg-tip.mg-open').forEach(t => t.classList.remove('mg-open'));
+      var isOpen = tip.classList.contains('mg-open');
+      document.querySelectorAll('.mg-tip.mg-open').forEach(function (t) { t.classList.remove('mg-open'); });
       if (!isOpen) tip.classList.add('mg-open');
     });
   });
-  document.addEventListener('click', () => {
-    document.querySelectorAll('.mg-tip.mg-open').forEach(t => t.classList.remove('mg-open'));
+  document.addEventListener('click', function () {
+    document.querySelectorAll('.mg-tip.mg-open').forEach(function (t) { t.classList.remove('mg-open'); });
   });
 });
 </script>
