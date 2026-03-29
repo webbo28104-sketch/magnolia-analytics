@@ -262,7 +262,8 @@ def view_report(round_id):
     round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
 
     # Ensure a Report record exists
-    if not round_.report:
+    report = round_.report
+    if not report:
         report = Report(round_id=round_.id, email_status='pending')
         db.session.add(report)
         db.session.flush()
@@ -331,8 +332,6 @@ def view_report(round_id):
     calendar_ctx = get_calendar_context(round_.date_played)
 
     # ---- Claude-generated text (lazy-generate on first view, cached after) ----
-    report = round_.report
-
     if not report.summary_text:
         summary_text = generate_context_summary(round_, weather, calendar_ctx)
         report.summary_text = summary_text
