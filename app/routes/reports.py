@@ -13,7 +13,7 @@ from app.utils.round_stats import build_course_hole_map
 from app.utils.personal_bests import check_recent_personal_best
 from app.services.weather_service import get_round_weather
 from app.services.calendar_service import get_calendar_context
-from app.services.claude_service import generate_narrative
+from app.services.claude_service import generate_narrative, generate_context_summary
 
 reports_bp = Blueprint('reports', __name__)
 
@@ -330,8 +330,15 @@ def view_report(round_id):
     # ---- Calendar context ----
     calendar_ctx = get_calendar_context(round_.date_played)
 
-    # ---- Claude narrative (lazy-generate on first view, cached after) ----
+    # ---- Claude-generated text (lazy-generate on first view, cached after) ----
     report = round_.report
+
+    if not report.summary_text:
+        summary_text = generate_context_summary(round_, weather, calendar_ctx)
+        report.summary_text = summary_text
+    else:
+        summary_text = report.summary_text
+
     if not report.narrative_text:
         narrative = generate_narrative(round_, sg_data, weather, calendar_ctx)
         report.narrative_text = narrative
@@ -399,6 +406,7 @@ def view_report(round_id):
         # Context
         weather      = weather,
         calendar_ctx = calendar_ctx,
+        summary_text = summary_text,
         narrative    = narrative,
 
         # Personal best

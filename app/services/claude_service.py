@@ -307,6 +307,92 @@ Rules:
 Output only the 3 paragraphs, separated by a blank line. Begin immediately."""
 
 
+def generate_context_summary(round_, weather, calendar_ctx: dict) -> str:
+    """
+    Generate a 2-3 sentence context summary for the top of the round report.
+
+    Covers conditions, season/date context, and what the score means given
+    the golfer's handicap. Cached in Report.summary_text on first view.
+    Caller must commit the DB session.
+
+    Returns the summary string (or a safe fallback on any failure).
+    """
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not api_key:
+        return ''   # empty string → card is hidden in template
+
+    user        = round_.golfer
+    course_name = round_.course.name if round_.course else 'Unknown Course'
+    score_vs_par = round_.score_vs_par()
+    score_label  = (
+        f'+{score_vs_par}' if score_vs_par and score_vs_par > 0
+        else ('E' if score_vs_par == 0 else str(score_vs_par))
+    )
+
+    weather_str = 'Weather data not available for this round.'
+    if weather:
+        parts = [f"{weather['condition']}", f"{weather['temp_c']}°C",
+                 f"wind {weather['wind_kph']} km/h"]
+        if weather.get('precip_mm', 0) > 0:
+            parts.append(f"{weather['precip_mm']}mm rain")
+        weather_str = ', '.join(parts)
+
+    ctx_parts = []
+    if calendar_ctx.get('golf_event'):
+        ctx_parts.append(calendar_ctx['golf_event'])
+    if calendar_ctx.get('bank_holiday'):
+        ctx_parts.append(calendar_ctx['bank_holiday'])
+    if calendar_ctx.get('notable'):
+        ctx_parts.append(calendar_ctx['notable'])
+    calendar_str = '; '.join(ctx_parts) if ctx_parts else 'No notable calendar context'
+
+    prompt = f"""You are writing a brief round context for a golfer's performance report.
+
+Write exactly 2-3 sentences of context. Use second person ("Your round at...").
+
+Round data:
+Course: {course_name}
+Date: {round_.date_played.strftime('%d %B %Y')}
+Score: {score_label} vs par ({round_.total_score} gross)
+Handicap Index: {user.handicap_index}
+Season: {calendar_ctx.get('season', 'Unknown')}
+Calendar: {calendar_str}
+Conditions: {weather_str}
+
+Rules:
+- Exactly 2-3 sentences. No lists, no headers, no markdown.
+- Second person throughout.
+- If weather is available, comment specifically on how it affected play (temperature, wind).
+- Reference the season, course, and how the score sits relative to the golfer's handicap.
+- Tone: warm and direct, like a knowledgeable friend after the round. No clichés.
+- Do not mention any software, platforms, or that this text was generated.
+
+Output only the sentences. Begin immediately."""
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        msg = client.messages.create(
+            model=_MODEL,
+            max_tokens=200,
+            messages=[{'role': 'user', 'content': prompt}],
+        )
+        summary = msg.content[0].text.strip()
+
+        report = round_.report
+        if report:
+            report.summary_text = summary
+            report.model_used = _MODEL
+            report.prompt_tokens     = (report.prompt_tokens or 0) + msg.usage.input_tokens
+            report.completion_tokens = (report.completion_tokens or 0) + msg.usage.output_tokens
+            report.generated_at = datetime.utcnow()
+
+        return summary
+
+    except Exception as e:
+        return ''   # empty string → card hidden; don't expose error in UI
+
+
 def generate_narrative(round_, sg_data: dict, weather, calendar_ctx: dict) -> str:
     """
     Generate and cache a 3-paragraph coaching narrative for the round.

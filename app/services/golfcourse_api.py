@@ -166,14 +166,16 @@ def _normalise_course_summary(raw: dict) -> dict:
     location = raw.get("location")
     city = raw.get("city") or (location.get("city", "") if isinstance(location, dict) else "")
 
+    # Coordinates may be top-level or nested inside a "location" object
+    _loc = raw.get("location") if isinstance(raw.get("location"), dict) else {}
     return {
         "id":      raw.get("id") or raw.get("course_id") or raw.get("club_id"),
         "name":    name,
         "city":    city,
         "region":  raw.get("state") or raw.get("region") or raw.get("county") or "",
         "country": raw.get("country") or raw.get("country_name", ""),
-        "lat":     _safe_float(raw.get("latitude") or raw.get("lat")),
-        "lng":     _safe_float(raw.get("longitude") or raw.get("lng") or raw.get("lon")),
+        "lat":     _safe_float(raw.get("latitude") or raw.get("lat") or _loc.get("latitude") or _loc.get("lat")),
+        "lng":     _safe_float(raw.get("longitude") or raw.get("lng") or raw.get("lon") or _loc.get("longitude") or _loc.get("lng") or _loc.get("lon")),
         "holes":   _safe_int(raw.get("holes"), 18),
         "par":     par,
     }

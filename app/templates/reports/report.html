@@ -343,6 +343,40 @@ body::before {
 .pb-banner-icon { font-size: 15px; flex-shrink: 0; }
 .pb-banner strong { color: var(--gold); }
 
+/* ── Context summary card ───────────────────────────────────────── */
+.ctx-summary {
+  background: var(--cream-ghost);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 18px 20px 16px;
+  margin-top: 22px;
+  position: relative;
+}
+.ctx-summary::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+  opacity: .45;
+  border-radius: 3px 3px 0 0;
+}
+.ctx-summary-eyebrow {
+  font-size: 9px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: .65;
+  margin-bottom: 10px;
+  font-family: 'DM Mono', monospace;
+}
+.ctx-summary-body {
+  font-size: 13px;
+  line-height: 1.72;
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+}
+
 /* ── Tab navigation ────────────────────────────────────────────── */
 .tab-nav {
   position: sticky;
@@ -496,48 +530,13 @@ body::before {
   <!-- OVERVIEW PANEL -->
   <div id="tab-overview" class="tab-panel active" role="tabpanel">
 
-  <!-- CONTEXT BANNER -->
-  <div class="context-banner fu d3">
-    <div class="ctx-block">
-      <div class="ctx-icon">🌬</div>
-      <div>
-        <div class="ctx-label">Conditions · {{ course_name }}</div>
-        <div class="ctx-val">
-          {% if weather %}
-            <strong>{{ weather.condition }}</strong> · {{ weather.temp_c }}°C · Wind {{ weather.wind_kph }} km/h
-            {%- if weather.precip_mm > 0 %} · {{ weather.precip_mm }}mm rain{% endif %}
-          {% else %}
-            <strong>Weather data unavailable</strong> for this date and location.
-          {% endif %}
-        </div>
-      </div>
-    </div>
-    <div class="ctx-block">
-      <div class="ctx-icon">📅</div>
-      <div>
-        <div class="ctx-label">Calendar Context</div>
-        <div class="ctx-val">
-          {% if calendar_ctx.notable %}<strong>{{ calendar_ctx.notable }}</strong>. {% endif %}
-          {% if calendar_ctx.bank_holiday %}{{ calendar_ctx.bank_holiday }}. {% endif %}
-          {% if calendar_ctx.golf_event %}<strong>{{ calendar_ctx.golf_event }}</strong>.{% endif %}
-          {% if not calendar_ctx.notable and not calendar_ctx.bank_holiday and not calendar_ctx.golf_event %}
-            A {{ calendar_ctx.season | lower }} round on the calendar.
-          {% endif %}
-        </div>
-      </div>
-    </div>
-    <div class="ctx-block">
-      <div class="ctx-icon">📊</div>
-      <div>
-        <div class="ctx-label">Season Standing</div>
-        <div class="ctx-val">
-          <strong>{{ calendar_ctx.season }}</strong>.
-          HC Index: <strong>{{ user.handicap_index }}</strong>.
-          {{ gir_pct }}% GIR this round.
-        </div>
-      </div>
-    </div>
+  <!-- CONTEXT SUMMARY -->
+  {% if summary_text %}
+  <div class="ctx-summary fu d3">
+    <div class="ctx-summary-eyebrow">Summary</div>
+    <div class="ctx-summary-body">{{ summary_text }}</div>
   </div>
+  {% endif %}
 
   <!-- ROUND SUMMARY -->
   <div class="sec-label fu d3">Round Summary</div>

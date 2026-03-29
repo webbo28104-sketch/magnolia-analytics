@@ -142,11 +142,18 @@ def get_round_weather(round_):
     # --- serve from cache ---
     if report and report.weather_json:
         if report.weather_json == _WEATHER_UNAVAILABLE:
-            return None   # cached miss — don't retry
-        try:
-            return json.loads(report.weather_json)
-        except (json.JSONDecodeError, TypeError):
-            pass  # corrupted — fall through and re-fetch
+            # Re-check: course may have acquired coordinates since sentinel was set.
+            # If coords are now present, clear the sentinel and re-fetch.
+            _lat = getattr(round_.course, 'lat', None) if round_.course else None
+            _lng = getattr(round_.course, 'lng', None) if round_.course else None
+            if not _lat or not _lng:
+                return None   # still no coordinates — skip
+            report.weather_json = None  # clear sentinel; fall through to fetch
+        else:
+            try:
+                return json.loads(report.weather_json)
+            except (json.JSONDecodeError, TypeError):
+                pass  # corrupted — fall through and re-fetch
 
     # --- check for coordinates ---
     lat = getattr(course, 'lat', None) if course else None

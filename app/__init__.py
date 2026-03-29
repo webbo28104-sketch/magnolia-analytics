@@ -89,6 +89,7 @@ def create_app(config_name='default'):
         from app.models.access_code import AccessCode       # noqa
         db.create_all()
         _run_column_migrations()
+        _backfill_course_coordinates(app)
         _ensure_admin_code(app)
 
     return app
@@ -128,6 +129,45 @@ def _run_column_migrations():
             db.session.commit()
         except Exception:
             db.session.rollback()   # column already exists — fine
+
+
+def _backfill_course_coordinates(app):
+    """
+    One-time backfill: fetch missing lat/lng for courses that have an external_id
+    but no coordinates stored. Runs on startup; exits immediately when nothing to fix.
+    """
+    from app.models.course import Course
+    try:
+        missing = Course.query.filter(
+            Course.external_id.isnot(None),
+            db.or_(Course.lat.is_(None), Course.lng.is_(None)),
+        ).limit(10).all()  # cap to avoid slow startups
+
+        if not missing:
+            return
+
+        from app.services.golfcourse_api import get_course_details, GolfCourseAPIError
+        for course in missing:
+            try:
+                detail = get_course_details(course.external_id)
+                lat = detail.get('lat')
+                lng = detail.get('lng')
+                if lat and lng:
+                    course.lat = lat
+                    course.lng = lng
+                    db.session.commit()
+                    app.logger.info(
+                        '[startup] Backfilled coordinates for %s: lat=%.5f lng=%.5f',
+                        course.name, lat, lng,
+                    )
+            except GolfCourseAPIError as exc:
+                db.session.rollback()
+                app.logger.warning('[startup] Could not fetch coords for %s: %s', course.name, exc)
+            except Exception as exc:
+                db.session.rollback()
+                app.logger.warning('[startup] Coord backfill error for %s: %s', course.name, exc)
+    except Exception as exc:
+        app.logger.warning('[startup] Course coordinate backfill failed: %s', exc)
 
 
 def _ensure_admin_code(app):
