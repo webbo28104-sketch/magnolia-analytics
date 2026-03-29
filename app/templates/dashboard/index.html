@@ -450,7 +450,7 @@
             <span class="hcp-toggle-dot"></span>
             <span class="hcp-toggle-text">{% if round.counts_for_official_hc != False %}Official{% else %}Casual{% endif %}</span>
           </button>
-          {% if round.report and round.report.html_content %}
+          {% if round.status == 'complete' %}
             <a href="{{ url_for('reports.view_report', round_id=round.id) }}" class="link-gold">View Report →</a>
             <a href="{{ url_for('reports.view_report', round_id=round.id) }}#share" class="round-edit-btn" title="Share report" style="display:inline-flex;align-items:center;text-decoration:none;color:inherit;vertical-align:middle">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
