@@ -1312,9 +1312,181 @@ document.addEventListener('DOMContentLoaded', function () {
   </div>
 </div>
 <script>
+// ── Share card: 1080×1080 canvas renderer ────────────────────────────────
+function smDrawCard(ctx, d) {
+  var W = 1080, H = 1080, PAD = 60;
+
+  function goldBar(y) {
+    var g = ctx.createLinearGradient(0, y, W, y);
+    g.addColorStop(0,    'rgba(196,160,82,0)');
+    g.addColorStop(0.15, '#c4a052');
+    g.addColorStop(0.5,  '#e2c06a');
+    g.addColorStop(0.85, '#c4a052');
+    g.addColorStop(1,    'rgba(196,160,82,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y, W, 3);
+  }
+
+  // Background
+  ctx.fillStyle = '#0f1a10';
+  ctx.fillRect(0, 0, W, H);
+  goldBar(0);
+
+  // ── Header
+  ctx.letterSpacing = '3px';
+  ctx.font = '700 18px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(196,160,82,0.5)';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('MAGNOLIA ANALYTICS', PAD, 54);
+  ctx.letterSpacing = '0px';
+
+  var cName = d.courseName.length > 26 ? d.courseName.slice(0, 25) + '\u2026' : d.courseName;
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(245,240,232,0.92)';
+  ctx.font = '600 24px Inter,system-ui,sans-serif';
+  ctx.fillText(cName, W - PAD, 46);
+  ctx.fillStyle = 'rgba(245,240,232,0.45)';
+  ctx.font = '400 18px Inter,system-ui,sans-serif';
+  ctx.fillText(d.datePlayed, W - PAD, 70);
+
+  // Header separator
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD, 98); ctx.lineTo(W - PAD, 98); ctx.stroke();
+
+  // ── Hero left: gross score
+  var divX = 498;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 148px Inter,system-ui,sans-serif';
+  ctx.fillText(String(d.grossScore), PAD, 472);
+
+  ctx.fillStyle = 'rgba(245,240,232,0.92)';
+  ctx.font = '700 28px Inter,system-ui,sans-serif';
+  ctx.fillText(d.playerName, PAD, 518);
+
+  ctx.fillStyle = 'rgba(245,240,232,0.38)';
+  ctx.font = '400 20px Inter,system-ui,sans-serif';
+  ctx.fillText('Gross Score', PAD, 550);
+
+  // Vertical divider
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(divX, 110); ctx.lineTo(divX, 792); ctx.stroke();
+
+  // ── Hero right: vs-par
+  var rX = divX + 46;
+  var vp = d.vspar;
+  var vpColor = vp === 0 ? '#ffffff' : (vp < 0 ? '#34a85a' : '#e05240');
+  var vpStr   = vp === 0 ? 'E' : (vp > 0 ? '+' + vp : '' + vp);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = vpColor;
+  ctx.font = '900 80px Inter,system-ui,sans-serif';
+  ctx.fillText(vpStr, rX, 252);
+  ctx.fillStyle = 'rgba(245,240,232,0.38)';
+  ctx.font = '400 17px Inter,system-ui,sans-serif';
+  ctx.fillText('vs par', rX, 278);
+
+  // ── SG rows (ranked best→worst → green→red)
+  var sg     = [d.sgOffTee, d.sgApproach, d.sgAtg, d.sgPutting];
+  var sgLbls = ['Off the Tee', 'Approach', 'Around Green', 'Putting'];
+  var ranked = sg.slice().sort(function(a, b) { return b - a; });
+  var rankC  = ['#34a85a', '#8ab876', '#c49a5a', '#e05240'];
+  function sgClr(v) { var i = ranked.indexOf(v); return rankC[i < 0 ? 3 : i]; }
+
+  var sy = 322, rowH = 84, bW = 256, bH = 7, maxSG = 3;
+  for (var i = 0; i < 4; i++) {
+    var ry  = sy + i * rowH;
+    var v   = sg[i];
+    var c   = sgClr(v);
+    var pct = Math.min(Math.abs(v) / maxSG, 1);
+
+    // Category label
+    ctx.letterSpacing = '1px';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = 'rgba(245,240,232,0.48)';
+    ctx.font = '500 14px Inter,system-ui,sans-serif';
+    ctx.fillText(sgLbls[i].toUpperCase(), rX, ry);
+    ctx.letterSpacing = '0px';
+
+    // Value (right-aligned)
+    var vStr = (v >= 0 ? '+' : '') + v.toFixed(2);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+    ctx.fillStyle = c;
+    ctx.font = '700 20px Inter,system-ui,sans-serif';
+    ctx.fillText(vStr, W - PAD, ry);
+
+    // Bar track + fill
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(rX, ry + 26, bW, bH);
+    ctx.fillStyle = c;
+    ctx.fillRect(rX, ry + 26, Math.round(bW * pct), bH);
+  }
+
+  // ── Stats strip
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD, 822); ctx.lineTo(W - PAD, 822); ctx.stroke();
+
+  var fwStr  = d.fairwaysAvail > 0 ? d.fairwaysHit + '/' + d.fairwaysAvail : '\u2014';
+  var girStr = d.girCount + '/' + d.holesPlayed;
+  var scrStr = d.scrambleAttempts > 0 ? d.scrambleSaves + '/' + d.scrambleAttempts : '\u2014';
+  var cells  = [
+    { v: fwStr,              l: 'FAIRWAYS' },
+    { v: girStr,             l: 'GIR'      },
+    { v: String(d.totalPutts), l: 'PUTTS'  },
+    { v: scrStr,             l: 'SCRAMBLE' },
+  ];
+  var cW = (W - PAD * 2) / 4;
+
+  for (var j = 0; j < 4; j++) {
+    var cx = PAD + cW * j + cW / 2;
+    if (j > 0) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(PAD + cW * j, 842); ctx.lineTo(PAD + cW * j, 982); ctx.stroke();
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 36px Inter,system-ui,sans-serif';
+    ctx.fillText(cells[j].v, cx, 910);
+    ctx.fillStyle = 'rgba(245,240,232,0.42)';
+    ctx.font = '600 14px Inter,system-ui,sans-serif';
+    ctx.letterSpacing = '1px';
+    ctx.fillText(cells[j].l, cx, 958);
+    ctx.letterSpacing = '0px';
+  }
+
+  goldBar(H - 3);
+}
+
+// ── Share modal logic ─────────────────────────────────────────────────────
 (function(){
   var _caption = {{ (course_name + ' · ' + score_vs_par_label + ' · ' + round.total_score|string + ' strokes 🏌️ #golf #magnolia') | tojson }};
-  var _url = {{ request.url | tojson }};
+  var _url     = {{ request.url | tojson }};
+
+  var _sd = {
+    grossScore:       {{ round.total_score or 0 }},
+    vspar:            {{ score_vs_par if score_vs_par is not none else 0 }},
+    courseName:       {{ course_name | tojson }},
+    datePlayed:       {{ round.date_played.strftime('%d %b %Y') | tojson }},
+    playerName:       {{ (user.first_name + ' ' + user.last_name) | tojson }},
+    fairwaysHit:      {{ round.fairways_hit or 0 }},
+    fairwaysAvail:    {{ round.fairways_available or 0 }},
+    girCount:         {{ round.gir_count or 0 }},
+    holesPlayed:      {{ round.holes_played or 18 }},
+    totalPutts:       {{ round.total_putts or 0 }},
+    scrambleSaves:    {{ scramble.saves }},
+    scrambleAttempts: {{ scramble.attempts }},
+    sgOffTee:         {{ sg_data.sg_off_tee  if sg_data.sg_off_tee  is not none else 0 }},
+    sgApproach:       {{ sg_data.sg_approach if sg_data.sg_approach is not none else 0 }},
+    sgAtg:            {{ sg_data.sg_atg      if sg_data.sg_atg      is not none else 0 }},
+    sgPutting:        {{ sg_data.sg_putting.total if sg_data.sg_putting.total is not none else 0 }},
+  };
+
   window.openShareModal = function(){
     document.getElementById('share-modal').classList.add('sm-open');
     document.body.style.overflow = 'hidden';
@@ -1331,14 +1503,51 @@ document.addEventListener('DOMContentLoaded', function () {
     var t = encodeURIComponent(_caption + '\n' + _url);
     window.open('https://wa.me/?text=' + t, '_blank');
   };
+
   window.smShareIG = function(){
-    navigator.clipboard.writeText(_caption).then(function(){
-      var btn = document.querySelector('.sm-ig');
-      var orig = btn.innerHTML;
-      btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/><\/svg> Copied!';
-      setTimeout(function(){ btn.innerHTML = orig; }, 2000);
-    }).catch(function(){ prompt('Copy this caption:', _caption); });
+    var btn = document.querySelector('.sm-ig');
+    var origHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"\/><polyline points="12 6 12 12 16 14"\/><\/svg>\u00a0Generating\u2026';
+
+    var canvas = document.createElement('canvas');
+    canvas.width = 1080; canvas.height = 1080;
+    var ctx = canvas.getContext('2d');
+
+    document.fonts.ready.then(function() {
+      smDrawCard(ctx, _sd);
+
+      canvas.toBlob(function(blob) {
+        if (!blob) {
+          btn.innerHTML = origHTML; btn.disabled = false; return;
+        }
+
+        function doDownload() {
+          var a = document.createElement('a');
+          a.download = 'magnolia-round-{{ round.id }}.png';
+          a.href = URL.createObjectURL(blob);
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(a.href);
+          btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"\/><polyline points="7 10 12 15 17 10"\/><line x1="12" y1="15" x2="12" y2="3"\/><\/svg>\u00a0Downloaded!';
+          setTimeout(function(){ btn.innerHTML = origHTML; btn.disabled = false; }, 2500);
+        }
+
+        if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+          navigator.clipboard.write([new ClipboardItem({'image/png': blob})])
+            .then(function(){
+              btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"\/><\/svg>\u00a0Copied!';
+              setTimeout(function(){ btn.innerHTML = origHTML; btn.disabled = false; }, 2500);
+            })
+            .catch(function(){ doDownload(); });
+        } else {
+          doDownload();
+        }
+      }, 'image/png');
+    });
   };
+
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeShareModal(); });
 
   // Auto-open share modal when navigated here with #share (e.g. from dashboard Share button)
