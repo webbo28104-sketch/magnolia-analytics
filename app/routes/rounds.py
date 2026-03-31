@@ -253,16 +253,25 @@ def submit_round(round_id):
             round_.compute_differential()
         except Exception as e:
             current_app.logger.exception(f"[submit_round] compute failed: {e}")
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            current_app.logger.exception(f"[submit_round] DB commit failed: {e}")
+            db.session.rollback()
+            flash('There was a problem saving your round. Please try again.', 'error')
+            return redirect(url_for('dashboard.index'))
         try:
             _recalculate_handicap(current_user)
         except Exception as e:
             current_app.logger.exception(f"[submit_round] Handicap recalc failed: {e}")
         try:
-            generate_report(round_)
-            send_report_email(round_)
+            report = generate_report(round_)
+            # Don't re-send the email if this round was already emailed (re-edit path)
+            if not (report and report.emailed_at):
+                send_report_email(round_)
             flash('Your round has been saved and your report is on its way!', 'success')
-        except Exception:
+        except Exception as e:
+            current_app.logger.exception(f"[submit_round] Report/email failed: {e}")
             flash('Round saved! Report generation is in the queue.', 'info')
 
         # Personal best check — runs after the report email so it lands separately

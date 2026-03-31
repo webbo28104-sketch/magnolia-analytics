@@ -186,13 +186,16 @@ max_tokens=8192,
     if not html_content:
         html_content = _placeholder_html(round_)
 
+    is_new = round_.report is None
     report = round_.report or Report(round_id=round_.id)
     report.html_content = html_content
     report.prompt_tokens = prompt_tokens
     report.completion_tokens = completion_tokens
     report.model_used = model_used
     report.generated_at = datetime.utcnow()
-    report.email_status = 'pending'
+    if is_new:
+        report.email_status = 'pending'
+    # Don't reset email_status for existing reports — preserves 'sent' on re-edit
 
     db.session.add(report)
     db.session.commit()
