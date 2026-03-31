@@ -16,7 +16,9 @@ Two entry points:
 """
 
 import os
+import time
 from datetime import datetime
+from flask import current_app
 from app import db
 from app.models.report import Report
 
@@ -27,58 +29,50 @@ _MODEL = 'claude-sonnet-4-20250514'
 # ---------------------------------------------------------------------------
 
 def _build_report_prompt(round_) -> str:
-    """Prompt for the legacy full-HTML email report."""
-    holes = round_.holes.all()
+    """Prompt for the legacy full-HTML email report — aggregated stats only."""
     user = round_.golfer
     course_name = round_.course.name if round_.course else 'Unknown Course'
-
-    hole_lines = []
-    for h in holes:
-        approach = ''
-        if not h.gir and h.approach_miss:
-            approach = f' | Miss: {h.approach_miss}'
-        if h.scramble_distance:
-            approach += f' | Scramble: {h.scramble_distance}'
-        sand = ''
-        if h.sand_save_attempt:
-            sand = f' | Sand save: {"Yes" if h.sand_save_made else "No"}'
-        hole_lines.append(
-            f"Hole {h.hole_number} (Par {h.par}): Score {h.score} | "
-            f"Tee: {h.tee_shot or 'N/A'} | GIR: {'Yes' if h.gir else 'No'}{approach} | "
-            f"Putts: {h.putts} | First putt: {h.first_putt_distance or 'N/A'}ft | "
-            f"Penalties: {h.penalties}{sand}"
-        )
 
     score_vs_par = round_.score_vs_par()
     score_label = f'+{score_vs_par}' if score_vs_par and score_vs_par > 0 else str(score_vs_par or 'E')
     fw_pct = round(round_.fairways_hit / round_.fairways_available * 100) if round_.fairways_available else 0
-    gir_pct = round(round_.gir_count / 18 * 100)
+    holes_played = round_.holes_played or 18
+    gir_pct = round(round_.gir_count / holes_played * 100) if round_.gir_count is not None else 0
 
-    return f"""You are the performance analysis engine for Magnolia Analytics — a premium golf tracking platform used by serious amateur golfers.
+    sg_off_tee = round_.sg_off_tee or 0
+    sg_approach = round_.sg_approach or 0
+    sg_atg = round_.sg_atg or 0
+    sg_putting = round_.sg_putting or 0
+    sg_total = round_.sg_total or 0
 
-GOLFER DATA
------------
-Name: {user.full_name}
-Handicap Index: {user.handicap_index}
+    return f"""You are the performance analysis engine for Magnolia Analytics, a premium golf tracking platform.
+
+ROUND SUMMARY
+-------------
+Golfer: {user.full_name} (Handicap {user.handicap_index})
 Course: {course_name}
 Date: {round_.date_played.strftime('%d %B %Y')}
-Total Score: {round_.total_score} ({score_label} par)
-Total Putts: {round_.total_putts}
-Fairways Hit: {round_.fairways_hit}/{round_.fairways_available} ({fw_pct}%)
-Greens in Regulation: {round_.gir_count}/18 ({gir_pct}%)
+Score: {round_.total_score} ({score_label} par)
+Putts: {round_.total_putts}
+FIR: {round_.fairways_hit}/{round_.fairways_available} ({fw_pct}%)
+GIR: {round_.gir_count}/{holes_played} ({gir_pct}%)
 Penalties: {round_.penalties}
 
-Hole-by-hole:
-{chr(10).join(hole_lines)}
+STROKES GAINED
+--------------
+Off Tee:      {sg_off_tee:+.2f}
+Approach:     {sg_approach:+.2f}
+Around Green: {sg_atg:+.2f}
+Putting:      {sg_putting:+.2f}
+Total:        {sg_total:+.2f}
 
 TASK
 ----
-Generate a complete, standalone HTML performance report. Output ONLY the HTML. Start with <!DOCTYPE html>.
-
-DESIGN: Fonts: Playfair Display (headings), DM Mono (labels), DM Sans (body). Dark green header (#1a2e1a), gold accents (#c9a84c). Stat cards, strokes-gained bars (centred zero), narrative card, weakness highlight, footer.
-CONTENT: Header, four stat cards, strokes-gained estimates, putting make% by band, 3-paragraph narrative (specific/coaching), season context, weakness card, key takeaways.
-TONE: Premium, analytical, like a private coach reviewing footage. Reference specific hole numbers.
-Output only HTML. Begin immediately with <!DOCTYPE html>."""
+Write a concise HTML round summary. Output only a <div> fragment (no DOCTYPE, no <html>/<body> wrapper).
+Use inline styles only. Dark green (#1a2e1a) for headings, gold (#c9a84c) for accents.
+Include: score headline, four stat cards (score vs par, FIR, GIR, putts), strokes gained bar summary, one coaching paragraph (2–3 sentences, data-grounded).
+Keep total output under 800 words of HTML.
+Begin immediately with <div>."""
 
 
 def _placeholder_html(round_) -> str:
@@ -170,16 +164,28 @@ def generate_report(round_) -> Report:
         try:
             import anthropic
             client = anthropic.Anthropic(api_key=api_key)
+            prompt_text = _build_report_prompt(round_)
+            current_app.logger.info(
+                '[claude] generate_report start prompt=%d chars model=%s',
+                len(prompt_text), _MODEL
+            )
+            t0 = time.time()
             msg = client.messages.create(
                 model=_MODEL,
-max_tokens=8192,
-                messages=[{'role': 'user', 'content': _build_report_prompt(round_)}]
+                max_tokens=1500,
+                messages=[{'role': 'user', 'content': prompt_text}]
+            )
+            elapsed = time.time() - t0
+            current_app.logger.info(
+                '[claude] generate_report done elapsed=%.1fs input_tokens=%d output_tokens=%d',
+                elapsed, msg.usage.input_tokens, msg.usage.output_tokens
             )
             html_content = msg.content[0].text
             prompt_tokens = msg.usage.input_tokens
             completion_tokens = msg.usage.output_tokens
             model_used = _MODEL
         except Exception as e:
+            current_app.logger.exception('[claude] generate_report api error: %s', e)
             html_content = None
             model_used = f'placeholder (api error: {str(e)[:80]})'
 
