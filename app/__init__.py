@@ -92,6 +92,7 @@ def create_app(config_name='default'):
         from app.models.report import Report                # noqa
         from app.models.waitlist import WaitingList         # noqa
         from app.models.access_code import AccessCode       # noqa
+        from app.models.admin_setting import AdminSetting   # noqa
         db.create_all()
         _run_column_migrations()
         _backfill_course_coordinates(app)

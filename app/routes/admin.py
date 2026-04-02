@@ -217,7 +217,46 @@ def founding_members():
 @admin_bp.route('/kpis')
 @staff_required
 def kpis():
-    return render_template('admin/kpis.html', active_tab='kpis')
+    """Render the KPI metrics panel. All calculations delegated to kpi_service."""
+    from app.services.kpi_service import get_all_kpis
+    from app.models.admin_setting import AdminSetting
+
+    metrics = get_all_kpis()
+    nps            = AdminSetting.get('nps_score', '')
+    email_open_rate = AdminSetting.get('email_open_rate', '')
+
+    return render_template(
+        'admin/kpis.html',
+        active_tab      = 'kpis',
+        metrics         = metrics,
+        nps             = nps,
+        email_open_rate = email_open_rate,
+    )
+
+
+@admin_bp.route('/kpis/settings', methods=['POST'])
+@staff_required
+def kpi_settings():
+    """Persist manually-entered KPI values (NPS, email open rate) to AdminSetting."""
+    from app.models.admin_setting import AdminSetting
+
+    nps             = request.form.get('nps_score', '').strip()
+    email_open_rate = request.form.get('email_open_rate', '').strip()
+
+    if nps:
+        AdminSetting.set('nps_score', nps)
+    if email_open_rate:
+        AdminSetting.set('email_open_rate', email_open_rate)
+
+    try:
+        db.session.commit()
+        flash('KPI settings saved.', 'success')
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error('[admin.kpi_settings] Save failed: %s', exc)
+        flash('Failed to save settings — check logs.', 'error')
+
+    return redirect(url_for('admin.kpis'))
 
 
 # ---------------------------------------------------------------------------

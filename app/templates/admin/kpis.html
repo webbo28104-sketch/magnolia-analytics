@@ -1,41 +1,425 @@
 {% extends 'admin/base.html' %}
 {% block title %}KPIs{% endblock %}
 
+{% block styles %}
+/* ── KPI grid ───────────────────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 0;
+}
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+}
+
+/* ── KPI card ───────────────────────────────────────────── */
+.kpi-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+}
+.kpi-card--wide {
+  grid-column: 1 / -1;
+}
+.kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1.1;
+}
+.kpi-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.kpi-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 6px;
+  line-height: 1.45;
+  border-left: 2px solid var(--border);
+  padding-left: 8px;
+}
+.kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+.kpi-delta--up   { color: #2d6a4f; }
+.kpi-delta--down { color: #c0392b; }
+.kpi-delta--flat { color: var(--text-muted); }
+
+/* ── MRR wide card ──────────────────────────────────────── */
+.kpi-mrr-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.kpi-mrr-header .kpi-label { margin-bottom: 0; }
+.kpi-mrr-total {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+.kpi-mrr-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (max-width: 600px) {
+  .kpi-mrr-grid { grid-template-columns: 1fr; }
+}
+.kpi-mrr-sub {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 18px;
+}
+.kpi-mrr-sub--combined {
+  border-color: rgba(201,168,76,0.4);
+  background: rgba(201,168,76,0.06);
+}
+.kpi-mrr-tier {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.kpi-mrr-value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.kpi-mrr-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── Section headings ───────────────────────────────────── */
+.kpi-section {
+  margin-bottom: 32px;
+}
+.kpi-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Manual settings form ───────────────────────────────── */
+.kpi-manual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+@media (max-width: 600px) {
+  .kpi-manual-grid { grid-template-columns: 1fr; }
+}
+.kpi-manual-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+}
+.kpi-manual-card .kpi-label { margin-bottom: 12px; }
+.kpi-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.kpi-input {
+  width: 110px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.kpi-input:focus { border-color: var(--green-700); }
+.kpi-input-unit {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.kpi-save-btn {
+  padding: 7px 14px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  border-radius: 5px;
+  background: var(--green-800);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.kpi-save-btn:hover { background: var(--green-700); }
+.kpi-fallback-note {
+  font-size: 11px;
+  color: var(--gold);
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+/* ── Window label ───────────────────────────────────────── */
+.kpi-window-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+{% endblock %}
+
+
 {% block content %}
+
 <div class="adm-page-header">
   <h1 class="adm-page-header__title">KPIs</h1>
   <p class="adm-page-header__sub">Key product and growth metrics.</p>
 </div>
 
-<div class="adm-stats">
-  <div class="adm-stat">
-    <div class="adm-stat__label">Total users</div>
-    <div class="adm-stat__value">—</div>
+<p class="kpi-window-note">
+  Current window: last 30 days &nbsp;·&nbsp; Delta vs prior 30-day window &nbsp;·&nbsp;
+  All times UTC
+</p>
+
+{# ─────────────────────────────────────────────────────────────── #}
+{# Macro: render a standard KPI card                               #}
+{# ─────────────────────────────────────────────────────────────── #}
+{% macro kpi_card(m, label, extra_class='') %}
+<div class="kpi-card {{ extra_class }}">
+  <div class="kpi-label">{{ label }}</div>
+  <div class="kpi-value">{{ m.display }}</div>
+  {% if m.sub %}
+  <div class="kpi-sub">{{ m.sub }}</div>
+  {% endif %}
+  {% if m.delta_str %}
+  <div class="kpi-delta kpi-delta--{{ m.delta_dir }}">
+    {% if m.delta_dir == 'up' %}↑{% elif m.delta_dir == 'down' %}↓{% endif %}
+    {{ m.delta_str }} vs prev 30d
   </div>
-  <div class="adm-stat">
-    <div class="adm-stat__label">Waitlist size</div>
-    <div class="adm-stat__value">—</div>
-  </div>
-  <div class="adm-stat">
-    <div class="adm-stat__label">Rounds / user</div>
-    <div class="adm-stat__value">—</div>
-    <div class="adm-stat__sub">avg lifetime</div>
-  </div>
-  <div class="adm-stat">
-    <div class="adm-stat__label">Reports / user</div>
-    <div class="adm-stat__value">—</div>
-    <div class="adm-stat__sub">avg lifetime</div>
+  {% else %}
+  <div class="kpi-delta kpi-delta--flat">— no prior data</div>
+  {% endif %}
+  {% if m.note %}
+  <div class="kpi-note">{{ m.note }}</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+{# ── Section 1: Users ──────────────────────────────────────────── #}
+<div class="kpi-section">
+  <h2 class="kpi-section-title">Users</h2>
+  <div class="kpi-grid">
+    {{ kpi_card(metrics.total_users,      'Total Users') }}
+    {{ kpi_card(metrics.paid_subs,        'Paid Subscribers') }}
+    {{ kpi_card(metrics.free_users,       'Free Users') }}
+    {{ kpi_card(metrics.waitlist_signups, 'Waitlist Signups') }}
   </div>
 </div>
 
-<div class="adm-card">
-  <div class="adm-placeholder">
-    <p class="adm-placeholder__session">Session 5</p>
-    <p class="adm-placeholder__title">KPI dashboard</p>
-    <p class="adm-placeholder__body">
-      Growth trends, retention, engagement metrics, and
-      waitlist-to-user conversion will be built in session 5.
-    </p>
+{# ── Section 2: Revenue ────────────────────────────────────────── #}
+<div class="kpi-section">
+  <h2 class="kpi-section-title">Revenue</h2>
+  <div class="kpi-card kpi-card--wide">
+    <div class="kpi-mrr-header">
+      <div class="kpi-label">Monthly Recurring Revenue</div>
+      {% set combined = metrics.mrr.combined %}
+      <div style="display:flex;align-items:baseline;gap:12px">
+        <div class="kpi-mrr-total">{{ combined.display }}</div>
+        {% if combined.delta_str %}
+        <div class="kpi-delta kpi-delta--{{ combined.delta_dir }}">
+          {% if combined.delta_dir == 'up' %}↑{% elif combined.delta_dir == 'down' %}↓{% endif %}
+          {{ combined.delta_str }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="kpi-mrr-grid">
+      {# Founding tier #}
+      {% set f = metrics.mrr.founding %}
+      <div class="kpi-mrr-sub">
+        <div class="kpi-mrr-tier">Founding · £{{ '%.2f'|format(metrics.mrr.founding_price) }}/mo</div>
+        <div class="kpi-mrr-value">{{ f.display }}</div>
+        <div class="kpi-mrr-count">{{ f.sub }}</div>
+        {% if f.delta_str %}
+        <div class="kpi-delta kpi-delta--{{ f.delta_dir }}" style="font-size:11px;margin-top:5px">
+          {% if f.delta_dir == 'up' %}↑{% elif f.delta_dir == 'down' %}↓{% endif %}
+          {{ f.delta_str }}
+        </div>
+        {% endif %}
+        {% if f.note %}<div class="kpi-note">{{ f.note }}</div>{% endif %}
+      </div>
+
+      {# Standard/paid tier #}
+      {% set s = metrics.mrr.standard %}
+      <div class="kpi-mrr-sub">
+        <div class="kpi-mrr-tier">Standard · £{{ '%.2f'|format(metrics.mrr.standard_price) }}/mo</div>
+        <div class="kpi-mrr-value">{{ s.display }}</div>
+        <div class="kpi-mrr-count">{{ s.sub }}</div>
+        {% if s.delta_str %}
+        <div class="kpi-delta kpi-delta--{{ s.delta_dir }}" style="font-size:11px;margin-top:5px">
+          {% if s.delta_dir == 'up' %}↑{% elif s.delta_dir == 'down' %}↓{% endif %}
+          {{ s.delta_str }}
+        </div>
+        {% endif %}
+      </div>
+
+      {# Combined #}
+      <div class="kpi-mrr-sub kpi-mrr-sub--combined">
+        <div class="kpi-mrr-tier">Combined</div>
+        <div class="kpi-mrr-value">{{ combined.display }}</div>
+        <div class="kpi-mrr-count">&nbsp;</div>
+        {% if combined.delta_str %}
+        <div class="kpi-delta kpi-delta--{{ combined.delta_dir }}" style="font-size:11px;margin-top:5px">
+          {% if combined.delta_dir == 'up' %}↑{% elif combined.delta_dir == 'down' %}↓{% endif %}
+          {{ combined.delta_str }} vs prev 30d
+        </div>
+        {% endif %}
+      </div>
+    </div>
   </div>
 </div>
+
+{# ── Section 3: Engagement & Retention ────────────────────────── #}
+<div class="kpi-section">
+  <h2 class="kpi-section-title">Engagement &amp; Retention</h2>
+  <div class="kpi-grid">
+    {# Churn — lower is better, so flip the colour meaning #}
+    {% set churn = metrics.churn_rate %}
+    <div class="kpi-card">
+      <div class="kpi-label">Monthly Churn Rate</div>
+      <div class="kpi-value">{{ churn.display }}</div>
+      {% if churn.sub %}<div class="kpi-sub">{{ churn.sub }}</div>{% endif %}
+      {% if churn.delta_str %}
+      <div class="kpi-delta kpi-delta--{{ churn.delta_dir }}">
+        {% if churn.delta_dir == 'up' %}↑{% elif churn.delta_dir == 'down' %}↓{% endif %}
+        {{ churn.delta_str }} vs prev 30d
+      </div>
+      {% else %}
+      <div class="kpi-delta kpi-delta--flat">— no prior data</div>
+      {% endif %}
+      {% if churn.note %}<div class="kpi-note">{{ churn.note }}</div>{% endif %}
+    </div>
+
+    {{ kpi_card(metrics.conversion_rate,     'Free → Paid Conversion') }}
+    {{ kpi_card(metrics.activation_rate,     'Activation Rate') }}
+    {{ kpi_card(metrics.avg_rounds_per_user, 'Avg Rounds / Active User') }}
+  </div>
+</div>
+
+{# ── Section 4: Product ────────────────────────────────────────── #}
+<div class="kpi-section">
+  <h2 class="kpi-section-title">Product</h2>
+  <div class="kpi-grid">
+    {{ kpi_card(metrics.reports_generated, 'Reports Generated (30d)') }}
+    {# Share cards placeholder — no model yet #}
+    <div class="kpi-card">
+      <div class="kpi-label">Share Cards Generated</div>
+      <div class="kpi-value" style="color:var(--text-muted)">—</div>
+      <div class="kpi-delta kpi-delta--flat">not tracked</div>
+      <div class="kpi-note">No ShareCard model — share cards are generated client-side
+        via canvas and not persisted. Add a <code>share_cards</code> table to track.</div>
+    </div>
+  </div>
+</div>
+
+{# ── Section 5: Manual metrics ─────────────────────────────────── #}
+<div class="kpi-section">
+  <h2 class="kpi-section-title">Manual Metrics</h2>
+  <form method="POST" action="{{ url_for('admin.kpi_settings') }}">
+    <div class="kpi-manual-grid">
+
+      {# NPS #}
+      <div class="kpi-manual-card">
+        <div class="kpi-label">NPS Score</div>
+        <div class="kpi-input-wrap">
+          <input
+            type="number"
+            name="nps_score"
+            class="kpi-input"
+            min="-100" max="100" step="1"
+            placeholder="—"
+            value="{{ nps }}"
+            autocomplete="off"
+          >
+          <span class="kpi-input-unit">/ 100</span>
+          <button type="submit" class="kpi-save-btn">Save</button>
+        </div>
+        <div class="kpi-sub" style="margin-top:8px">Net Promoter Score — manual entry</div>
+      </div>
+
+      {# Email open rate #}
+      <div class="kpi-manual-card">
+        <div class="kpi-label">Report Email Open Rate</div>
+        <div class="kpi-input-wrap">
+          <input
+            type="number"
+            name="email_open_rate"
+            class="kpi-input"
+            min="0" max="100" step="0.1"
+            placeholder="—"
+            value="{{ email_open_rate }}"
+            autocomplete="off"
+          >
+          <span class="kpi-input-unit">%</span>
+          <button type="submit" class="kpi-save-btn">Save</button>
+        </div>
+        <div class="kpi-sub" style="margin-top:8px">
+          Fallback — manual entry from SendGrid dashboard
+        </div>
+        <div class="kpi-fallback-note">Replace with SendGrid webhook data when available</div>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Prevent both save buttons in the manual form from submitting simultaneously.
+// Each button submits the whole form — no partial saves needed since both
+// fields are always updated together.
+</script>
 {% endblock %}
