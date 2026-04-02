@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, abort, make_response, redirect, url_for
 from flask_login import login_required, current_user
 from app import db
+from app.utils.access import is_pro
 from app.models.report import Report
 from app.models.round import Round
 from app.utils.strokes_gained import (
@@ -375,6 +376,12 @@ def view_report(round_id):
 
     return render_template(
         'reports/report.html',
+
+        # Access gate — controls blur vs full display in template.
+        # All data is still computed; the gate is purely presentational.
+        # TODO: when founding/standard tiers are introduced, update is_pro() in
+        # app/utils/access.py — do not add inline tier checks here.
+        user_is_pro = is_pro(current_user),
 
         # Round
         round             = round_,

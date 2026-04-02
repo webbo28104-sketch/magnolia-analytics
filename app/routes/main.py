@@ -14,3 +14,7 @@ def pricing():
 @main_bp.route('/glossary')
 def glossary():
     return render_template('glossary.html')
+
+@main_bp.route('/upgrade')
+def upgrade():
+    return render_template('upgrade.html')

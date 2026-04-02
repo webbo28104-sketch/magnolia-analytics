@@ -427,6 +427,58 @@ body::before {
   animation: none !important;
 }
 
+/* ── Pro gate: blur + lock card ──────────────────────────────── */
+.pro-gate {
+  position: relative;
+}
+.pro-blur {
+  filter: blur(4px);
+  user-select: none;
+  pointer-events: none;
+  min-height: 320px;
+}
+.pro-lock-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--forest);
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  padding: 32px 40px;
+  text-align: center;
+  z-index: 10;
+  max-width: 380px;
+  width: 88%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+}
+.pro-lock-card .plc-icon {
+  font-size: 26px;
+  margin-bottom: 14px;
+  display: block;
+}
+.pro-lock-card h3 {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  margin-bottom: 20px;
+}
+.pro-lock-card .plc-btn {
+  display: inline-block;
+  background: var(--gold);
+  color: var(--forest);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  padding: 10px 26px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.pro-lock-card .plc-btn:hover { background: var(--gold-light); }
+
 </style>
 {# Dynamic watermark text for hero::before #}
 <style>.hero-gross::before { content: '{{ course_name_upper }}'; }</style>
@@ -987,6 +1039,11 @@ body::before {
   <!-- COACHING PANEL -->
   <div id="tab-coaching" class="tab-panel" role="tabpanel">
 
+  {# Pro gate: wrap content in blur for free users. Lock card is positioned absolutely over it. #}
+  {# TODO: when founding/standard tiers are introduced, update is_pro() in app/utils/access.py #}
+  <div class="{% if not user_is_pro %}pro-gate{% endif %}">
+  <div class="{% if not user_is_pro %}pro-blur{% endif %}">
+
   <!-- STROKES GAINED -->
   <div class="sec-divider"></div>
   <div class="sec-label fu d7">
@@ -1189,6 +1246,16 @@ body::before {
     <div class="ft-brand">Magnolia Analytics</div>
     <div class="ft-meta">Round Report · {{ round.date_played.strftime('%d %B %Y') }} · {{ course_name }} · v2.0</div>
   </div>
+
+  </div>{# /pro-blur #}
+  {% if not user_is_pro %}
+  <div class="pro-lock-card">
+    <span class="plc-icon">🔒</span>
+    <h3>Unlock your full AI coaching report — upgrade to Magnolia Pro</h3>
+    <a href="{{ url_for('main.upgrade') }}" class="plc-btn">Upgrade to Pro</a>
+  </div>
+  {% endif %}
+  </div>{# /pro-gate #}
 
   </div><!-- /tab-coaching -->
 

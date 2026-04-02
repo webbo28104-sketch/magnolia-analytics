@@ -5,6 +5,7 @@ from datetime import date, timedelta
 from app.models.round import Round
 from app.models.hole import Hole
 from app.utils.personal_bests import check_recent_personal_best
+from app.utils.access import is_pro
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -19,7 +20,12 @@ def index():
         .all()
     )
 
-    recent_rounds = all_complete[:10]
+    total_complete = len(all_complete)
+    # Free users see last 10 rounds; pro users see full history.
+    # TODO: when founding/standard tiers are introduced, update is_pro() in
+    # app/utils/access.py — do not add inline tier checks here.
+    user_is_pro = is_pro(current_user)
+    recent_rounds = all_complete if user_is_pro else all_complete[:10]
     stats  = _compute_stats(all_complete[:20]) if all_complete else None
     glance = _compute_glance(all_complete) if all_complete else None
 
@@ -56,6 +62,8 @@ def index():
 
     return render_template('dashboard/index.html',
         recent_rounds=recent_rounds,
+        total_complete=total_complete,
+        user_is_pro=user_is_pro,
         stats=stats,
         glance=glance,
         in_progress_rounds=in_progress_rounds,

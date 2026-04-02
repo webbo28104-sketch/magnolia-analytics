@@ -81,6 +81,10 @@ def create_app(config_name='default'):
     def _combine_filter(d, other):
         return {**d, **other}
 
+    # Custom Jinja2 globals — callable from any template without passing in context
+    from app.utils.access import is_pro
+    app.jinja_env.globals['is_pro'] = is_pro
+
     # Create all tables on startup (safe to call repeatedly)
     with app.app_context():
         from app.models.user import User                    # noqa

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Upgrade to Magnolia Pro{% endblock %}
+
+{% block content %}
+<section class="auth-page">
+  <div class="auth-card" style="max-width:480px">
+
+    <div class="auth-header">
+      <h1 class="auth-title" style="font-size:1.5rem">Magnolia Pro</h1>
+      <p class="auth-subtitle">Full coaching reports, strokes gained analysis, and complete round history.</p>
+    </div>
+
+    <div style="background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.3);border-radius:8px;padding:24px;margin-bottom:24px">
+      <div style="font-size:2.2rem;font-weight:700;letter-spacing:-0.03em;color:var(--text)">
+        £7.99<span style="font-size:1rem;font-weight:500;color:var(--text-muted)">/month</span>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:2px">Cancel any time</div>
+    </div>
+
+    <ul style="list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:28px">
+      {% for feature in [
+        'Full AI coaching narrative after every round',
+        'Strokes gained breakdown (Off Tee, Approach, Around Green, Putting)',
+        'Report email delivery',
+        'Complete round history — all rounds, no cap',
+        'Historical trends and performance charts',
+      ] %}
+      <li style="display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--text)">
+        <span style="color:#2d6a4f;font-size:15px;flex-shrink:0;margin-top:1px">✓</span>
+        {{ feature }}
+      </li>
+      {% endfor %}
+    </ul>
+
+    <div style="background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:20px;text-align:center">
+      <p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Stripe payments coming soon</p>
+      <p style="font-size:13px;color:var(--text-muted)">
+        We're setting up secure payment processing. In the meantime,
+        <a href="mailto:team@magnoliaanalytics.golf" style="color:var(--gold-amber, #c9a84c)">contact us</a>
+        to arrange early access.
+      </p>
+    </div>
+
+    {% if current_user.is_authenticated %}
+    <p class="auth-footer" style="margin-top:20px">
+      <a href="{{ url_for('dashboard.index') }}">← Back to dashboard</a>
+    </p>
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}

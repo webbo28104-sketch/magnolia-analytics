@@ -497,6 +497,17 @@
       </div>
       {% endfor %}
     </div>
+    {# Locked row: shown to free users when older rounds are hidden #}
+    {# TODO: when founding/standard tiers are introduced, update is_pro() in app/utils/access.py #}
+    {% if not user_is_pro and total_complete > 10 %}
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;margin-top:8px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:8px;font-size:13px;color:var(--text-muted)">
+      <span style="font-size:15px">🔒</span>
+      <span>
+        {{ total_complete - 10 }} older round{{ 's' if total_complete - 10 != 1 }} hidden
+        — <a href="{{ url_for('main.upgrade') }}" style="color:var(--color-gold,#c9a84c);font-weight:600;text-decoration:none">upgrade to see full history</a>
+      </span>
+    </div>
+    {% endif %}
     {% else %}
     <div class="empty-state">
       <p>No rounds logged yet.</p>
