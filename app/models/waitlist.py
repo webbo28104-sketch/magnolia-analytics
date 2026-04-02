@@ -12,6 +12,8 @@ class WaitingList(db.Model):
     rounds_per_month = db.Column(db.Integer, nullable=True)
     signed_up_at     = db.Column(db.DateTime, default=datetime.utcnow)
     access_code      = db.Column(db.String(30), nullable=True)
+    status           = db.Column(db.String(20), default='pending')
+    invited_at       = db.Column(db.DateTime, nullable=True)
 
     def __repr__(self):
         return f'<WaitingList {self.email}>'

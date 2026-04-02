@@ -1,38 +1,419 @@
 {% extends 'admin/base.html' %}
 {% block title %}Waitlist{% endblock %}
 
+{% block styles %}
+/* ── Cap bar ────────────────────────────────────────────── */
+.cap-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 999px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+.cap-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--green-700);
+  transition: width 0.3s ease;
+}
+.cap-bar__fill--warn  { background: #c9a84c; }
+.cap-bar__fill--over  { background: #c0392b; }
+
+/* ── Filter bar ─────────────────────────────────────────── */
+.adm-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.adm-search {
+  flex: 1;
+  min-width: 200px;
+  max-width: 320px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.adm-search:focus { border-color: var(--green-700); }
+
+.adm-select {
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+}
+.adm-select:focus { border-color: var(--green-700); }
+
+.adm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.adm-btn--primary {
+  background: var(--green-800);
+  color: #ffffff;
+}
+.adm-btn--primary:hover { background: var(--green-700); }
+.adm-btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.adm-btn--ghost:hover { color: var(--text); border-color: #b0a898; }
+.adm-btn--gold {
+  background: var(--gold);
+  color: #0d2218;
+}
+.adm-btn--gold:hover { background: var(--gold-light); }
+.adm-btn--sm {
+  padding: 5px 11px;
+  font-size: 12px;
+}
+.adm-btn:disabled, .adm-btn[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Bulk action bar ────────────────────────────────────── */
+.adm-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(27,67,50,0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px 8px 0 0;
+  border-bottom: none;
+}
+.adm-bulk-count {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+/* ── Table overrides ────────────────────────────────────── */
+.adm-card--flush {
+  padding: 0;
+  border-radius: 0 0 10px 10px;
+}
+.adm-table td.td-email { color: var(--text-muted); font-size: 12px; }
+.adm-table td.td-action { width: 120px; }
+
+/* ── Status badge colours ───────────────────────────────── */
+.adm-badge--pending   { background: rgba(107,114,128,0.1);  color: #4a5568; }
+.adm-badge--invited   { background: rgba(201,168,76,0.15);  color: #8a6800; }
+.adm-badge--converted { background: rgba(45,106,79,0.12);   color: #2d6a4f; }
+
+/* ── Pagination ─────────────────────────────────────────── */
+.adm-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.adm-pagination__links {
+  display: flex;
+  gap: 4px;
+}
+.adm-pagination__links a,
+.adm-pagination__links span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: var(--white);
+}
+.adm-pagination__links a:hover { border-color: var(--green-700); color: var(--green-700); }
+.adm-pagination__links span.current {
+  background: var(--green-800);
+  border-color: var(--green-800);
+  color: #fff;
+}
+.adm-pagination__links span.disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ── Empty state ────────────────────────────────────────── */
+.adm-empty {
+  padding: 48px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+{% endblock %}
+
 {% block content %}
+
+{# ── Page header ──────────────────────────────────────────────── #}
 <div class="adm-page-header">
   <h1 class="adm-page-header__title">Waitlist</h1>
   <p class="adm-page-header__sub">Everyone waiting for access to Magnolia Analytics.</p>
 </div>
 
-<div class="adm-stats">
+{# ── Stats ────────────────────────────────────────────────────── #}
+{% set cap_pct = [invites_this_week / invite_cap * 100, 100] | min | int %}
+<div class="adm-stats" style="margin-bottom:28px">
+
   <div class="adm-stat">
-    <div class="adm-stat__label">On waitlist</div>
-    <div class="adm-stat__value">—</div>
-    <div class="adm-stat__sub">total entries</div>
+    <div class="adm-stat__label">Total on list</div>
+    <div class="adm-stat__value">{{ total }}</div>
+    <div class="adm-stat__sub">all entries</div>
   </div>
+
   <div class="adm-stat">
-    <div class="adm-stat__label">Avg handicap</div>
-    <div class="adm-stat__value">—</div>
-    <div class="adm-stat__sub">across entries with HI</div>
+    <div class="adm-stat__label">Pending</div>
+    <div class="adm-stat__value">{{ pending_count }}</div>
+    <div class="adm-stat__sub">not yet invited</div>
   </div>
+
   <div class="adm-stat">
-    <div class="adm-stat__label">Invites sent</div>
-    <div class="adm-stat__value">—</div>
-    <div class="adm-stat__sub">invite codes issued</div>
+    <div class="adm-stat__label">Invited</div>
+    <div class="adm-stat__value">{{ invited_count }}</div>
+    <div class="adm-stat__sub">code sent, not registered</div>
+  </div>
+
+  <div class="adm-stat">
+    <div class="adm-stat__label">Converted</div>
+    <div class="adm-stat__value">{{ converted_count }}</div>
+    <div class="adm-stat__sub">registered accounts</div>
+  </div>
+
+  <div class="adm-stat">
+    <div class="adm-stat__label">Invites this week</div>
+    <div class="adm-stat__value">
+      {{ invites_this_week }}<span style="font-size:16px;font-weight:400;color:var(--text-muted)"> / {{ invite_cap }}</span>
+    </div>
+    <div class="cap-bar">
+      <div class="cap-bar__fill
+        {%- if cap_pct >= 100 %} cap-bar__fill--over
+        {%- elif cap_pct >= 75 %} cap-bar__fill--warn
+        {%- endif %}"
+        style="width:{{ cap_pct }}%">
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Bulk send form (wraps the table's checkboxes via form= attribute) ─ #}
+<form id="bulk-form" method="POST" action="{{ url_for('admin.send_invite') }}">
+</form>
+
+{# ── Filter bar ───────────────────────────────────────────────── #}
+<form method="GET" action="{{ url_for('admin.waitlist') }}" class="adm-filter-bar">
+  <input
+    type="text"
+    name="q"
+    value="{{ q }}"
+    placeholder="Search name or email…"
+    class="adm-search"
+    autocomplete="off"
+  >
+  <select name="status" class="adm-select">
+    <option value="all"       {% if status_filter == 'all'       %}selected{% endif %}>All statuses</option>
+    <option value="pending"   {% if status_filter == 'pending'   %}selected{% endif %}>Pending</option>
+    <option value="invited"   {% if status_filter == 'invited'   %}selected{% endif %}>Invited</option>
+    <option value="converted" {% if status_filter == 'converted' %}selected{% endif %}>Converted</option>
+  </select>
+  <button type="submit" class="adm-btn adm-btn--ghost">Filter</button>
+  {% if q or status_filter != 'all' %}
+  <a href="{{ url_for('admin.waitlist') }}" class="adm-btn adm-btn--ghost">Clear</a>
+  {% endif %}
+</form>
+
+{# ── Bulk action bar ──────────────────────────────────────────── #}
+<div class="adm-bulk-bar">
+  <input
+    type="checkbox"
+    id="select-all"
+    title="Select all on this page"
+    style="width:15px;height:15px;cursor:pointer;accent-color:var(--green-700)"
+  >
+  <label for="select-all" style="font-size:13px;font-weight:500;color:var(--text);cursor:pointer;user-select:none">
+    Select all
+  </label>
+  <button
+    type="submit"
+    form="bulk-form"
+    class="adm-btn adm-btn--gold adm-btn--sm"
+    id="bulk-send-btn"
+    disabled
+  >
+    Send Beta Invite
+  </button>
+  <span class="adm-bulk-count" id="bulk-count" style="display:none"></span>
+</div>
+
+{# ── Table ────────────────────────────────────────────────────── #}
+<div class="adm-card adm-card--flush">
+  <div class="adm-table-wrap">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th style="width:36px;padding-left:16px"></th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>HI</th>
+          <th>Joined</th>
+          <th>Status</th>
+          <th class="td-action">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+          {% if entry.email in registered_emails %}
+            {% set eff_status = 'converted' %}
+          {% else %}
+            {% set eff_status = entry.status or 'pending' %}
+          {% endif %}
+        <tr>
+          <td style="padding-left:16px">
+            {% if eff_status != 'converted' %}
+            <input
+              type="checkbox"
+              name="entry_ids"
+              value="{{ entry.id }}"
+              form="bulk-form"
+              class="row-checkbox"
+              style="width:15px;height:15px;cursor:pointer;accent-color:var(--green-700)"
+            >
+            {% endif %}
+          </td>
+          <td style="font-weight:500">{{ entry.name }}</td>
+          <td class="td-email">{{ entry.email }}</td>
+          <td>{{ '%.1f'|format(entry.handicap) if entry.handicap is not none else '—' }}</td>
+          <td>{{ entry.signed_up_at.strftime('%d %b %Y') }}</td>
+          <td>
+            <span class="adm-badge adm-badge--{{ eff_status }}">{{ eff_status }}</span>
+          </td>
+          <td class="td-action">
+            {% if eff_status == 'pending' %}
+              <form method="POST" action="{{ url_for('admin.send_invite') }}" style="display:inline">
+                <input type="hidden" name="entry_ids" value="{{ entry.id }}">
+                <button type="submit" class="adm-btn adm-btn--primary adm-btn--sm">Send Invite</button>
+              </form>
+            {% elif eff_status == 'invited' %}
+              <span style="font-size:12px;color:var(--text-muted)">
+                Sent {{ entry.invited_at.strftime('%d %b') if entry.invited_at else '—' }}
+              </span>
+            {% else %}
+              <span style="font-size:12px;color:var(--green-700);font-weight:500">Registered ✓</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="adm-empty">No entries match your filters.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
 
-<div class="adm-card">
-  <div class="adm-placeholder">
-    <p class="adm-placeholder__session">Session 2</p>
-    <p class="adm-placeholder__title">Waitlist entries</p>
-    <p class="adm-placeholder__body">
-      The full entry list, search, filters, and send-invite action
-      will be built in session 2.
-    </p>
+{# ── Pagination ───────────────────────────────────────────────── #}
+{% if pagination.pages > 1 %}
+<div class="adm-pagination">
+  <span>
+    Showing {{ (pagination.page - 1) * pagination.per_page + 1 }}–{{ [pagination.page * pagination.per_page, pagination.total] | min }}
+    of {{ pagination.total }}
+  </span>
+  <div class="adm-pagination__links">
+    {% if pagination.has_prev %}
+      <a href="{{ url_for('admin.waitlist', page=pagination.prev_num, q=q, status=status_filter) }}">← Prev</a>
+    {% else %}
+      <span class="disabled">← Prev</span>
+    {% endif %}
+
+    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      {% if p %}
+        {% if p == pagination.page %}
+          <span class="current">{{ p }}</span>
+        {% else %}
+          <a href="{{ url_for('admin.waitlist', page=p, q=q, status=status_filter) }}">{{ p }}</a>
+        {% endif %}
+      {% else %}
+        <span class="disabled">…</span>
+      {% endif %}
+    {% endfor %}
+
+    {% if pagination.has_next %}
+      <a href="{{ url_for('admin.waitlist', page=pagination.next_num, q=q, status=status_filter) }}">Next →</a>
+    {% else %}
+      <span class="disabled">Next →</span>
+    {% endif %}
   </div>
 </div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var selectAll  = document.getElementById('select-all');
+  var bulkBtn    = document.getElementById('bulk-send-btn');
+  var bulkCount  = document.getElementById('bulk-count');
+  var checkboxes = document.querySelectorAll('.row-checkbox');
+
+  function updateBulk() {
+    var checked = document.querySelectorAll('.row-checkbox:checked');
+    var n = checked.length;
+    if (n > 0) {
+      bulkBtn.disabled = false;
+      bulkCount.style.display = '';
+      bulkCount.textContent   = n + ' selected';
+    } else {
+      bulkBtn.disabled = true;
+      bulkCount.style.display = 'none';
+    }
+    // Sync select-all state
+    selectAll.checked       = n > 0 && n === checkboxes.length;
+    selectAll.indeterminate = n > 0 && n < checkboxes.length;
+  }
+
+  selectAll.addEventListener('change', function () {
+    checkboxes.forEach(function (cb) { cb.checked = selectAll.checked; });
+    updateBulk();
+  });
+
+  checkboxes.forEach(function (cb) {
+    cb.addEventListener('change', updateBulk);
+  });
+})();
+</script>
 {% endblock %}

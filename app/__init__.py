@@ -125,6 +125,8 @@ def _run_column_migrations():
         ('users',     'password_reset_token',     'VARCHAR(100)'),
         ('users',     'password_reset_expires',   'TIMESTAMP'),
         ('users',     'is_staff',                 'BOOLEAN DEFAULT FALSE'),
+        ('waiting_list', 'status',               "VARCHAR(20) DEFAULT 'pending'"),
+        ('waiting_list', 'invited_at',           'TIMESTAMP'),
     ]
     for table, column, col_type in migrations:
         try:

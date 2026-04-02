@@ -1,25 +1,26 @@
 """
 Admin dashboard blueprint.
 All routes require is_staff=True on the current user.
-
-Diagnostic routes (/test-email, /db-users) are preserved at the bottom
-and can be removed once email flows are fully confirmed.
 """
 import os
+import random
+import string
 import traceback
+from datetime import datetime, timedelta
 from functools import wraps
 from types import SimpleNamespace
-from datetime import datetime
 
 from flask import (
     Blueprint, render_template, redirect, url_for,
     flash, jsonify, request, current_app,
 )
-from flask_login import current_user, login_required
+from flask_login import current_user
 
 from app import db
 
 admin_bp = Blueprint('admin', __name__)
+
+INVITE_CAP_PER_WEEK = 50
 
 
 # ---------------------------------------------------------------------------
@@ -38,6 +39,19 @@ def staff_required(f):
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+def _generate_invite_code() -> str:
+    """Generate a unique single-use GOLF-XXXX-XXXX code."""
+    from app.models.access_code import AccessCode
+    part = lambda: ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+    while True:
+        code = f'GOLF-{part()}-{part()}'
+        if not AccessCode.query.filter_by(code=code).first():
+            return code
+
+
+# ---------------------------------------------------------------------------
 # Dashboard views
 # ---------------------------------------------------------------------------
 @admin_bp.route('/')
@@ -49,7 +63,137 @@ def index():
 @admin_bp.route('/waitlist')
 @staff_required
 def waitlist():
-    return render_template('admin/waitlist.html', active_tab='waitlist')
+    from app.models.waitlist import WaitingList
+    from app.models.user import User
+
+    q             = request.args.get('q', '').strip()
+    status_filter = request.args.get('status', 'all')
+    page          = request.args.get('page', 1, type=int)
+    per_page      = 50
+
+    # Registered emails (for 'converted' detection)
+    registered_emails = {
+        row[0] for row in db.session.query(User.email).all()
+    }
+
+    # Stats
+    total           = WaitingList.query.count()
+    pending_count   = WaitingList.query.filter_by(status='pending').count()
+    invited_count   = WaitingList.query.filter_by(status='invited').count()
+    converted_count = (
+        WaitingList.query
+        .filter(WaitingList.email.in_(registered_emails))
+        .count()
+    ) if registered_emails else 0
+
+    week_ago           = datetime.utcnow() - timedelta(days=7)
+    invites_this_week  = (
+        WaitingList.query
+        .filter(WaitingList.invited_at >= week_ago)
+        .count()
+    )
+
+    # Filtered query
+    query = WaitingList.query
+    if q:
+        query = query.filter(
+            db.or_(
+                WaitingList.name.ilike(f'%{q}%'),
+                WaitingList.email.ilike(f'%{q}%'),
+            )
+        )
+    if status_filter == 'pending':
+        query = query.filter(
+            WaitingList.status == 'pending',
+            ~WaitingList.email.in_(registered_emails) if registered_emails else db.true(),
+        )
+    elif status_filter == 'invited':
+        query = query.filter(WaitingList.status == 'invited')
+    elif status_filter == 'converted':
+        if registered_emails:
+            query = query.filter(WaitingList.email.in_(registered_emails))
+        else:
+            query = query.filter(db.false())
+
+    query      = query.order_by(WaitingList.signed_up_at.desc())
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    return render_template(
+        'admin/waitlist.html',
+        active_tab        = 'waitlist',
+        entries           = pagination.items,
+        pagination        = pagination,
+        registered_emails = registered_emails,
+        q                 = q,
+        status_filter     = status_filter,
+        total             = total,
+        pending_count     = pending_count,
+        invited_count     = invited_count,
+        converted_count   = converted_count,
+        invites_this_week = invites_this_week,
+        invite_cap        = INVITE_CAP_PER_WEEK,
+    )
+
+
+@admin_bp.route('/waitlist/send-invite', methods=['POST'])
+@staff_required
+def send_invite():
+    from app.models.waitlist import WaitingList
+    from app.models.access_code import AccessCode
+    from app.services.sendgrid_service import send_invite_code
+
+    entry_ids = request.form.getlist('entry_ids', type=int)
+    if not entry_ids:
+        flash('No entries selected.', 'error')
+        return redirect(url_for('admin.waitlist'))
+
+    sent    = 0
+    skipped = 0
+    failed  = 0
+
+    for entry_id in entry_ids:
+        entry = WaitingList.query.get(entry_id)
+        if not entry:
+            continue
+
+        # Don't re-invite already-converted users
+        from app.models.user import User
+        if User.query.filter_by(email=entry.email).first():
+            skipped += 1
+            continue
+
+        code_str = _generate_invite_code()
+        code     = AccessCode(code=code_str, is_admin=False)
+        db.session.add(code)
+
+        entry.status     = 'invited'
+        entry.invited_at = datetime.utcnow()
+        entry.access_code = code_str
+
+        try:
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.error('[admin.send_invite] DB error for entry %s: %s', entry_id, exc)
+            failed += 1
+            continue
+
+        first_name = entry.name.split()[0] if entry.name else None
+        try:
+            send_invite_code(entry.email, code_str, first_name=first_name)
+        except Exception as exc:
+            current_app.logger.warning('[admin.send_invite] Email failed for %s: %s', entry.email, exc)
+
+        sent += 1
+
+    if sent:
+        flash(f'{sent} invite{"s" if sent != 1 else ""} sent.', 'success')
+    if skipped:
+        flash(f'{skipped} skipped — already registered.', 'info')
+    if failed:
+        flash(f'{failed} failed — check logs.', 'error')
+
+    return redirect(url_for('admin.waitlist', q=request.args.get('q', ''), status=request.args.get('status', 'all')))
 
 
 @admin_bp.route('/users')
@@ -102,18 +246,11 @@ def test_email():
             'from_email':       from_email,
         },
         'direct_sendgrid': {
-            'to': to_email,
-            'called': False,
-            'status_code': None,
-            'success': False,
-            'error': None,
+            'to': to_email, 'called': False,
+            'status_code': None, 'success': False, 'error': None,
         },
         'template_renders': {},
-        'db_user_lookup': {
-            'email': to_email,
-            'found': False,
-            'note': None,
-        },
+        'db_user_lookup': {'email': to_email, 'found': False, 'note': None},
         'reset_email_send': None,
     }
 
@@ -142,29 +279,7 @@ def test_email():
             result['direct_sendgrid']['error']     = str(exc)
             result['direct_sendgrid']['traceback'] = traceback.format_exc()
 
-    mock_user  = SimpleNamespace(first_name='Test', last_name='User', email=to_email)
-    mock_round = SimpleNamespace(
-        id=1,
-        golfer=mock_user,
-        course=SimpleNamespace(name='Test Course'),
-        date_played=datetime.utcnow(),
-        counts_for_official_hc=True,
-        total_score=72,
-        fairways_available=14,
-        fairways_hit=8,
-        holes_played=18,
-        gir_count=9,
-        total_putts=32,
-        sg_off_tee=0.5,
-        sg_approach=0.2,
-        sg_atg=-0.1,
-        sg_putting=0.3,
-        sg_total=0.9,
-        report=None,
-        score_vs_par=lambda: -2,
-        holes=SimpleNamespace(all=lambda: []),
-    )
-
+    mock_user = SimpleNamespace(first_name='Test', last_name='User', email=to_email)
     result['template_renders'] = {
         'password_reset': _try_render(
             'email/password_reset.html',
@@ -176,11 +291,7 @@ def test_email():
             first_name='Test',
             new_round_url='https://example.com/rounds/new',
         ),
-        'waitlist_confirm': _try_render(
-            'email/waitlist_confirm.html',
-            name='Test',
-            position=42,
-        ),
+        'waitlist_confirm': _try_render('email/waitlist_confirm.html', name='Test', position=42),
         'invite_code': _try_render(
             'email/invite_code.html',
             first_name='Test',
@@ -194,12 +305,7 @@ def test_email():
         ),
         'admin_waitlist': _try_render(
             'email/admin_waitlist.html',
-            entry=SimpleNamespace(
-                name='Test User',
-                email=to_email,
-                handicap=12.4,
-                rounds_per_month=4,
-            ),
+            entry=SimpleNamespace(name='Test User', email=to_email, handicap=12.4, rounds_per_month=4),
             position=319,
             real_count=1,
         ),
@@ -210,23 +316,15 @@ def test_email():
         user = User.query.filter_by(email=to_email.lower()).first()
         if user:
             result['db_user_lookup']['found'] = True
-            result['db_user_lookup']['note']  = (
-                f'User found: first_name={user.first_name!r}. '
-                'forgot-password WILL attempt to send for this email.'
-            )
+            result['db_user_lookup']['note']  = f'User found: first_name={user.first_name!r}.'
         else:
-            result['db_user_lookup']['found'] = False
             count = User.query.count()
             result['db_user_lookup']['total_users_in_db'] = count
-            result['db_user_lookup']['note'] = (
-                'No user with this email in the database. '
-                f'Total users in DB: {count}.'
-            )
+            result['db_user_lookup']['note'] = f'No user with this email. Total users: {count}.'
             if count > 0:
                 users = User.query.limit(5).all()
                 result['db_user_lookup']['sample_emails'] = [
-                    u.email[:3] + '***@' + u.email.split('@')[-1]
-                    for u in users
+                    u.email[:3] + '***@' + u.email.split('@')[-1] for u in users
                 ]
     except Exception as exc:
         result['db_user_lookup']['error'] = str(exc)
@@ -237,23 +335,16 @@ def test_email():
             user = User.query.filter_by(email=to_email.lower()).first()
             if not user:
                 result['reset_email_send'] = {
-                    'attempted': False,
-                    'error': f'No user found for {to_email} — cannot send reset email.',
+                    'attempted': False, 'error': f'No user found for {to_email}.',
                 }
             else:
                 from app.services.sendgrid_service import send_password_reset
                 reset_url = 'https://magnoliaanalytics.golf/auth/reset-password/diagnostic-test-token'
                 success = send_password_reset(user, reset_url)
-                result['reset_email_send'] = {
-                    'attempted': True,
-                    'success':   success,
-                    'to':        user.email,
-                }
+                result['reset_email_send'] = {'attempted': True, 'success': success, 'to': user.email}
         except Exception as exc:
             result['reset_email_send'] = {
-                'attempted': True,
-                'error':     str(exc),
-                'traceback': traceback.format_exc(),
+                'attempted': True, 'error': str(exc), 'traceback': traceback.format_exc(),
             }
 
     return jsonify(result), 200

@@ -239,7 +239,14 @@
         </div>
       </div>
     </div>
-    <a href="{{ url_for('rounds.new_round') }}" class="btn btn--gold">+ Log Round</a>
+    <div style="text-align:right">
+      <a href="{{ url_for('rounds.new_round') }}" class="btn btn--gold">+ Log Round</a>
+      {% if current_user.is_staff %}
+      <div style="margin-top:6px">
+        <a href="{{ url_for('admin.index') }}" style="font-size:11px;color:var(--text-muted);text-decoration:none;letter-spacing:0.02em;font-weight:500;opacity:0.7;">Admin Panel</a>
+      </div>
+      {% endif %}
+    </div>
   </div>
 
   <!-- Continue Round banner (Task 11) -->
