@@ -66,9 +66,11 @@ def create_app(config_name='default'):
         # Admin routes → redirect to login (not waitlist) when unauthenticated
         if request.endpoint and request.endpoint.startswith('admin.'):
             return redirect(url_for('auth.login'))
-        # Allow /auth/register only if access has been granted via modal
+        # Allow /auth/register via modal flow (session flag) or direct invite link (?code= / form field)
         if request.endpoint == 'auth.register':
             if session.get('access_granted'):
+                return None
+            if request.args.get('code') or request.form.get('invite_code'):
                 return None
             return redirect(url_for('waitlist.index'))
         # All other unauthenticated requests → waitlist

@@ -23,46 +23,69 @@ def register():
         password         = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
 
-        # Basic validation
+        # Prefer the code entered in the form; fall back to the session (modal flow)
+        form_code    = request.form.get('invite_code', '').strip().upper()
+        session_code = (session.get('access_code') or '').strip().upper()
+        code_str     = form_code or session_code
+
+        def _form(**kw):
+            return render_template('auth/register.html', code_prefill=code_str, **kw)
+
+        # --- Invite code: must be present and still available at submission time ---
+        if not code_str:
+            flash(
+                'Access to Magnolia is currently by invite only. '
+                'Join the waitlist at magnoliaanalytics.golf',
+                'error',
+            )
+            return _form()
+
+        access_code_obj = AccessCode.query.filter_by(code=code_str).first()
+        if not access_code_obj or not access_code_obj.is_available:
+            flash(
+                'Access to Magnolia is currently by invite only. '
+                'Join the waitlist at magnoliaanalytics.golf',
+                'error',
+            )
+            return _form()
+
+        # --- Basic field validation ---
         if not all([first_name, last_name, email, password]):
             flash('All fields are required.', 'error')
-            return render_template('auth/register.html')
+            return _form()
         if password != confirm_password:
             flash('Passwords do not match.', 'error')
-            return render_template('auth/register.html')
+            return _form()
         if len(password) < 8:
             flash('Password must be at least 8 characters.', 'error')
-            return render_template('auth/register.html')
+            return _form()
         if User.query.filter_by(email=email).first():
             flash('An account with that email already exists.', 'error')
-            return render_template('auth/register.html')
+            return _form()
 
-        # Retrieve the access code stored in session (set by /auth/validate-code)
-        code_in_session = session.get('access_code')
-        access_code_obj = None
-        if code_in_session:
-            access_code_obj = AccessCode.query.filter_by(code=code_in_session).first()
-
-        # Create user
+        # --- Create user ---
         user = User(first_name=first_name, last_name=last_name, email=email)
         user.set_password(password)
-        if code_in_session:
-            user.invite_code = code_in_session
+        user.invite_code = code_str
         db.session.add(user)
 
-        # Mark code as used
-        if access_code_obj:
-            access_code_obj.mark_used(email)
+        # Consume the code
+        access_code_obj.mark_used(email)
+
+        # Mark the matching waitlist entry as converted
+        from app.models.waitlist import WaitingList
+        wl_entry = WaitingList.query.filter_by(access_code=code_str).first()
+        if wl_entry:
+            wl_entry.status = 'converted'
 
         db.session.commit()
 
-        # Clear the access session flags
+        # Clear session access flags
         session.pop('access_granted', None)
         session.pop('access_code', None)
 
         login_user(user)
 
-        # Send welcome email (non-blocking — failure doesn't break registration)
         try:
             send_welcome(user)
         except Exception as exc:
@@ -71,7 +94,9 @@ def register():
         flash(f'Welcome to Magnolia Analytics, {first_name}!', 'success')
         return redirect(url_for('dashboard.index'))
 
-    return render_template('auth/register.html')
+    # GET — pre-fill from URL param, fall back to session (modal flow)
+    code_prefill = request.args.get('code', '').strip().upper() or (session.get('access_code') or '')
+    return render_template('auth/register.html', code_prefill=code_prefill)
 
 
 @auth_bp.route('/validate-code', methods=['POST'])
