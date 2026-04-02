@@ -1,0 +1,38 @@
+{% extends 'admin/base.html' %}
+{% block title %}Waitlist{% endblock %}
+
+{% block content %}
+<div class="adm-page-header">
+  <h1 class="adm-page-header__title">Waitlist</h1>
+  <p class="adm-page-header__sub">Everyone waiting for access to Magnolia Analytics.</p>
+</div>
+
+<div class="adm-stats">
+  <div class="adm-stat">
+    <div class="adm-stat__label">On waitlist</div>
+    <div class="adm-stat__value">—</div>
+    <div class="adm-stat__sub">total entries</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat__label">Avg handicap</div>
+    <div class="adm-stat__value">—</div>
+    <div class="adm-stat__sub">across entries with HI</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat__label">Invites sent</div>
+    <div class="adm-stat__value">—</div>
+    <div class="adm-stat__sub">invite codes issued</div>
+  </div>
+</div>
+
+<div class="adm-card">
+  <div class="adm-placeholder">
+    <p class="adm-placeholder__session">Session 2</p>
+    <p class="adm-placeholder__title">Waitlist entries</p>
+    <p class="adm-placeholder__body">
+      The full entry list, search, filters, and send-invite action
+      will be built in session 2.
+    </p>
+  </div>
+</div>
+{% endblock %}

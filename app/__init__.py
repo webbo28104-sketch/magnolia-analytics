@@ -30,11 +30,11 @@ def create_app(config_name='default'):
     from app.routes.courses import courses_bp
     from app.routes.profile import profile_bp
     from app.routes.waitlist import waitlist_bp
-    from app.routes.admin import admin_bp  # temporary — remove after SendGrid confirmed
+    from app.routes.admin import admin_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(admin_bp)  # temporary — remove after SendGrid confirmed
+    app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
     app.register_blueprint(rounds_bp, url_prefix='/rounds')
     app.register_blueprint(reports_bp, url_prefix='/reports')
@@ -63,6 +63,9 @@ def create_app(config_name='default'):
         # Authenticated users pass through
         if current_user.is_authenticated:
             return None
+        # Admin routes → redirect to login (not waitlist) when unauthenticated
+        if request.endpoint and request.endpoint.startswith('admin.'):
+            return redirect(url_for('auth.login'))
         # Allow /auth/register only if access has been granted via modal
         if request.endpoint == 'auth.register':
             if session.get('access_granted'):
@@ -121,6 +124,7 @@ def _run_column_migrations():
         ('users',     'invite_code',              'VARCHAR(50)'),
         ('users',     'password_reset_token',     'VARCHAR(100)'),
         ('users',     'password_reset_expires',   'TIMESTAMP'),
+        ('users',     'is_staff',                 'BOOLEAN DEFAULT FALSE'),
     ]
     for table, column, col_type in migrations:
         try:

@@ -1,0 +1,28 @@
+{% extends 'admin/base.html' %}
+{% block title %}Founding Members{% endblock %}
+
+{% block content %}
+<div class="adm-page-header">
+  <h1 class="adm-page-header__title">Founding Members</h1>
+  <p class="adm-page-header__sub">Users with founding member status.</p>
+</div>
+
+<div class="adm-stats">
+  <div class="adm-stat">
+    <div class="adm-stat__label">Founding members</div>
+    <div class="adm-stat__value">—</div>
+    <div class="adm-stat__sub">active status</div>
+  </div>
+</div>
+
+<div class="adm-card">
+  <div class="adm-placeholder">
+    <p class="adm-placeholder__session">Session 4</p>
+    <p class="adm-placeholder__title">Founding member management</p>
+    <p class="adm-placeholder__body">
+      Grant and revoke founding member status per user.
+      This is the only write action in this section.
+    </p>
+  </div>
+</div>
+{% endblock %}

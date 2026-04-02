@@ -1,0 +1,38 @@
+{% extends 'admin/base.html' %}
+{% block title %}Rounds{% endblock %}
+
+{% block content %}
+<div class="adm-page-header">
+  <h1 class="adm-page-header__title">Rounds</h1>
+  <p class="adm-page-header__sub">All logged rounds across all users.</p>
+</div>
+
+<div class="adm-stats">
+  <div class="adm-stat">
+    <div class="adm-stat__label">Total rounds</div>
+    <div class="adm-stat__value">—</div>
+    <div class="adm-stat__sub">complete rounds</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat__label">Last 30 days</div>
+    <div class="adm-stat__value">—</div>
+    <div class="adm-stat__sub">rounds logged</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat__label">Reports generated</div>
+    <div class="adm-stat__value">—</div>
+    <div class="adm-stat__sub">Claude reports</div>
+  </div>
+</div>
+
+<div class="adm-card">
+  <div class="adm-placeholder">
+    <p class="adm-placeholder__session">Session 3</p>
+    <p class="adm-placeholder__title">Rounds log</p>
+    <p class="adm-placeholder__body">
+      Full rounds table with user, course, date, score, and strokes-gained
+      breakdown will be built in session 3.
+    </p>
+  </div>
+</div>
+{% endblock %}

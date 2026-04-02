@@ -1,0 +1,41 @@
+{% extends 'admin/base.html' %}
+{% block title %}KPIs{% endblock %}
+
+{% block content %}
+<div class="adm-page-header">
+  <h1 class="adm-page-header__title">KPIs</h1>
+  <p class="adm-page-header__sub">Key product and growth metrics.</p>
+</div>
+
+<div class="adm-stats">
+  <div class="adm-stat">
+    <div class="adm-stat__label">Total users</div>
+    <div class="adm-stat__value">—</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat__label">Waitlist size</div>
+    <div class="adm-stat__value">—</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat__label">Rounds / user</div>
+    <div class="adm-stat__value">—</div>
+    <div class="adm-stat__sub">avg lifetime</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat__label">Reports / user</div>
+    <div class="adm-stat__value">—</div>
+    <div class="adm-stat__sub">avg lifetime</div>
+  </div>
+</div>
+
+<div class="adm-card">
+  <div class="adm-placeholder">
+    <p class="adm-placeholder__session">Session 5</p>
+    <p class="adm-placeholder__title">KPI dashboard</p>
+    <p class="adm-placeholder__body">
+      Growth trends, retention, engagement metrics, and
+      waitlist-to-user conversion will be built in session 5.
+    </p>
+  </div>
+</div>
+{% endblock %}

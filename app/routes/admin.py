@@ -1,20 +1,83 @@
 """
-Temporary admin diagnostics blueprint.
-REMOVE after all email flows are confirmed working.
+Admin dashboard blueprint.
+All routes require is_staff=True on the current user.
+
+Diagnostic routes (/test-email, /db-users) are preserved at the bottom
+and can be removed once email flows are fully confirmed.
 """
 import os
 import traceback
+from functools import wraps
 from types import SimpleNamespace
 from datetime import datetime
 
-from flask import Blueprint, jsonify, request, current_app, render_template
+from flask import (
+    Blueprint, render_template, redirect, url_for,
+    flash, jsonify, request, current_app,
+)
+from flask_login import current_user, login_required
+
 from app import db
 
 admin_bp = Blueprint('admin', __name__)
 
 
 # ---------------------------------------------------------------------------
-# Helper: try to render a template and return ok/error string
+# Auth guard
+# ---------------------------------------------------------------------------
+def staff_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for('auth.login'))
+        if not current_user.is_staff:
+            flash('Access denied.', 'error')
+            return redirect(url_for('dashboard.index'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+# ---------------------------------------------------------------------------
+# Dashboard views
+# ---------------------------------------------------------------------------
+@admin_bp.route('/')
+@staff_required
+def index():
+    return redirect(url_for('admin.waitlist'))
+
+
+@admin_bp.route('/waitlist')
+@staff_required
+def waitlist():
+    return render_template('admin/waitlist.html', active_tab='waitlist')
+
+
+@admin_bp.route('/users')
+@staff_required
+def users():
+    return render_template('admin/users.html', active_tab='users')
+
+
+@admin_bp.route('/rounds')
+@staff_required
+def rounds():
+    return render_template('admin/rounds.html', active_tab='rounds')
+
+
+@admin_bp.route('/founding-members')
+@staff_required
+def founding_members():
+    return render_template('admin/founding_members.html', active_tab='founding_members')
+
+
+@admin_bp.route('/kpis')
+@staff_required
+def kpis():
+    return render_template('admin/kpis.html', active_tab='kpis')
+
+
+# ---------------------------------------------------------------------------
+# Diagnostic: SendGrid + template checks  (remove once email confirmed)
 # ---------------------------------------------------------------------------
 def _try_render(template, **ctx):
     try:
@@ -24,20 +87,9 @@ def _try_render(template, **ctx):
         return str(exc)
 
 
-# ---------------------------------------------------------------------------
-# /admin/test-email
-# Comprehensive SendGrid + template diagnostic.
-# Optional query-param: ?to=someone@email.com  — overrides the default to_email
-# Optional query-param: ?reset=1              — also trigger a real forgot-password
-#                                               email for an existing user whose
-#                                               email matches `to` (no DB write).
-# ---------------------------------------------------------------------------
-@admin_bp.route('/admin/test-email')
+@admin_bp.route('/test-email')
+@staff_required
 def test_email():
-    """
-    Hit this in a browser to diagnose email sending end-to-end.
-    Returns JSON. TEMPORARY — remove once all email flows are confirmed working.
-    """
     api_key    = os.environ.get('SENDGRID_API_KEY', '').strip()
     from_email = os.environ.get('SENDGRID_FROM_EMAIL', '').strip() or 'team@magnoliaanalytics.golf'
     to_email   = request.args.get('to', 'team@magnoliaanalytics.golf').strip()
@@ -65,9 +117,6 @@ def test_email():
         'reset_email_send': None,
     }
 
-    # ------------------------------------------------------------------
-    # 1. Direct SendGrid call (proves API key + from_email work)
-    # ------------------------------------------------------------------
     if not api_key:
         result['direct_sendgrid']['error'] = (
             'SENDGRID_API_KEY is not set or empty — check Railway → Variables.'
@@ -76,7 +125,6 @@ def test_email():
         try:
             from sendgrid import SendGridAPIClient
             from sendgrid.helpers.mail import Mail
-
             message = Mail(
                 from_email=from_email,
                 to_emails=to_email,
@@ -94,9 +142,6 @@ def test_email():
             result['direct_sendgrid']['error']     = str(exc)
             result['direct_sendgrid']['traceback'] = traceback.format_exc()
 
-    # ------------------------------------------------------------------
-    # 2. Template render checks (catches Jinja2 errors for every email type)
-    # ------------------------------------------------------------------
     mock_user  = SimpleNamespace(first_name='Test', last_name='User', email=to_email)
     mock_round = SimpleNamespace(
         id=1,
@@ -160,9 +205,6 @@ def test_email():
         ),
     }
 
-    # ------------------------------------------------------------------
-    # 3. DB user lookup — confirms whether forgot-password would find this user
-    # ------------------------------------------------------------------
     try:
         from app.models.user import User
         user = User.query.filter_by(email=to_email.lower()).first()
@@ -174,16 +216,13 @@ def test_email():
             )
         else:
             result['db_user_lookup']['found'] = False
-            result['db_user_lookup']['note']  = (
-                'No user with this email in the database. '
-                'forgot-password silently skips sending — this is why 0 SendGrid requests. '
-                'Register on the production site first, or pass a different ?to= email.'
-            )
-            # Also report total user count so we know what emails DO exist
             count = User.query.count()
             result['db_user_lookup']['total_users_in_db'] = count
+            result['db_user_lookup']['note'] = (
+                'No user with this email in the database. '
+                f'Total users in DB: {count}.'
+            )
             if count > 0:
-                # Show first few emails (masked) so we know what to test with
                 users = User.query.limit(5).all()
                 result['db_user_lookup']['sample_emails'] = [
                     u.email[:3] + '***@' + u.email.split('@')[-1]
@@ -192,10 +231,6 @@ def test_email():
     except Exception as exc:
         result['db_user_lookup']['error'] = str(exc)
 
-    # ------------------------------------------------------------------
-    # 4. Optional: trigger a real password-reset email for the looked-up user
-    #    GET /admin/test-email?to=real@email.com&reset=1
-    # ------------------------------------------------------------------
     if trigger_reset:
         try:
             from app.models.user import User
@@ -207,17 +242,12 @@ def test_email():
                 }
             else:
                 from app.services.sendgrid_service import send_password_reset
-                reset_url = f'https://magnoliaanalytics.golf/auth/reset-password/diagnostic-test-token'
+                reset_url = 'https://magnoliaanalytics.golf/auth/reset-password/diagnostic-test-token'
                 success = send_password_reset(user, reset_url)
                 result['reset_email_send'] = {
                     'attempted': True,
                     'success':   success,
                     'to':        user.email,
-                    'note': (
-                        'Called send_password_reset() directly. '
-                        'Check SendGrid dashboard for a new request, '
-                        'and check the inbox for the email.'
-                    ),
                 }
         except Exception as exc:
             result['reset_email_send'] = {
@@ -229,13 +259,9 @@ def test_email():
     return jsonify(result), 200
 
 
-# ---------------------------------------------------------------------------
-# /admin/db-users
-# List all user emails in the DB (masked) so we know what's registered.
-# ---------------------------------------------------------------------------
-@admin_bp.route('/admin/db-users')
+@admin_bp.route('/db-users')
+@staff_required
 def db_users():
-    """Temporary: show registered users so we know what email to test forgot-password with."""
     try:
         from app.models.user import User
         users = User.query.order_by(User.id).all()
@@ -246,7 +272,8 @@ def db_users():
                     'id':         u.id,
                     'email':      u.email,
                     'first_name': u.first_name,
-                    'created':    str(u.id),  # no created_at field, use id as proxy
+                    'created':    u.created_at.isoformat() if u.created_at else None,
+                    'is_staff':   u.is_staff,
                 }
                 for u in users
             ],

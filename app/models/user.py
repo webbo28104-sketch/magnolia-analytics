@@ -30,6 +30,7 @@ class User(UserMixin, db.Model):
 
     # Access
     invite_code = db.Column(db.String(50), nullable=True)
+    is_staff = db.Column(db.Boolean, default=False)
 
     # Password reset
     password_reset_token   = db.Column(db.String(100), nullable=True)
