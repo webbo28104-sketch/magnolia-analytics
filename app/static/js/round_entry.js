@@ -14,6 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // ── Multi-select pill groups (miss direction + lie type) ──────────────────
+  // Fix: use document-level event delegation instead of per-element listeners.
+  // Per-element listeners attached at DOMContentLoaded don't reliably fire on
+  // iOS Safari when the element lives inside an overflow:hidden / 0-height
+  // .he-reveal container. Delegation catches the bubble at the document level.
+  //
   // Group A (miss-dir): Left/Right mutually exclusive; Long/Short mutually exclusive.
   // Group B (lie-type): fully multi-select, no exclusions.
 
@@ -27,50 +32,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 .map(p => p.dataset.value).join(',');
   }
 
-  document.querySelectorAll('.he-pill--multi').forEach(pill => {
-    pill.addEventListener('click', () => {
-      const group = pill.dataset.group;
-      const value = pill.dataset.value;
+  document.addEventListener('click', e => {
+    const pill = e.target.closest('.he-pill--multi');
+    if (!pill) return;
 
-      if (group === 'miss-dir') {
-        if (pill.classList.contains('is-active')) {
-          // Tap active pill to deselect
-          pill.classList.remove('is-active');
-        } else {
-          // Auto-deselect the conflicting opposite direction before activating
-          const conflict = { left: 'right', right: 'left', long: 'short', short: 'long' }[value];
-          if (conflict) {
-            document.querySelectorAll(`#miss-dir-pills .he-pill--multi[data-value="${conflict}"]`)
-                    .forEach(p => p.classList.remove('is-active'));
-          }
-          pill.classList.add('is-active');
+    const group = pill.dataset.group;
+    const value = pill.dataset.value;
+
+    if (group === 'miss-dir') {
+      if (pill.classList.contains('is-active')) {
+        // Tap active pill to deselect
+        pill.classList.remove('is-active');
+      } else {
+        // Auto-deselect the conflicting opposite before activating
+        const conflict = { left: 'right', right: 'left', long: 'short', short: 'long' }[value];
+        if (conflict) {
+          document.querySelectorAll(`#miss-dir-pills .he-pill--multi[data-value="${conflict}"]`)
+                  .forEach(p => p.classList.remove('is-active'));
         }
-        const newVal = getMissDirValue();
-        const missInput = document.getElementById('approach-miss-input');
-        if (missInput) missInput.value = newVal;
-        handleApproachMissChange(newVal);
-
-      } else if (group === 'lie-type') {
-        // Fully multi-select: toggle on/off freely
-        pill.classList.toggle('is-active');
-        const lieInput = document.getElementById('lie-type-input');
-        if (lieInput) lieInput.value = getLieTypeValue();
+        pill.classList.add('is-active');
+      }
+      const newVal = getMissDirValue();
+      const missInput = document.getElementById('approach-miss-input');
+      if (missInput) missInput.value = newVal;
+      handleApproachMissChange(newVal);
+      // Reset miss-label error colour if a direction is now selected
+      if (newVal) {
+        const lbl = document.querySelector('#miss-dir-pills')
+                             ?.closest('.he-field')?.querySelector('.he-label');
+        if (lbl) lbl.style.color = '';
       }
 
-      if (navigator.vibrate) navigator.vibrate(10);
-    });
+    } else if (group === 'lie-type') {
+      // Fully multi-select: toggle freely
+      pill.classList.toggle('is-active');
+      const lieInput = document.getElementById('lie-type-input');
+      if (lieInput) lieInput.value = getLieTypeValue();
+    }
+
+    if (navigator.vibrate) navigator.vibrate(10);
   });
 
 
   // ── Radio pill tap-button groups (all non-multi pills) ────────────────────
   // Each .he-pill carries data-field and data-value.
-  // Other fields behave as radio buttons (tap again = stays selected).
+  // Tap again = stays selected (radio behaviour).
   document.querySelectorAll('.he-pill:not(.he-pill--multi)').forEach(pill => {
     pill.addEventListener('click', () => {
       const field  = pill.dataset.field;
       if (!field) return; // handled separately (e.g. tee-shot SVG penalty btn)
       const value  = pill.dataset.value;
-      const target = pill.dataset.target; // optional explicit hidden input id
+      const target = pill.dataset.target;
 
       const group = pill.closest('.he-pills');
 
@@ -85,18 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const input = document.getElementById(inputId)
                  || document.querySelector(`input[name="${field}"]`);
       if (input) input.value = value;
-
-      // Bucket tap clears the paired exact input (bucket wins until exact overrides)
-      const exactMap = {
-        first_putt_distance:  'first-putt-exact',
-        approach_dist_bucket: 'approach-dist-exact',
-        second_shot_bucket:   'second-shot-exact',
-        scramble_distance:    'scramble-dist-exact',
-      };
-      if (exactMap[field]) {
-        const exactEl = document.getElementById(exactMap[field]);
-        if (exactEl) exactEl.value = '';
-      }
 
       if (navigator.vibrate) navigator.vibrate(10);
     });
@@ -143,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // ── On-load: apply initial conditional state from server-rendered values ────
-  // Par-based visibility (tee shot, second shot) — par is fixed from course_par
   const parInput = document.getElementById('par-input');
   const initPar  = parInput ? parseInt(parInput.value) : 4;
 
@@ -163,48 +162,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
-  // ── Exact number inputs override bucket selections ─────────────────────────
-  function bindExactInput(exactId, pillsContainerId, hiddenInputId) {
+  // ── Exact number inputs → hidden inputs ───────────────────────────────────
+  // Pills are removed; exact inputs are now the sole input method for distances.
+  function bindExactInput(exactId, hiddenInputId) {
     const exactEl  = document.getElementById(exactId);
     const hiddenEl = document.getElementById(hiddenInputId);
-    const pillsEl  = document.getElementById(pillsContainerId);
     if (!exactEl || !hiddenEl) return;
 
+    // Sync on load (in case the field has a pre-filled value)
+    if (exactEl.value.trim() !== '') hiddenEl.value = exactEl.value.trim();
+
     exactEl.addEventListener('input', () => {
-      const val = exactEl.value.trim();
-      if (val !== '') {
-        // Deactivate all pills in the group
-        if (pillsEl) {
-          pillsEl.querySelectorAll('.he-pill').forEach(b => b.classList.remove('is-active'));
-        }
-        hiddenEl.value = val;
-      } else {
-        hiddenEl.value = '';
-      }
+      hiddenEl.value = exactEl.value.trim();
     });
   }
 
-  bindExactInput('first-putt-exact',   'first-putt-pills',   'first-putt-input');
-  bindExactInput('approach-dist-exact', 'approach-dist-pills', 'approach-distance-input');
-  bindExactInput('second-shot-exact',   'second-shot-pills',   'second-shot-distance-input');
+  bindExactInput('approach-dist-exact',  'approach-distance-input');
+  bindExactInput('second-shot-exact',    'second-shot-distance-input');
+  bindExactInput('first-putt-exact',     'first-putt-input');
 
-  // Scramble exact — stores integer yardage string
-  (function bindExactScramble() {
+  // Scramble — store as integer string
+  (function bindScrambleExact() {
     const exactEl  = document.getElementById('scramble-dist-exact');
     const hiddenEl = document.getElementById('scramble-distance-input');
-    const pillsEl  = document.getElementById('scramble-pills');
     if (!exactEl || !hiddenEl) return;
 
     exactEl.addEventListener('input', () => {
       const val = parseInt(exactEl.value);
-      if (!isNaN(val) && exactEl.value.trim() !== '') {
-        if (pillsEl) {
-          pillsEl.querySelectorAll('.he-pill').forEach(b => b.classList.remove('is-active'));
-        }
-        hiddenEl.value = String(val);
-      } else {
-        hiddenEl.value = '';
-      }
+      hiddenEl.value = (!isNaN(val) && exactEl.value.trim() !== '') ? String(val) : '';
     });
   })();
 
@@ -240,32 +225,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Clear helpers ──────────────────────────────────────────────────────────
   function clearScrambleInputs() {
-    const distInput  = document.getElementById('scramble-distance-input');
-    const exactEl    = document.getElementById('scramble-dist-exact');
-    const pillsEl    = document.getElementById('scramble-pills');
+    const distInput = document.getElementById('scramble-distance-input');
+    const exactEl   = document.getElementById('scramble-dist-exact');
     if (distInput) distInput.value = '';
     if (exactEl)   exactEl.value = '';
-    if (pillsEl)   pillsEl.querySelectorAll('.he-pill').forEach(b => b.classList.remove('is-active'));
-  }
-
-
-
-  // ── Form submit: require at least one miss direction when GIR = No ─────────
-  const holeForm = document.getElementById('hole-form');
-  if (holeForm) {
-    holeForm.addEventListener('submit', e => {
-      const mr = document.getElementById('miss-reveal');
-      const mi = document.getElementById('approach-miss-input');
-      if (mr && mr.classList.contains('is-visible') && mi && !mi.value) {
-        e.preventDefault();
-        const label = document.querySelector('#miss-dir-pills')
-                              ?.closest('.he-field')?.querySelector('.he-label');
-        if (label) {
-          label.style.color = 'var(--he-red)';
-          label.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-    });
   }
 
 
@@ -293,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('score-down')?.addEventListener('click', update);
     document.getElementById('score-up')?.addEventListener('click',   update);
-    update(); // set label on page load
+    update();
   })();
 
 
@@ -347,8 +310,115 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Restore from server-rendered existing value
     if (input.value) select(input.value);
   })();
+
+
+  // ── Arithmetic validation ─────────────────────────────────────────────────
+  // Derives impossible/unusual combinations from first principles.
+  // Does NOT block submission — shows a confirmation modal instead.
+
+  function getHoleIssues() {
+    const par   = parseInt(document.getElementById('par-input')?.value)   || 4;
+    const score = parseInt(document.getElementById('score-input')?.value) || par;
+    const putts = parseInt(document.getElementById('putts-input')?.value) || 0;
+    // GIR = Yes when gir-yes pill is active; default to true for first render
+    const girYesEl = document.getElementById('gir-yes');
+    const girNoEl  = document.getElementById('gir-no');
+    let gir = true; // default: assume GIR unless No is active
+    if (girNoEl?.classList.contains('is-active'))  gir = false;
+    if (girYesEl?.classList.contains('is-active')) gir = true;
+
+    const issues = [];
+
+    // Putts ≥ score: need at least 1 non-putt stroke (the tee shot)
+    if (putts >= score) {
+      issues.push(
+        `${putts} putt${putts !== 1 ? 's' : ''} with a score of ${score} — ` +
+        `you need at least 1 non-putt stroke`
+      );
+    }
+
+    // GIR = Yes but shots-to-green exceeds par − 2
+    // GIR requires reaching the green in at most (par − 2) shots.
+    if (gir) {
+      const shotsToGreen = score - putts;
+      const maxForGIR    = par - 2;   // par3→1, par4→2, par5→3
+      if (shotsToGreen > maxForGIR) {
+        issues.push(
+          `GIR marked Yes, but ${shotsToGreen} shot${shotsToGreen !== 1 ? 's' : ''} to the green — ` +
+          `a par ${par} allows at most ${maxForGIR} for GIR`
+        );
+      }
+    }
+
+    // Score = 1 (hole in one): valid but always confirm
+    if (score === 1) {
+      issues.push(`Score of 1 on a par ${par} — confirming this as a hole in one`);
+    }
+
+    return issues;
+  }
+
+  function showValidationModal(issues) {
+    const overlay  = document.getElementById('he-validation-overlay');
+    const listEl   = document.getElementById('he-modal-issues');
+    const parEl    = document.getElementById('he-modal-par');
+    if (!overlay || !listEl) return;
+
+    const par = parseInt(document.getElementById('par-input')?.value) || 4;
+    if (parEl) parEl.textContent = `Par ${par} · your stats look unusual:`;
+    listEl.innerHTML = issues.map(i => `<li>${i}</li>`).join('');
+    overlay.style.display = 'flex';
+  }
+
+  function hideValidationModal() {
+    const overlay = document.getElementById('he-validation-overlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  // Modal buttons
+  document.getElementById('he-modal-fix')?.addEventListener('click', hideValidationModal);
+
+  document.getElementById('he-modal-confirm')?.addEventListener('click', () => {
+    hideValidationModal();
+    validationOverride = true;
+    document.getElementById('hole-form')?.requestSubmit();
+  });
+
+
+  // ── Form submit: miss direction check + arithmetic validation ──────────────
+  let validationOverride = false;
+  const holeForm = document.getElementById('hole-form');
+
+  if (holeForm) {
+    holeForm.addEventListener('submit', e => {
+
+      // 1. Require at least one miss direction when GIR = No
+      const mr = document.getElementById('miss-reveal');
+      const mi = document.getElementById('approach-miss-input');
+      if (mr && mr.classList.contains('is-visible') && mi && !mi.value) {
+        e.preventDefault();
+        const lbl = document.querySelector('#miss-dir-pills')
+                             ?.closest('.he-field')?.querySelector('.he-label');
+        if (lbl) {
+          lbl.style.color = 'var(--he-red)';
+          lbl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+
+      // 2. Arithmetic validation — skip if user already confirmed
+      if (!validationOverride) {
+        const issues = getHoleIssues();
+        if (issues.length > 0) {
+          e.preventDefault();
+          showValidationModal(issues);
+          return;
+        }
+      }
+      validationOverride = false; // reset after each submit attempt
+    });
+  }
 
 });

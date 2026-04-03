@@ -292,26 +292,96 @@
     border-color: var(--he-gold);
   }
 
-  /* ── Bottom-border exact input ───────────────────────────────────────────── */
+  /* ── Number distance inputs (primary input, no bucket pills) ─────────────── */
   .he-exact {
     display: block;
-    width: 100%;
-    margin-top: 10px;
-    padding: 6px 0;
+    width: 140px;
+    margin: 0 auto;
+    padding: 8px 12px;
     background: transparent;
     border: none;
-    border-bottom: 1.5px solid var(--he-border);
+    border-bottom: 2px solid var(--he-border);
     color: var(--he-green);
     font-family: 'Inter', system-ui, sans-serif;
-    font-size: .9rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
     box-sizing: border-box;
     -webkit-appearance: none;
     appearance: none;
   }
-  .he-exact::placeholder { color: #bbb; }
+  .he-exact::placeholder { color: #ccc; font-weight: 400; font-size: 1rem; }
   .he-exact:focus {
     outline: none;
     border-bottom-color: var(--he-gold);
+  }
+
+  /* ── Validation modal ────────────────────────────────────────────────────── */
+  .he-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 400;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .he-modal-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px 20px 20px;
+    max-width: 320px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  }
+  .he-modal-title {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 700;
+    font-size: .95rem;
+    color: var(--he-green);
+    margin: 0 0 6px;
+  }
+  .he-modal-par {
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--he-muted);
+    margin: 0 0 14px;
+  }
+  .he-modal-issues {
+    margin: 0 0 20px;
+    padding-left: 1.1em;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: .85rem;
+    color: #444;
+    line-height: 1.55;
+  }
+  .he-modal-actions {
+    display: flex;
+    gap: 10px;
+  }
+  .he-modal-btn {
+    flex: 1;
+    height: 44px;
+    border-radius: 999px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: .875rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .he-modal-btn--ghost {
+    background: transparent;
+    border-color: var(--he-border);
+    color: var(--he-muted);
+  }
+  .he-modal-btn--gold {
+    background: var(--he-green);
+    border-color: var(--he-green);
+    color: var(--he-gold);
   }
 
   /* ── Progressive disclosure ──────────────────────────────────────────────── */
@@ -550,16 +620,8 @@
     <!-- 3. Approach distance (always visible) ────────────────────────── -->
     <div class="he-field">
       <label class="he-label">Approach distance (yds)</label>
-      <div class="he-pills he-pills--wrap" id="approach-dist-pills">
-        {% for val, label in [(75,'50–100'), (112,'100–125'), (137,'125–150'), (162,'150–175'), (187,'175–200'), (212,'200–225'), (237,'225–250'), (999,'250+')] %}
-        <button type="button"
-                class="he-pill{% if existing and existing.approach_distance == val %} is-active{% endif %}"
-                data-field="approach_dist_bucket" data-value="{{ val }}"
-                data-target="approach-distance-input">{{ label }}</button>
-        {% endfor %}
-      </div>
       <input type="number" id="approach-dist-exact" class="he-exact"
-             placeholder="or exact yds…" min="1" max="600"
+             placeholder="yds" min="1" max="600"
              value="{{ existing.approach_distance if existing and existing.approach_distance else '' }}">
       <input type="hidden" name="approach_distance" id="approach-distance-input"
              value="{{ existing.approach_distance or '' }}">
@@ -569,16 +631,8 @@
     <div class="he-field he-reveal{% if init_par == 5 %} is-visible{% endif %}" id="second-shot-reveal">
       <div class="he-reveal-inner">
         <label class="he-label">2nd shot distance (yds)</label>
-        <div class="he-pills he-pills--wrap" id="second-shot-pills">
-          {% for val, label in [(100,'&lt;100'), (125,'100–125'), (150,'125–150'), (175,'150–175'), (200,'175–200'), (225,'200–225'), (250,'225–250'), (999,'250+')] %}
-          <button type="button"
-                  class="he-pill{% if existing and existing.second_shot_distance == val %} is-active{% endif %}"
-                  data-field="second_shot_bucket" data-value="{{ val }}"
-                  data-target="second-shot-distance-input">{{ label }}</button>
-          {% endfor %}
-        </div>
         <input type="number" id="second-shot-exact" class="he-exact"
-               placeholder="or exact yds…" min="1" max="600"
+               placeholder="yds" min="1" max="600"
                value="{{ existing.second_shot_distance if existing and existing.second_shot_distance else '' }}">
         <input type="hidden" name="second_shot_distance" id="second-shot-distance-input"
                value="{{ existing.second_shot_distance or '' }}">
@@ -633,15 +687,9 @@
           <div class="he-reveal-inner">
             <div class="he-field">
               <label class="he-label">Short game distance (yds)</label>
-              <div class="he-pills he-pills--wrap" id="scramble-pills">
-                {% for option, label in [('fringe','Fringe'), ('0_10','0–10'), ('10_20','10–20'), ('20_40','20–40'), ('40_plus','40+')] %}
-                <button type="button"
-                        class="he-pill{% if existing and existing.scramble_distance == option %} is-active{% endif %}"
-                        data-field="scramble_distance" data-value="{{ option }}">{{ label }}</button>
-                {% endfor %}
-              </div>
               <input type="number" id="scramble-dist-exact" class="he-exact"
-                     placeholder="or exact yds…" min="0" value="">
+                     placeholder="yds" min="0"
+                     value="{{ existing.scramble_distance if existing and existing.scramble_distance and existing.scramble_distance.isdigit() else '' }}">
               <input type="hidden" name="scramble_distance" id="scramble-distance-input"
                      value="{{ existing.scramble_distance or '' }}">
             </div>
@@ -665,15 +713,8 @@
     <!-- 8. First putt distance ───────────────────────────────────────── -->
     <div class="he-field">
       <label class="he-label">First putt distance (ft)</label>
-      <div class="he-pills" id="first-putt-pills">
-        {% for dist in [3, 6, 10, 15, 20, 30, 40] %}
-        <button type="button"
-                class="he-pill{% if existing and existing.first_putt_distance == dist %} is-active{% endif %}"
-                data-field="first_putt_distance" data-value="{{ dist }}">{{ dist }}'</button>
-        {% endfor %}
-      </div>
       <input type="number" id="first-putt-exact" class="he-exact"
-             placeholder="or exact ft…" min="1" max="200"
+             placeholder="ft" min="1" max="200"
              value="{{ existing.first_putt_distance if existing and existing.first_putt_distance else '' }}">
       <input type="hidden" name="first_putt_distance" id="first-putt-input"
              value="{{ existing.first_putt_distance or '' }}">
@@ -691,6 +732,19 @@
     </div>
 
   </form>
+
+  <!-- ── Arithmetic validation modal ──────────────────────────────────── -->
+  <div id="he-validation-overlay" class="he-modal-overlay" style="display:none">
+    <div class="he-modal-box">
+      <p class="he-modal-title">Double-check your stats</p>
+      <p class="he-modal-par" id="he-modal-par"></p>
+      <ul class="he-modal-issues" id="he-modal-issues"></ul>
+      <div class="he-modal-actions">
+        <button type="button" id="he-modal-fix"     class="he-modal-btn he-modal-btn--ghost">Let me fix it</button>
+        <button type="button" id="he-modal-confirm" class="he-modal-btn he-modal-btn--gold">Yes, looks right</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ── Sticky next button ─────────────────────────────────────────── -->
   <div class="he-next-wrap">
