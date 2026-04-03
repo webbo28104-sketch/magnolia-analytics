@@ -244,6 +244,58 @@ def _weakest_sg_category(sg_data: dict) -> str:
     return min(categories, key=categories.get)
 
 
+def _build_historical_context(round_, prev_rounds: list) -> dict:
+    """
+    Assemble historical baseline data for the Claude narrative prompt.
+
+    prev_rounds: all completed rounds for this user ordered most-recent first,
+                 excluding the current round (already queried by the caller).
+
+    Returns a dict consumed by claude_service._build_narrative_prompt.
+    When round_count < 20 only the count is included — history is too thin
+    for averages to be meaningful.
+    """
+    round_count = len(prev_rounds) + 1   # include the current round
+    ctx = {'round_count': round_count}
+
+    if round_count < 20 or not prev_rounds:
+        return ctx
+
+    # Averages across all previous rounds that have complete data
+    scored = [r for r in prev_rounds if r.total_score is not None]
+
+    scores_vp = [v for v in (r.score_vs_par() for r in scored) if v is not None]
+    sg_totals  = [r.sg_total   for r in scored if r.sg_total   is not None]
+    putts_list = [r.total_putts for r in scored if r.total_putts is not None]
+    gir_rates  = [
+        r.gir_count / r.holes_played
+        for r in scored
+        if r.gir_count is not None and r.holes_played
+    ]
+
+    ctx['avg_score_vs_par'] = round(sum(scores_vp) / len(scores_vp), 1) if scores_vp else None
+    ctx['avg_sg_total']     = round(sum(sg_totals)  / len(sg_totals),  2) if sg_totals  else None
+    ctx['avg_putts']        = round(sum(putts_list) / len(putts_list), 1) if putts_list else None
+    ctx['avg_gir_pct']      = round(sum(gir_rates)  / len(gir_rates) * 100, 1) if gir_rates else None
+
+    # Recent form — last 5 rounds
+    recent = prev_rounds[:5]
+    ctx['recent_scores'] = [
+        {
+            'date':         r.date_played.strftime('%d %b %Y'),
+            'course':       r.course.name if r.course else 'Unknown',
+            'score_vs_par': r.score_vs_par(),
+            'sg_total':     r.sg_total,
+        }
+        for r in recent if r.total_score is not None
+    ]
+    ctx['recent_differentials'] = [
+        round(r.hc_differential, 1)
+        for r in recent
+        if r.hc_differential is not None
+    ]
+
+    return ctx
 
 
 # ---------------------------------------------------------------------------
@@ -332,22 +384,7 @@ def view_report(round_id):
     # ---- Calendar context ----
     calendar_ctx = get_calendar_context(round_.date_played)
 
-    # ---- Claude-generated text (lazy-generate on first view, cached after) ----
-    if not report.summary_text:
-        summary_text = generate_context_summary(round_, weather, calendar_ctx)
-        report.summary_text = summary_text
-    else:
-        summary_text = report.summary_text
-
-    if not report.narrative_text:
-        narrative = generate_narrative(round_, sg_data, weather, calendar_ctx)
-        report.narrative_text = narrative
-    else:
-        narrative = report.narrative_text
-
-    db.session.commit()
-
-    # ---- Personal best banner ----
+    # ---- Previous rounds (needed for both historical context and personal best) ----
     prev_rounds = (
         Round.query
         .filter(Round.user_id == current_user.id,
@@ -356,6 +393,22 @@ def view_report(round_id):
         .order_by(Round.date_played.desc())
         .all()
     )
+    historical_ctx = _build_historical_context(round_, prev_rounds)
+
+    # ---- Claude-generated text (lazy-generate on first view, cached after) ----
+    if not report.summary_text:
+        summary_text = generate_context_summary(round_, weather, calendar_ctx)
+        report.summary_text = summary_text
+    else:
+        summary_text = report.summary_text
+
+    if not report.narrative_text:
+        narrative = generate_narrative(round_, sg_data, historical_ctx)
+        report.narrative_text = narrative
+    else:
+        narrative = report.narrative_text
+
+    db.session.commit()
 
     # ---- Derived display values ----
     score_vs_par = round_.score_vs_par()

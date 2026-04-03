@@ -8,9 +8,9 @@ Two entry points:
     Creates/updates the Report record and generates html_content for email
     delivery. Uses a lightweight placeholder if no API key is set.
 
-  generate_narrative(round_, sg_data, weather, calendar_ctx)
+  generate_narrative(round_, sg_data, historical_ctx)
     Called lazily on first report page view (from reports.py).
-    Generates a 3-paragraph plain-text coaching narrative and caches it in
+    Generates a multi-paragraph plain-text coaching narrative and caches it in
     Report.narrative_text. On failure, writes a graceful fallback string so
     the page always renders cleanly.
 """
@@ -220,100 +220,179 @@ _NARRATIVE_FALLBACK = (
 )
 
 
-def _build_narrative_prompt(round_, sg_data: dict, weather, calendar_ctx: dict) -> str:
+def _build_narrative_prompt(round_, sg_data: dict, historical_ctx: dict) -> str:
     """
-    Build the prompt for the 3-paragraph narrative.
-    Passes all assembled stats so Claude can write specific, data-led coaching.
+    Build the comprehensive coaching narrative prompt.
+
+    historical_ctx keys:
+      round_count              — int, total completed rounds including this one
+      avg_score_vs_par         — float or None  (only if round_count >= 20)
+      avg_sg_total             — float or None
+      avg_putts                — float or None
+      avg_gir_pct              — float or None
+      recent_scores            — list of {date, course, score_vs_par, sg_total}
+      recent_differentials     — list of floats
     """
     holes = round_.holes.all()
     user = round_.golfer
     course_name = round_.course.name if round_.course else 'Unknown Course'
 
-    # Hole summary
+    # Hole-by-hole — include miss direction, lie type, and 2nd-shot distance
     hole_lines = []
     for h in holes:
         svp = h.score - h.par
-        label = {-2:'Eagle',-1:'Birdie',0:'Par',1:'Bogey',2:'Double',3:'Triple'}.get(svp, f'+{svp}')
+        label = {-2: 'Eagle', -1: 'Birdie', 0: 'Par', 1: 'Bogey',
+                 2: 'Double', 3: 'Triple'}.get(svp, f'+{svp}')
         hole_lines.append(
             f"  H{h.hole_number:02d} Par{h.par}: {h.score} ({label}) | "
-            f"Tee:{h.tee_shot or'–'} GIR:{'Y' if h.gir else'N'} "
-            f"Putts:{h.putts} FPD:{h.first_putt_distance or'?'}ft "
-            f"ApprDist:{h.approach_distance or'?'}yds Pen:{h.penalties}"
+            f"Tee:{h.tee_shot or '–'} GIR:{'Y' if h.gir else 'N'} "
+            f"Putts:{h.putts} FPD:{h.first_putt_distance or '?'}ft "
+            f"Appr:{h.approach_distance or '?'}yds "
+            f"Miss:{h.approach_miss or '–'} Lie:{h.lie_type or '–'} "
+            f"2nd:{h.second_shot_distance or '–'}yds Pen:{h.penalties}"
         )
 
-    # SG summary
-    sg_putting = sg_data.get('sg_putting', {})
-    sg_lines = (
-        f"  SG Off Tee:        {sg_data.get('sg_off_tee', 0):+.2f}\n"
-        f"  SG Approach:       {sg_data.get('sg_approach', 0):+.2f}\n"
-        f"  SG Around Green:   {sg_data.get('sg_atg', 0):+.2f}\n"
-        f"  SG Putting:        {sg_putting.get('total', 0):+.2f}"
-    )
+    # SG values — sg_putting is a dict with 'total' key
+    sg_putting   = sg_data.get('sg_putting', {})
+    sg_off_tee   = sg_data.get('sg_off_tee', 0) or 0
+    sg_approach  = sg_data.get('sg_approach', 0) or 0
+    sg_atg       = sg_data.get('sg_atg', 0) or 0
+    sg_put_total = (sg_putting.get('total', 0) if isinstance(sg_putting, dict) else sg_putting) or 0
+    sg_total     = sg_data.get('sg_total', 0) or 0
 
-    # Context
-    score_vs_par = round_.score_vs_par()
-    score_label = f'+{score_vs_par}' if score_vs_par and score_vs_par > 0 else str(score_vs_par or 'E')
-    fw_pct = round(round_.fairways_hit / round_.fairways_available * 100) if round_.fairways_available else 0
-    gir_pct = round(round_.gir_count / 18 * 100)
+    score_vs_par  = round_.score_vs_par()
+    score_label   = f'+{score_vs_par}' if score_vs_par and score_vs_par > 0 else str(score_vs_par or 'E')
+    fw_pct        = round(round_.fairways_hit / round_.fairways_available * 100) if round_.fairways_available else 0
+    holes_played  = round_.holes_played or len(holes)
+    gir_pct       = round(round_.gir_count / holes_played * 100) if holes_played else 0
 
-    weather_str = 'Not available'
-    if weather:
-        weather_str = (
-            f"{weather['condition']}, {weather['temp_c']}°C, "
-            f"wind {weather['wind_kph']} km/h, precip {weather['precip_mm']} mm"
-        )
+    round_count = historical_ctx.get('round_count', 1)
 
-    calendar_str = ' | '.join(
-        v for v in [
-            calendar_ctx.get('golf_event'),
-            calendar_ctx.get('bank_holiday'),
-            calendar_ctx.get('notable'),
-            calendar_ctx.get('season'),
-        ] if v
-    ) or 'No notable context'
+    # Historical baseline section — only included when >= 20 rounds
+    historical_section = ''
+    if round_count >= 20:
+        avg_svp   = historical_ctx.get('avg_score_vs_par')
+        avg_sg    = historical_ctx.get('avg_sg_total')
+        avg_putt  = historical_ctx.get('avg_putts')
+        avg_gir   = historical_ctx.get('avg_gir_pct')
+        rec_diffs = historical_ctx.get('recent_differentials', [])
+        rec_scores = historical_ctx.get('recent_scores', [])
 
-    return f"""You are the coaching analyst for Magnolia Analytics, a premium amateur golf tracking platform.
+        def _svp(v):
+            if v is None: return '?'
+            return f'+{v:.1f}' if v > 0 else f'{v:.1f}'
+
+        rec_lines = '\n'.join(
+            f"  {r['date']} — {r['course']}: {_svp(r.get('score_vs_par'))} par"
+            + (f", SG {r['sg_total']:+.2f}" if r.get('sg_total') is not None else '')
+            for r in rec_scores
+        ) or '  (none)'
+
+        historical_section = f"""
+HISTORICAL BASELINE  ({round_count} completed rounds)
+------------------------------------------------------
+Avg score vs par:        {_svp(avg_svp)}
+Avg SG total:            {f'{avg_sg:+.2f}' if avg_sg is not None else '—'}
+Avg putts per round:     {avg_putt if avg_putt is not None else '—'}
+Avg GIR rate:            {f'{avg_gir:.1f}%' if avg_gir is not None else '—'}
+Recent HC differentials: {', '.join(str(d) for d in rec_diffs) if rec_diffs else '—'}
+
+Last 5 rounds:
+{rec_lines}
+"""
+
+    # Sample-size conditional instructions
+    if round_count < 20:
+        sample_guidance = f"""SAMPLE SIZE: {round_count} round(s) recorded — history is limited.
+- Do not draw any conclusions about handicap trend; the sample is too small
+- Do not compare score to handicap index in a meaningful way; omit it entirely
+- Focus entirely on shot patterns, directional tendencies, and immediately actionable observations
+- Acknowledge once, briefly, that observations are early-stage — do not repeat this caveat"""
+    else:
+        sample_guidance = f"""SAMPLE SIZE: {round_count} rounds recorded — full historical analysis is valid.
+- Compare key stats from this round to the player's historical averages in the section above
+- State whether this round is above, below, or in line with their established baseline
+- Handicap trend (improving / plateauing / declining) is valid to mention, based on recent differentials
+- Score vs handicap is one data point only — do not lead with it; SG and shot patterns take priority"""
+
+    return f"""You are the coaching analyst for Magnolia Analytics, a performance tracking platform for amateur golfers.
 
 ROUND SUMMARY
 -------------
-Golfer:  {user.full_name}  (Handicap {user.handicap_index})
-Course:  {course_name}
-Date:    {round_.date_played.strftime('%d %B %Y')}
-Score:   {round_.total_score} ({score_label} par)
-Putts:   {round_.total_putts}
-FIR:     {round_.fairways_hit}/{round_.fairways_available} ({fw_pct}%)
-GIR:     {round_.gir_count}/18 ({gir_pct}%)
+Golfer:    {user.full_name} (HC Index {user.handicap_index})
+Course:    {course_name}
+Date:      {round_.date_played.strftime('%d %B %Y')}
+Score:     {round_.total_score} ({score_label} vs par)
+Putts:     {round_.total_putts}
+FIR:       {round_.fairways_hit}/{round_.fairways_available} ({fw_pct}%)
+GIR:       {round_.gir_count}/{holes_played} ({gir_pct}%)
 Penalties: {round_.penalties}
 
-STROKES GAINED (estimated)
---------------------------
-{sg_lines}
+STROKES GAINED  (0 = scratch handicap baseline)
+------------------------------------------------
+SG Off Tee:      {sg_off_tee:+.2f}
+SG Approach:     {sg_approach:+.2f}
+SG Around Green: {sg_atg:+.2f}
+SG Putting:      {sg_put_total:+.2f}
+SG Total:        {sg_total:+.2f}
 
-HOLE-BY-HOLE
-------------
+HOLE-BY-HOLE DATA
+-----------------
+Key: Tee=tee shot | GIR=green in regulation | FPD=first putt distance |
+Appr=approach distance | Miss=approach miss direction(s) | Lie=lie type at miss |
+2nd=2nd shot distance (par 5s) | Pen=penalty strokes
 {chr(10).join(hole_lines)}
+{historical_section}
+{sample_guidance}
 
-CONDITIONS
-----------
-Weather:  {weather_str}
-Calendar: {calendar_str}
+ANALYTICAL INSTRUCTIONS — follow all sections:
 
-TASK
-----
-Write a coaching narrative of exactly 3 paragraphs (plain text, no markdown, no HTML tags).
+1. SG ANALYSIS
+- Lead with whichever SG category had the largest impact this round (most positive or most negative)
+- For each SG figure state whether it is above, at, or below scratch (0 = scratch level)
+- If any category lacks sufficient data, acknowledge the gap — do not fabricate insight
+- Back up every SG claim with specific hole evidence from the data above
 
-Paragraph 1 — What worked: Be specific about the strongest parts of this round. Reference actual hole numbers and shot types. Note any standout stats.
-Paragraph 2 — What cost shots: Identify the specific patterns that hurt the score most. Be honest and direct. Reference hole numbers.
-Paragraph 3 — One clear priority: Name the single highest-leverage area to work on before the next round and give one concrete practice suggestion.
+2. MISS PATTERN ANALYSIS
+- Systematically examine the Miss and Lie columns for directional bias
+- Cross-reference miss direction with lie type: the same miss repeatedly landing in the same lie type is a named pattern
+- Two or more identical misses = a recurring pattern worth highlighting; a single miss = note it, do not over-weight it
+- Check whether miss tendencies differ by par type (par 3 vs par 4 vs par 5) and name it if they do
 
-Rules:
-- Plain text only. No bullet points, no headers, no markdown, no HTML.
-- Reference specific hole numbers.
-- Never be generic. Every sentence must be grounded in the actual data above.
-- Tone: a knowledgeable private coach who respects the golfer's intelligence.
-- Total length: 150–220 words across the 3 paragraphs.
+3. PAR 5 PERFORMANCE (only if the round contains par 5s)
+- Assess whether par 5s were scoring opportunities or weaknesses based on actual scores
+- Use the 2nd column where populated to infer lay-up vs attacking strategy
+- Cross-reference GIR and score: reaching the green but not making birdie is a missed opportunity
 
-Output only the 3 paragraphs, separated by a blank line. Begin immediately."""
+4. CONSISTENCY AND ROUND FLOW
+- Note whether bogeys and birdies were clustered or spread across the round
+- For 18-hole rounds: comment on front vs back 9 split if they differ materially
+- Identify any blow-up holes (double bogey or worse) and trace their cause from the hole data
+- Assess variance: controlled scoring (pars and single bogeys) vs boom/bust
+
+5. PRACTICE RECOMMENDATIONS (end of narrative, exactly 2–3)
+- Rank by impact: biggest SG drain or most frequent miss pattern goes first
+- Be specific: cite hole numbers, shot counts, or distance bands from the data
+- If the data is insufficient for a specific recommendation, say so; do not substitute generic advice
+- Write as a coach speaking directly to the player, not as a data summary
+
+TONE RULES
+- Knowledgeable, direct, honest — encouraging only when the data genuinely warrants it
+- No filler praise ("great round", "well done on your GIR") unless this round is objectively strong by the numbers
+- Never repeat the same observation across paragraphs
+- Vary sentence structure; avoid chains of "your X was Y" constructions
+- Write as if you watched the round, not as if you scanned a scorecard
+
+OUTPUT
+Write 4–5 paragraphs of plain text, separated by blank lines. No markdown, no HTML, no bullet points, no section headers.
+
+Para 1 — Round character and SG overview: what defined this round and how did each SG category perform vs scratch baseline?
+Para 2 — Shot pattern and miss analysis: directional tendencies, lie context, any par-type differences
+Para 3 — Par 5 performance (if applicable) and round consistency / flow
+Para 4 — Historical context: {'compare to established baseline and comment on trend' if round_count >= 20 else 'one sentence acknowledging early-stage observations; do not pad'}
+Para 5 — 2–3 specific, ranked practice recommendations
+
+Begin immediately."""
 
 
 def generate_context_summary(round_, weather, calendar_ctx: dict) -> str:
@@ -402,12 +481,15 @@ Output only the sentences. Begin immediately."""
         return ''   # empty string → card hidden; don't expose error in UI
 
 
-def generate_narrative(round_, sg_data: dict, weather, calendar_ctx: dict) -> str:
+def generate_narrative(round_, sg_data: dict, historical_ctx: dict) -> str:
     """
-    Generate and cache a 3-paragraph coaching narrative for the round.
+    Generate and cache a coaching narrative for the round.
 
     Called on first report page view. Result is saved to Report.narrative_text
     so subsequent views are instant. Caller must commit the DB session.
+
+    historical_ctx: assembled by reports._build_historical_context — contains
+    round count, historical averages, and recent form (when >= 20 rounds exist).
 
     Returns the narrative string (either from Claude or the fallback).
     """
@@ -421,10 +503,10 @@ def generate_narrative(round_, sg_data: dict, weather, calendar_ctx: dict) -> st
         client = anthropic.Anthropic(api_key=api_key)
         msg = client.messages.create(
             model=_MODEL,
-            max_tokens=512,
+            max_tokens=900,
             messages=[{
                 'role': 'user',
-                'content': _build_narrative_prompt(round_, sg_data, weather, calendar_ctx)
+                'content': _build_narrative_prompt(round_, sg_data, historical_ctx)
             }]
         )
         narrative = msg.content[0].text.strip()
