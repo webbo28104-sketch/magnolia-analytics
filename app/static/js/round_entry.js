@@ -22,7 +22,7 @@ function getLieTypeValue() {
               .map(p => p.dataset.value).join(',');
 }
 
-document.addEventListener('click', e => {
+document.addEventListener('click', function(e) {
   const pill = e.target.closest('.he-pill--multi');
   if (!pill) return;
 
