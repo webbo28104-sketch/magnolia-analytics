@@ -612,7 +612,7 @@ body::before {
     <div class="sum-card">
       <div class="sum-card-lbl">
         <span class="mg-tip">Greens in Reg (GIR)<span class="mg-tip-icon">ⓘ</span>
-          <span class="mg-pop">Green In Regulation — reaching the putting surface in par minus 2 strokes. A par-4 means on the green in 2 or fewer shots. Tour average is ~65%; scratch golfer ~60–65%.</span>
+          <span class="mg-pop">Green In Regulation — reaching the putting surface in par minus 2 strokes. A par-4 means on the green in 2 or fewer shots. Scratch average is ~60–65%.</span>
         </span>
       </div>
       <div class="sum-card-val">{{ round.gir_count if round.gir_count is not none else '—' }}/{{ _gir_denom }}</div>
@@ -791,7 +791,7 @@ body::before {
         {% elif disp_left > disp_right and disp_left > disp_fw %}
           <strong>Left-biased driving</strong> — {{ disp_left }} of {{ round.fairways_available }} tee shots missed left.
         {% elif disp_fw >= round.fairways_available * 0.5 %}
-          <strong>Solid driving accuracy</strong> — {{ fw_pct }}% fairways hit (PGA Tour average ~60%).
+          <strong>Solid driving accuracy</strong> — {{ fw_pct }}% fairways hit (scratch average ~60%).
         {% else %}
           Driving accuracy at {{ fw_pct }}%. Track across multiple rounds to identify shape tendencies.
         {% endif %}
@@ -893,7 +893,7 @@ body::before {
       <div class="stat-row" style="margin-top:12px;">
         <span class="sk">
           <span class="mg-tip">SG Approach<span class="mg-tip-icon">ⓘ</span>
-            <span class="mg-pop">Strokes Gained: Approach — measures how many strokes your approach shots gain or lose compared to the PGA Tour average, based on distance to the hole.</span>
+            <span class="mg-pop">Strokes Gained: Approach — measures how many strokes your approach shots gain or lose compared to the scratch average, based on distance to the hole.</span>
           </span>
         </span>
         <span class="sv {{ 'c-grn' if (sg_app_ok and sg_data.sg_approach >= 0) else 'c-red' if sg_app_ok }}">{{ sgfmt(sg_data.sg_approach) if sg_app_ok else '—' }}</span>
@@ -931,7 +931,7 @@ body::before {
       <div class="stat-row">
         <span class="sk">
           <span class="mg-tip">SG Around Green<span class="mg-tip-icon">ⓘ</span>
-            <span class="mg-pop">Strokes Gained: Around the Green — measures performance on shots within ~30 yards of the green (chips, pitches, bunker shots) versus the PGA Tour average.</span>
+            <span class="mg-pop">Strokes Gained: Around the Green — measures performance on shots within ~30 yards of the green (chips, pitches, bunker shots) versus the scratch average.</span>
           </span>
         </span>
         <span class="sv {{ 'c-grn' if (sg_atg_ok and sg_data.sg_atg >= 0) else 'c-red' if sg_atg_ok }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</span>
@@ -939,7 +939,7 @@ body::before {
       {% if scramble.save_pct is not none %}
       <div class="insight">
         {% if scramble.save_pct >= 50 %}
-        <strong>Good scrambling</strong> — {{ scramble.save_pct }}% conversion rate (PGA Tour average ~55%).
+        <strong>Good scrambling</strong> — {{ scramble.save_pct }}% conversion rate (scratch average ~55%).
         {% else %}
         Scramble rate at {{ scramble.save_pct }}%. With {{ scramble.attempts }} opportunities, converting one more per round would be worth roughly one stroke.
         {% endif %}
@@ -992,7 +992,7 @@ body::before {
       <div class="stat-row">
         <span class="sk">
           <span class="mg-tip">SG Putting<span class="mg-tip-icon">ⓘ</span>
-            <span class="mg-pop">Strokes Gained: Putting — how many strokes your putting gained or lost versus the PGA Tour average, calculated from first-putt distances. Positive = fewer putts than tour average.</span>
+            <span class="mg-pop">Strokes Gained: Putting — how many strokes your putting gained or lost versus the scratch average, calculated from first-putt distances. Positive = fewer putts than scratch average.</span>
           </span>
         </span>
         <span class="sv {{ 'c-grn' if (sg_putt_ok and sg_data.sg_putting.total >= 0) else 'c-red' if sg_putt_ok }}">{{ sgfmt(sg_data.sg_putting.total) if sg_putt_ok else '—' }}</span>
@@ -1048,9 +1048,9 @@ body::before {
   <div class="sec-divider"></div>
   <div class="sec-label fu d7">
     <span class="mg-tip">Strokes Gained<span class="mg-tip-icon">ⓘ</span>
-      <span class="mg-pop">Strokes Gained (SG) measures performance in each area relative to the PGA Tour average, following Mark Broadie's methodology. Positive = gained strokes vs tour; negative = lost strokes. Values are estimates derived from your shot data.</span>
+      <span class="mg-pop">Strokes Gained (SG) measures performance in each area relative to a scratch handicap baseline, following Mark Broadie's methodology. Positive = gained strokes vs scratch; negative = lost strokes. Values are estimates derived from your shot data.</span>
     </span>
-    &nbsp;vs PGA Tour Average
+    &nbsp;vs Scratch Average
   </div>
   {# Rank-based colour: only rank categories with sufficient data #}
   {% set _sg_valid = [] %}
@@ -1070,7 +1070,7 @@ body::before {
   {% macro hcplabel(sg, ok=True) -%}
     {%- if ok -%}
       {%- if sg > 0 -%}
-        <div class="sg-hcp">Tour level</div>
+        <div class="sg-hcp">Scratch level</div>
       {%- else -%}
         {%- set hcp = ((sg + 1) * -6 + 6) | round | int -%}
         {%- if hcp < 0 -%}
@@ -1086,7 +1086,7 @@ body::before {
     <div class="sg-card">
       <div class="sg-cat">
         <span class="mg-tip">SG: Off the Tee<span class="mg-tip-icon">ⓘ</span>
-          <span class="mg-pop">Measures tee-shot performance on par-4s and par-5s. Based on fairway/rough/penalty outcome vs. the PGA Tour average, using Broadie's SG model.</span>
+          <span class="mg-pop">Measures tee-shot performance on par-4s and par-5s. Based on fairway/rough/penalty outcome vs. the scratch average, using Broadie's SG model.</span>
         </span>
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_off_tee, sg_ott_ok) }}">{{ sgfmt(sg_data.sg_off_tee) if sg_ott_ok else '—' }}</div>
@@ -1116,7 +1116,7 @@ body::before {
     <div class="sg-card">
       <div class="sg-cat">
         <span class="mg-tip">SG: Putting<span class="mg-tip-icon">ⓘ</span>
-          <span class="mg-pop">Measures putting performance from first-putt distances versus expected putts to hole out from those distances, compared to the PGA Tour average.</span>
+          <span class="mg-pop">Measures putting performance from first-putt distances versus expected putts to hole out from those distances, compared to the scratch average.</span>
         </span>
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_putting.total, sg_putt_ok) }}">{{ sgfmt(sg_data.sg_putting.total) if sg_putt_ok else '—' }}</div>
@@ -1244,7 +1244,7 @@ body::before {
   <!-- FOOTER -->
   <div class="rpt-footer fu d9">
     <div class="ft-brand">Magnolia Analytics</div>
-    <div class="ft-meta">Round Report · {{ round.date_played.strftime('%d %B %Y') }} · {{ course_name }} · v2.0</div>
+    <div class="ft-meta">Round Report · {{ round.date_played.strftime('%d %B %Y') }} · {{ course_name }}</div>
   </div>
 
   </div>{# /pro-blur #}

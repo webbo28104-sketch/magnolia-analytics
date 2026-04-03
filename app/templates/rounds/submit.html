@@ -41,8 +41,8 @@
       </table>
     </div>
 
-    <form method="POST" action="{{ url_for('rounds.submit_round', round_id=round.id) }}">
-      <button type="submit" class="btn btn--gold btn--full">Submit & Generate Report →</button>
+    <form method="POST" action="{{ url_for('rounds.submit_round', round_id=round.id) }}" id="submit-form">
+      <button type="submit" class="btn btn--gold btn--full">Submit &amp; Generate Report →</button>
     </form>
 
     <a href="{{ url_for('rounds.enter_hole', round_id=round.id, hole_number=18) }}"
@@ -50,4 +50,24 @@
 
   </div>
 </section>
+
+<!-- Loading overlay — shown while report is being generated server-side -->
+<div id="report-loading" style="display:none;position:fixed;inset:0;z-index:9999;background:#1a2e1a;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <div style="
+    width:52px;height:52px;
+    border:3px solid rgba(201,168,76,0.2);
+    border-top-color:#c9a84c;
+    border-radius:50%;
+    animation:rpt-spin .8s linear infinite;
+  "></div>
+  <p style="color:#c9a84c;font-family:'Inter',system-ui,sans-serif;font-size:1.05rem;font-weight:600;letter-spacing:.04em;margin:0;">Generating your report…</p>
+  <p style="color:rgba(245,240,232,0.45);font-family:'Inter',system-ui,sans-serif;font-size:.82rem;margin:0;">This usually takes a few seconds</p>
+</div>
+<style>@keyframes rpt-spin { to { transform: rotate(360deg); } }</style>
+<script>
+document.getElementById('submit-form').addEventListener('submit', function() {
+  var overlay = document.getElementById('report-loading');
+  overlay.style.display = 'flex';
+});
+</script>
 {% endblock %}

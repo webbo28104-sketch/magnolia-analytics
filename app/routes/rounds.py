@@ -302,7 +302,7 @@ def submit_round(round_id):
         except Exception:
             current_app.logger.warning('[submit_round] PB email failed for round %s', round_.id)
 
-        return redirect(url_for('dashboard.index'))
+        return redirect(url_for('reports.view_report', round_id=round_.id))
 
     holes = round_.holes.all()
     return render_template('rounds/submit.html', round=round_, holes=holes)
