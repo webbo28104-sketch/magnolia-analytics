@@ -258,6 +258,27 @@ def _build_historical_context(round_, prev_rounds: list) -> dict:
     round_count = len(prev_rounds) + 1   # include the current round
     ctx = {'round_count': round_count}
 
+    # Per-category SG averages and sparklines — computed regardless of round_count.
+    # Averages shown only when >= 5 previous rounds have data for that category.
+    # Sparkline shown only when total data points (prev + current) >= 5.
+    _sg_cat_defs = [
+        ('sg_off_tee',  round_.sg_off_tee),
+        ('sg_approach', round_.sg_approach),
+        ('sg_atg',      round_.sg_atg),
+        ('sg_putting',  round_.sg_putting),
+    ]
+    for cat, curr_val in _sg_cat_defs:
+        cat_vals = [getattr(r, cat) for r in prev_rounds if getattr(r, cat) is not None]
+        count = len(cat_vals)
+        ctx[f'avg_{cat}'] = round(sum(cat_vals) / count, 2) if count >= 5 else None
+        ctx[f'{cat}_count'] = count
+        # Sparkline: up to 4 most-recent previous rounds (reversed to oldest-first) + current
+        prev_with_data = [round(v, 2) for v in cat_vals[:4]]
+        spark = list(reversed(prev_with_data))
+        if curr_val is not None:
+            spark.append(round(curr_val, 2))
+        ctx[f'sparkline_{cat}'] = spark if len(spark) >= 5 else []
+
     if round_count < 20 or not prev_rounds:
         return ctx
 
@@ -467,6 +488,9 @@ def view_report(round_id):
         calendar_ctx = calendar_ctx,
         summary_text = summary_text,
         narrative    = narrative,
+
+        # Historical context (per-category SG averages + sparklines)
+        historical_ctx = historical_ctx,
 
         # Personal best
         pb_banner    = pb_banner,

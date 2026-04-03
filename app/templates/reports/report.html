@@ -181,6 +181,42 @@ body::before {
 .sg-bf.n { right:50%; }
 .sg-bn { font-family:'Inter',system-ui,sans-serif; font-size:13px; width:40px; text-align:right; flex-shrink:0; }
 .sg-bn.p { color:var(--green-soft); } .sg-bn.n { color:var(--red-soft); }
+/* SG: colour thresholds (±0.2) */
+.sg-positive { color:var(--green-soft); } .sg-neutral { color:var(--cream-dim); } .sg-negative { color:var(--red-soft); }
+/* SG: dual-bar chart */
+.sgb-track    { height:6px; background:rgba(245,240,232,0.07); border-radius:3px; position:relative; overflow:hidden; margin-bottom:3px; }
+.sgb-track-sm { height:3px; background:rgba(245,240,232,0.05); border-radius:2px; position:relative; overflow:hidden; }
+.sgb-zero     { position:absolute; left:50%; top:0; bottom:0; width:1px; background:rgba(245,240,232,0.18); }
+.sgb-bar      { position:absolute; top:0; height:100%; border-radius:2px; max-width:50%; }
+.sgb-pos      { left:50%;  background:var(--gold); }
+.sgb-neg      { right:50%; background:var(--red-soft); }
+.sgb-avg-pos  { left:50%;  background:rgba(126,207,158,0.45); }
+.sgb-avg-neg  { right:50%; background:rgba(232,160,144,0.35); }
+/* SG: sparkline */
+.sg-spark      { display:block; width:100%; height:28px; margin-top:4px; overflow:visible; }
+.sg-spark-zero { stroke:rgba(245,240,232,0.12); fill:none; }
+.sg-spark-line { stroke:rgba(201,168,76,0.45); fill:none; stroke-width:1.5; stroke-linejoin:round; stroke-linecap:round; }
+.sg-spark-dot  { fill:rgba(245,240,232,0.28); }
+.sg-spark-curr { fill:var(--gold); }
+/* SG: value display */
+.sga-vals   { display:flex; gap:10px; align-items:flex-start; justify-content:flex-end; }
+.sga-vb     { display:flex; flex-direction:column; align-items:flex-end; }
+.sga-vt     { font-size:8px; letter-spacing:.1em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:2px; }
+.sga-vn     { font-family:'Inter',system-ui,sans-serif; font-size:20px; font-weight:500; line-height:1; }
+.sga-vn-sm  { font-family:'Inter',system-ui,sans-serif; font-size:14px; font-weight:400; line-height:1; }
+.sga-nd     { font-size:8px; color:var(--cream-faint); font-style:italic; line-height:1.3; text-align:right; }
+/* SG: total summary bar */
+.sga-total      { display:flex; justify-content:space-between; align-items:center; padding:11px 14px; background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; margin-top:12px; }
+.sga-total-lbl  { font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:4px; }
+.sga-total-curr { font-family:'Inter',system-ui,sans-serif; font-size:22px; font-weight:500; line-height:1; }
+.sga-total-avg  { font-size:10px; color:var(--cream-faint); margin-top:3px; }
+.sg-baseline-note { font-size:9px; color:var(--cream-faint); line-height:1.5; margin-bottom:16px; opacity:.75; }
+/* SG: legend */
+.sg-legend      { display:flex; gap:14px; align-items:center; margin-bottom:12px; }
+.sg-legend-item { display:flex; align-items:center; gap:5px; }
+.sg-legend-lbl  { font-size:8px; letter-spacing:.1em; text-transform:uppercase; color:var(--cream-faint); }
+.sg-legend-bar  { height:6px; width:22px; border-radius:2px; background:var(--gold); }
+.sg-legend-bar-sm { height:3px; width:22px; border-radius:2px; background:rgba(126,207,158,0.45); }
 .pd-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:14px; }
 .pd-cell { background:rgba(245,240,232,0.04); border:1px solid var(--border); border-radius:3px; padding:8px 4px 6px; text-align:center; }
 .pd-rng { font-size:8px; letter-spacing:.06em; color:var(--cream-faint); margin-bottom:5px; }
@@ -1047,119 +1083,139 @@ body::before {
   <!-- STROKES GAINED -->
   <div class="sec-divider"></div>
   <div class="sec-label fu d7">
-    <span class="mg-tip">Strokes Gained<span class="mg-tip-icon">ⓘ</span>
+    <span class="mg-tip">Strokes Gained Analysis<span class="mg-tip-icon">ⓘ</span>
       <span class="mg-pop">Strokes Gained (SG) measures performance in each area relative to a scratch handicap baseline, following Mark Broadie's methodology. Positive = gained strokes vs scratch; negative = lost strokes. Values are estimates derived from your shot data.</span>
     </span>
-    &nbsp;vs Scratch Average
   </div>
-  {# Rank-based colour: only rank categories with sufficient data #}
-  {% set _sg_valid = [] %}
-  {% if sg_ott_ok  %}{% set _sg_valid = _sg_valid + [sg_data.sg_off_tee] %}{% endif %}
-  {% if sg_app_ok  %}{% set _sg_valid = _sg_valid + [sg_data.sg_approach] %}{% endif %}
-  {% if sg_atg_ok  %}{% set _sg_valid = _sg_valid + [sg_data.sg_atg] %}{% endif %}
-  {% if sg_putt_ok %}{% set _sg_valid = _sg_valid + [sg_data.sg_putting.total] %}{% endif %}
-  {% set _sg_sorted = _sg_valid | sort %}
-  {% macro rankclr(val, ok=True) -%}
-    {%- if not ok or not _sg_sorted -%}var(--cream-dim)
-    {%- elif val == _sg_sorted | last -%}var(--green-soft)
-    {%- elif val == _sg_sorted | first and _sg_sorted | length > 1 -%}var(--red-soft)
-    {%- else -%}#c9a84c
-    {%- endif -%}
-  {%- endmacro %}
+  <p class="sg-baseline-note fu d7">0 = scratch handicap level · Positive = gaining strokes on a scratch golfer · Negative = losing strokes</p>
 
-  {% macro hcplabel(sg, ok=True) -%}
-    {%- if ok -%}
-      {%- if sg > 0 -%}
-        <div class="sg-hcp">Scratch level</div>
-      {%- else -%}
-        {%- set hcp = ((sg + 1) * -6 + 6) | round | int -%}
-        {%- if hcp < 0 -%}
-          <div class="sg-hcp c-grn">Plays to +{{ hcp | abs }}</div>
-        {%- else -%}
-          <div class="sg-hcp">Plays to {{ hcp }} hcp</div>
-        {%- endif -%}
-      {%- endif -%}
-    {%- endif -%}
-  {%- endmacro %}
+  {# Colour class macro — thresholds ±0.2 #}
+  {% macro sgcol(val) %}{% if val > 0.2 %}sg-positive{% elif val < -0.2 %}sg-negative{% else %}sg-neutral{% endif %}{% endmacro %}
 
-  <div class="sg-cards fu d7">
-    <div class="sg-card">
-      <div class="sg-cat">
-        <span class="mg-tip">SG: Off the Tee<span class="mg-tip-icon">ⓘ</span>
-          <span class="mg-pop">Measures tee-shot performance on par-4s and par-5s. Based on fairway/rough/penalty outcome vs. the scratch average, using Broadie's SG model.</span>
-        </span>
-      </div>
-      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_off_tee, sg_ott_ok) }}">{{ sgfmt(sg_data.sg_off_tee) if sg_ott_ok else '—' }}</div>
-      <div class="sg-sub">{{ fw_pct }}% fairways</div>
-      {{ hcplabel(sg_data.sg_off_tee, sg_ott_ok) }}
-    </div>
-    <div class="sg-card">
-      <div class="sg-cat">
-        <span class="mg-tip">SG: Approach<span class="mg-tip-icon">ⓘ</span>
-          <span class="mg-pop">Measures approach shot performance. Based on GIR rate and approach distance versus expected strokes to hole out from that distance.</span>
-        </span>
-      </div>
-      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_approach, sg_app_ok) }}">{{ sgfmt(sg_data.sg_approach) if sg_app_ok else '—' }}</div>
-      <div class="sg-sub">{{ gir_pct }}% GIR</div>
-      {{ hcplabel(sg_data.sg_approach, sg_app_ok) }}
-    </div>
-    <div class="sg-card">
-      <div class="sg-cat">
-        <span class="mg-tip">SG: Around Green<span class="mg-tip-icon">ⓘ</span>
-          <span class="mg-pop">Measures short-game performance on chips, pitches, and bunker shots (within ~30 yards of the green). Based on scramble rate and sand-save percentage.</span>
-        </span>
-      </div>
-      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_atg, sg_atg_ok) }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</div>
-      <div class="sg-sub">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% scramble</div>
-      {{ hcplabel(sg_data.sg_atg, sg_atg_ok) }}
-    </div>
-    <div class="sg-card">
-      <div class="sg-cat">
-        <span class="mg-tip">SG: Putting<span class="mg-tip-icon">ⓘ</span>
-          <span class="mg-pop">Measures putting performance from first-putt distances versus expected putts to hole out from those distances, compared to the scratch average.</span>
-        </span>
-      </div>
-      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_putting.total, sg_putt_ok) }}">{{ sgfmt(sg_data.sg_putting.total) if sg_putt_ok else '—' }}</div>
-      <div class="sg-sub">{{ round.total_putts }} total putts</div>
-      {{ hcplabel(sg_data.sg_putting.total, sg_putt_ok) }}
-    </div>
+  {# Dual bar macro: current round track (6px) + optional avg track (3px below) #}
+  {% macro dualbar(curr_val, curr_ok, avg_val) %}
+  {% if curr_ok %}
+  {% set cp = [[(( curr_val | abs) / 3 * 50) | round | int, 0] | max, 50] | min %}
+  <div class="sgb-track">
+    <div class="sgb-zero"></div>
+    <div class="sgb-bar {{ 'sgb-pos' if curr_val >= 0 else 'sgb-neg' }}" style="width:{{ cp }}%;"></div>
   </div>
+  {% if avg_val is not none %}
+  {% set ap = [[(( avg_val | abs) / 3 * 50) | round | int, 0] | max, 50] | min %}
+  <div class="sgb-track-sm">
+    <div class="sgb-zero"></div>
+    <div class="sgb-bar {{ 'sgb-avg-pos' if avg_val >= 0 else 'sgb-avg-neg' }}" style="width:{{ ap }}%;"></div>
+  </div>
+  {% endif %}
+  {% endif %}
+  {% endmacro %}
+
+  {# Sparkline SVG macro — vals: list of floats oldest→newest, must be >= 5 points #}
+  {% macro sparkline(vals) %}
+  {% if vals | length >= 5 %}
+  {% set n = vals | length %}
+  {% set ns = namespace(pts='') %}
+  {% for v in vals %}
+    {% set xi = (loop.index0 / (n - 1) * 80) | round(1) %}
+    {% set raw_y = 16 - v / 3 * 16 %}
+    {% set yi = (0 if raw_y < 0 else (32 if raw_y > 32 else raw_y)) | round(1) %}
+    {% if loop.first %}{% set ns.pts = xi | string + ',' + yi | string %}
+    {% else %}{% set ns.pts = ns.pts + ' ' + xi | string + ',' + yi | string %}{% endif %}
+  {% endfor %}
+  <svg class="sg-spark" viewBox="0 0 80 32" preserveAspectRatio="none">
+    <line x1="0" y1="16" x2="80" y2="16" class="sg-spark-zero" stroke-width="0.5"/>
+    <polyline class="sg-spark-line" points="{{ ns.pts }}"/>
+    {% for v in vals %}
+      {% set xi = (loop.index0 / (n - 1) * 80) | round(1) %}
+      {% set raw_y = 16 - v / 3 * 16 %}
+      {% set yi = (0 if raw_y < 0 else (32 if raw_y > 32 else raw_y)) | round(1) %}
+      <circle cx="{{ xi }}" cy="{{ yi }}" r="1.8" class="{{ 'sg-spark-curr' if loop.last else 'sg-spark-dot' }}"/>
+    {% endfor %}
+  </svg>
+  {% endif %}
+  {% endmacro %}
+
+  {# Safe access to historical context #}
+  {% set _hctx = historical_ctx if historical_ctx is defined else {} %}
+
   <div class="sg-bars fu d7">
-    {% set sg_rows = [] %}
-    {% if sg_ott_ok  %}{% set sg_rows = sg_rows + [('Off Tee',      sg_data.sg_off_tee)] %}{% endif %}
-    {% if sg_app_ok  %}{% set sg_rows = sg_rows + [('Approach',     sg_data.sg_approach)] %}{% endif %}
-    {% if sg_atg_ok  %}{% set sg_rows = sg_rows + [('Around Green', sg_data.sg_atg)] %}{% endif %}
-    {% if sg_putt_ok %}{% set sg_rows = sg_rows + [('Putting',      sg_data.sg_putting.total)] %}{% endif %}
-    {% for label, val in sg_rows %}
-    {% set w = [[((val | abs) / 8 * 50) | round | int, 0] | max, 50] | min %}
-    {% set cls = 'p' if val >= 0 else 'n' %}
-    <div class="sg-br">
-      <span class="sg-bc">{{ label }}</span>
-      <div class="sg-bt">
-        <div class="sg-bz"></div>
-        <div class="sg-bf {{ cls }}" style="width:{{ w }}%; background:{{ rankclr(val) }};"></div>
+
+    {# Legend #}
+    <div class="sg-legend">
+      <div class="sg-legend-item">
+        <div class="sg-legend-bar"></div>
+        <span class="sg-legend-lbl">This round</span>
       </div>
-      <span class="sg-bn" style="color:{{ rankclr(val) }}">{{ sgfmt(val) }}</span>
+      <div class="sg-legend-item">
+        <div class="sg-legend-bar-sm"></div>
+        <span class="sg-legend-lbl">Your avg</span>
+      </div>
+    </div>
+
+    {# Rows: (data-sufficiency flag, historical-context key, display label, current value) #}
+    {% set _sg_cat_rows = [
+      (sg_ott_ok,  'sg_off_tee',  'Off Tee',      sg_data.sg_off_tee),
+      (sg_app_ok,  'sg_approach', 'Approach',      sg_data.sg_approach),
+      (sg_atg_ok,  'sg_atg',      'Around Green',  sg_data.sg_atg),
+      (sg_putt_ok, 'sg_putting',  'Putting',       sg_data.sg_putting.total),
+    ] %}
+
+    {% for row_ok, cat_key, row_label, row_curr in _sg_cat_rows %}
+    {% set row_avg   = _hctx.get('avg_' + cat_key) %}
+    {% set row_spark = _hctx.get('sparkline_' + cat_key, []) %}
+    <div class="sg-br">
+      <span class="sg-bc">{{ row_label }}</span>
+      <div style="flex:1; min-width:0;">
+        {{ dualbar(row_curr, row_ok, row_avg) }}
+        {% if row_spark %}{{ sparkline(row_spark) }}{% endif %}
+      </div>
+      <div class="sga-vals">
+        <div class="sga-vb">
+          <div class="sga-vt">Round</div>
+          {% if row_ok %}
+          <div class="sga-vn {{ sgcol(row_curr) }}">{{ sgfmt(row_curr) }}</div>
+          {% else %}
+          <div class="sga-vn sg-neutral">—</div>
+          {% endif %}
+        </div>
+        {% if row_avg is not none %}
+        <div class="sga-vb">
+          <div class="sga-vt">Avg</div>
+          <div class="sga-vn-sm {{ sgcol(row_avg) }}">{{ sgfmt(row_avg) }}</div>
+        </div>
+        {% elif row_ok %}
+        <div class="sga-nd">Not enough<br>data</div>
+        {% endif %}
+      </div>
     </div>
     {% endfor %}
+
   </div>
+
+  {# SG Total summary #}
   {% if sg_total_ok %}
-  <div class="insight fu d7" style="margin-top:12px; padding:12px 16px; background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px;">
-    <strong>Key insight:</strong>
-    {% set sg_vals = {} %}
-    {% if sg_ott_ok  %}{% set sg_vals = sg_vals | combine({'Off the Tee':      sg_data.sg_off_tee}) %}{% endif %}
-    {% if sg_app_ok  %}{% set sg_vals = sg_vals | combine({'Approach':         sg_data.sg_approach}) %}{% endif %}
-    {% if sg_atg_ok  %}{% set sg_vals = sg_vals | combine({'Around the Green': sg_data.sg_atg}) %}{% endif %}
-    {% if sg_putt_ok %}{% set sg_vals = sg_vals | combine({'Putting':          sg_data.sg_putting.total}) %}{% endif %}
-    {% set best_cat  = sg_vals | dictsort(by='value') | last %}
-    {% set worst_cat = sg_vals | dictsort(by='value') | first %}
-    Strongest area: <strong>{{ best_cat[0] }}</strong> ({{ sgfmt(best_cat[1]) }}).
-    Most strokes lost: <strong>{{ worst_cat[0] }}</strong> ({{ sgfmt(worst_cat[1]) }}).
-    Total SG: <span class="{{ 'c-grn' if sg_data.sg_total >= 0 else 'c-red' }}"><strong>{{ sgfmt(sg_data.sg_total) }}</strong></span>.
-    {% if worst_cat[0] == 'Off the Tee' %}This is primarily a <strong>driving accuracy</strong> issue — improving tee shots unlocks better approach distances across the board.
-    {% elif worst_cat[0] == 'Approach' %}Approach play is the biggest opportunity — better distance control into greens will directly lower scores.
-    {% elif worst_cat[0] == 'Around the Green' %}Short game is the priority — one more scramble conversion per round is worth a full shot.
-    {% else %}Putting is the focus — pace control and first-putt distance reduction will have the highest immediate impact.{% endif %}
+  {% set _avg_sg_total = _hctx.get('avg_sg_total') %}
+  {% set _sg_vals_named = {} %}
+  {% if sg_ott_ok  %}{% set _sg_vals_named = _sg_vals_named | combine({'Off the Tee':      sg_data.sg_off_tee}) %}{% endif %}
+  {% if sg_app_ok  %}{% set _sg_vals_named = _sg_vals_named | combine({'Approach':         sg_data.sg_approach}) %}{% endif %}
+  {% if sg_atg_ok  %}{% set _sg_vals_named = _sg_vals_named | combine({'Around the Green': sg_data.sg_atg}) %}{% endif %}
+  {% if sg_putt_ok %}{% set _sg_vals_named = _sg_vals_named | combine({'Putting':          sg_data.sg_putting.total}) %}{% endif %}
+  <div class="sga-total fu d7">
+    <div>
+      <div class="sga-total-lbl">SG: Total</div>
+      <div class="sga-total-curr {{ sgcol(sg_data.sg_total) }}">{{ sgfmt(sg_data.sg_total) }}</div>
+      {% if _avg_sg_total is not none %}
+      <div class="sga-total-avg">avg {{ sgfmt(_avg_sg_total) }}</div>
+      {% endif %}
+    </div>
+    {% if _sg_vals_named %}
+    {% set _best  = _sg_vals_named | dictsort(by='value') | last %}
+    {% set _worst = _sg_vals_named | dictsort(by='value') | first %}
+    <div style="text-align:right;">
+      <div class="sga-total-avg">Best: <strong class="sg-positive">{{ _best[0] }}</strong></div>
+      <div class="sga-total-avg">Focus: <strong class="sg-negative">{{ _worst[0] }}</strong></div>
+    </div>
+    {% endif %}
   </div>
   {% endif %}
 
