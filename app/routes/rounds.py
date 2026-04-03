@@ -101,10 +101,10 @@ def new_round():
         course_id   = request.form.get('course_id')
         tee_set_id  = request.form.get('tee_set_id')
         date_played = request.form.get('date_played', date.today().isoformat())
-        holes_played  = int(request.form.get('holes_played', 18))
         starting_hole = int(request.form.get('starting_hole', 1) or 1)
         starting_hole = max(1, min(18, starting_hole))
         is_partial    = (starting_hole != 1)
+        holes_played  = 9 if starting_hole >= 10 else 18
 
         if not course_id or not tee_set_id:
             flash('Please select a course and tee.', 'error')

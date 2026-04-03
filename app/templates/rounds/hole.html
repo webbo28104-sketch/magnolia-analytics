@@ -621,7 +621,7 @@
     <div class="he-field">
       <label class="he-label">Approach distance (yds)</label>
       <input type="number" id="approach-dist-exact" class="he-exact"
-             placeholder="yds" min="1" max="600"
+             placeholder="yds" min="1" max="600" inputmode="numeric" pattern="[0-9]*"
              value="{{ existing.approach_distance if existing and existing.approach_distance else '' }}">
       <input type="hidden" name="approach_distance" id="approach-distance-input"
              value="{{ existing.approach_distance or '' }}">
@@ -632,7 +632,7 @@
       <div class="he-reveal-inner">
         <label class="he-label">2nd shot distance (yds)</label>
         <input type="number" id="second-shot-exact" class="he-exact"
-               placeholder="yds" min="1" max="600"
+               placeholder="yds" min="1" max="600" inputmode="numeric" pattern="[0-9]*"
                value="{{ existing.second_shot_distance if existing and existing.second_shot_distance else '' }}">
         <input type="hidden" name="second_shot_distance" id="second-shot-distance-input"
                value="{{ existing.second_shot_distance or '' }}">
@@ -688,7 +688,7 @@
             <div class="he-field">
               <label class="he-label">Short game distance (yds)</label>
               <input type="number" id="scramble-dist-exact" class="he-exact"
-                     placeholder="yds" min="0"
+                     placeholder="yds" min="0" inputmode="numeric" pattern="[0-9]*"
                      value="{{ existing.scramble_distance if existing and existing.scramble_distance and existing.scramble_distance.isdigit() else '' }}">
               <input type="hidden" name="scramble_distance" id="scramble-distance-input"
                      value="{{ existing.scramble_distance or '' }}">
@@ -714,7 +714,7 @@
     <div class="he-field">
       <label class="he-label">First putt distance (ft)</label>
       <input type="number" id="first-putt-exact" class="he-exact"
-             placeholder="ft" min="1" max="200"
+             placeholder="ft" min="1" max="200" inputmode="numeric" pattern="[0-9]*"
              value="{{ existing.first_putt_distance if existing and existing.first_putt_distance else '' }}">
       <input type="hidden" name="first_putt_distance" id="first-putt-input"
              value="{{ existing.first_putt_distance or '' }}">

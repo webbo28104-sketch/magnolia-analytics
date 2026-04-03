@@ -3,75 +3,88 @@
  * Works with the redesigned hole.html (he-pill / is-active / he-reveal / is-visible).
  */
 
-document.addEventListener('DOMContentLoaded', () => {
+// ── Multi-select pill groups (miss direction + lie type) ──────────────────
+// Registered at top level (outside DOMContentLoaded) so it is active the
+// instant the script executes, avoiding a brief window on desktop where the
+// DOMContentLoaded callback hasn't run yet. The script tag is at the bottom
+// of <body> so document always exists at this point.
+//
+// Group A (miss-dir): Left/Right mutually exclusive; Long/Short mutually exclusive.
+// Group B (lie-type): fully multi-select, no exclusions.
 
-  // ── Reveal helper ──────────────────────────────────────────────────────────
-  function reveal(el, show) {
-    if (!el) return;
-    if (show) el.classList.add('is-visible');
-    else       el.classList.remove('is-visible');
-  }
+function getMissDirValue() {
+  return Array.from(document.querySelectorAll('#miss-dir-pills .he-pill--multi.is-active'))
+              .map(p => p.dataset.value).join(',');
+}
 
+function getLieTypeValue() {
+  return Array.from(document.querySelectorAll('#lie-type-pills .he-pill--multi.is-active'))
+              .map(p => p.dataset.value).join(',');
+}
 
-  // ── Multi-select pill groups (miss direction + lie type) ──────────────────
-  // Fix: use document-level event delegation instead of per-element listeners.
-  // Per-element listeners attached at DOMContentLoaded don't reliably fire on
-  // iOS Safari when the element lives inside an overflow:hidden / 0-height
-  // .he-reveal container. Delegation catches the bubble at the document level.
-  //
-  // Group A (miss-dir): Left/Right mutually exclusive; Long/Short mutually exclusive.
-  // Group B (lie-type): fully multi-select, no exclusions.
+document.addEventListener('click', e => {
+  const pill = e.target.closest('.he-pill--multi');
+  if (!pill) return;
 
-  function getMissDirValue() {
-    return Array.from(document.querySelectorAll('#miss-dir-pills .he-pill--multi.is-active'))
-                .map(p => p.dataset.value).join(',');
-  }
+  const group = pill.dataset.group;
+  const value = pill.dataset.value;
 
-  function getLieTypeValue() {
-    return Array.from(document.querySelectorAll('#lie-type-pills .he-pill--multi.is-active'))
-                .map(p => p.dataset.value).join(',');
-  }
-
-  document.addEventListener('click', e => {
-    const pill = e.target.closest('.he-pill--multi');
-    if (!pill) return;
-
-    const group = pill.dataset.group;
-    const value = pill.dataset.value;
-
-    if (group === 'miss-dir') {
-      if (pill.classList.contains('is-active')) {
-        // Tap active pill to deselect
-        pill.classList.remove('is-active');
-      } else {
-        // Auto-deselect the conflicting opposite before activating
-        const conflict = { left: 'right', right: 'left', long: 'short', short: 'long' }[value];
-        if (conflict) {
-          document.querySelectorAll(`#miss-dir-pills .he-pill--multi[data-value="${conflict}"]`)
-                  .forEach(p => p.classList.remove('is-active'));
-        }
-        pill.classList.add('is-active');
+  if (group === 'miss-dir') {
+    if (pill.classList.contains('is-active')) {
+      // Tap active pill to deselect
+      pill.classList.remove('is-active');
+    } else {
+      // Auto-deselect the conflicting opposite before activating
+      const conflict = { left: 'right', right: 'left', long: 'short', short: 'long' }[value];
+      if (conflict) {
+        document.querySelectorAll(`#miss-dir-pills .he-pill--multi[data-value="${conflict}"]`)
+                .forEach(p => p.classList.remove('is-active'));
       }
-      const newVal = getMissDirValue();
-      const missInput = document.getElementById('approach-miss-input');
-      if (missInput) missInput.value = newVal;
-      handleApproachMissChange(newVal);
-      // Reset miss-label error colour if a direction is now selected
-      if (newVal) {
-        const lbl = document.querySelector('#miss-dir-pills')
-                             ?.closest('.he-field')?.querySelector('.he-label');
-        if (lbl) lbl.style.color = '';
-      }
-
-    } else if (group === 'lie-type') {
-      // Fully multi-select: toggle freely
-      pill.classList.toggle('is-active');
-      const lieInput = document.getElementById('lie-type-input');
-      if (lieInput) lieInput.value = getLieTypeValue();
+      pill.classList.add('is-active');
+    }
+    const newVal = getMissDirValue();
+    const missInput = document.getElementById('approach-miss-input');
+    if (missInput) missInput.value = newVal;
+    handleApproachMissChange(newVal);
+    // Reset miss-label error colour if a direction is now selected
+    if (newVal) {
+      const lbl = document.querySelector('#miss-dir-pills')
+                           ?.closest('.he-field')?.querySelector('.he-label');
+      if (lbl) lbl.style.color = '';
     }
 
-    if (navigator.vibrate) navigator.vibrate(10);
-  });
+  } else if (group === 'lie-type') {
+    // Fully multi-select: toggle freely
+    pill.classList.toggle('is-active');
+    const lieInput = document.getElementById('lie-type-input');
+    if (lieInput) lieInput.value = getLieTypeValue();
+  }
+
+  if (navigator.vibrate) navigator.vibrate(10);
+});
+
+// ── Shared helpers (top-level so the click handler above can call them) ───────
+
+function reveal(el, show) {
+  if (!el) return;
+  if (show) el.classList.add('is-visible');
+  else       el.classList.remove('is-visible');
+}
+
+function clearScrambleInputs() {
+  const distInput = document.getElementById('scramble-distance-input');
+  const exactEl   = document.getElementById('scramble-dist-exact');
+  if (distInput) distInput.value = '';
+  if (exactEl)   exactEl.value = '';
+}
+
+function handleApproachMissChange(missValue) {
+  const scrambleReveal = document.getElementById('scramble-reveal');
+  reveal(scrambleReveal, !!missValue);
+  if (!missValue) clearScrambleInputs();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
 
 
   // ── Radio pill tap-button groups (all non-multi pills) ────────────────────
@@ -101,14 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (navigator.vibrate) navigator.vibrate(10);
     });
   });
-
-
-  // ── Approach miss → show/hide scramble reveal ───────────
-  function handleApproachMissChange(missValue) {
-    const scrambleReveal = document.getElementById('scramble-reveal');
-    reveal(scrambleReveal, !!missValue);
-    if (!missValue) clearScrambleInputs();
-  }
 
 
   // ── GIR toggle ──────────────────────────────────────────
@@ -223,13 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initStepper('penalties-down', 'penalties-up', 'penalties-display', 'penalties-input', 0, 10);
 
 
-  // ── Clear helpers ──────────────────────────────────────────────────────────
-  function clearScrambleInputs() {
-    const distInput = document.getElementById('scramble-distance-input');
-    const exactEl   = document.getElementById('scramble-dist-exact');
-    if (distInput) distInput.value = '';
-    if (exactEl)   exactEl.value = '';
-  }
 
 
   // ── Score vs par live label ────────────────────────────────────────────────
