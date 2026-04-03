@@ -156,15 +156,14 @@
         </div>
       </div>
 
-      <!-- Front 9 / Back 9 — only shown for 9-hole rounds -->
-      <div class="form-group hidden" id="nine-hole-group">
-        <label class="form-label">Which 9?</label>
-        <div class="tap-group tap-group--two">
-          <button type="button" class="tap-btn tap-btn--half" id="nine-front-btn"
-                  onclick="selectNine('front')">Front 9 (1–9)</button>
-          <button type="button" class="tap-btn tap-btn--half" id="nine-back-btn"
-                  onclick="selectNine('back')">Back 9 (10–18)</button>
-        </div>
+      <!-- Starting hole selector -->
+      <div class="form-group" id="starting-hole-group">
+        <label for="starting_hole_select" class="form-label">Starting hole</label>
+        <select id="starting_hole_select" class="form-input form-select">
+          {% for n in range(1, 19) %}
+          <option value="{{ n }}"{% if n == 1 %} selected{% endif %}>Hole {{ n }}</option>
+          {% endfor %}
+        </select>
       </div>
 
       <button class="btn btn--gold btn--full" onclick="goToReview()" id="btnReview" disabled>
@@ -197,9 +196,9 @@
           <span class="summary-key">Holes</span>
           <span class="summary-val" id="summaryHoles"></span>
         </div>
-        <div class="summary-row hidden" id="summaryNineRow">
-          <span class="summary-key">Course half</span>
-          <span class="summary-val" id="summaryNine"></span>
+        <div class="summary-row" id="summaryStartingHoleRow">
+          <span class="summary-key">Starting hole</span>
+          <span class="summary-val" id="summaryStartingHole">1</span>
         </div>
       </div>
 
@@ -209,7 +208,7 @@
         <input type="hidden" name="tee_set_id"          id="hidTeeSetId">
         <input type="hidden" name="date_played"         id="hidDate">
         <input type="hidden" name="holes_played"        id="hidHoles">
-        <input type="hidden" name="nine_hole_selection" id="hidNineHole">
+        <input type="hidden" name="starting_hole" id="hidStartingHole" value="1">
       </form>
 
       <div class="confirm-actions">
@@ -456,7 +455,7 @@
   let selectedCourse      = null;   // lightweight API result
   let selectedTee         = null;   // full tee object with holes[]
   let searchTimer         = null;
-  let nineHoleSelection   = null;   // 'front' | 'back' | null
+  let startingHole        = 1;      // 1–18
 
 
   // Home country seeded from user profile — prioritises results without hiding others
@@ -612,50 +611,10 @@
     document.getElementById('btnReview').disabled = false;
   };
 
-  /* ── Holes selector → show/hide Front/Back 9 ── */
-  document.getElementById('holes_played').addEventListener('change', function() {
-    const nineGroup = document.getElementById('nine-hole-group');
-    if (this.value === '9') {
-      nineGroup.classList.remove('hidden');
-    } else {
-      nineGroup.classList.add('hidden');
-      // Reset nine selection when switching back to 18
-      nineHoleSelection = null;
-      document.getElementById('nine-front-btn').classList.remove('tap-btn--active');
-      document.getElementById('nine-back-btn').classList.remove('tap-btn--active');
-      // Reset rating preview back to full-round rating
-      updateNineRatingPreview(null);
-    }
+  /* ── Starting hole selector ── */
+  document.getElementById('starting_hole_select').addEventListener('change', function() {
+    startingHole = parseInt(this.value) || 1;
   });
-
-  /* ── Front / Back 9 selection (Task 6: update displayed rating) ──────────── */
-  window.selectNine = function(choice) {
-    nineHoleSelection = choice;
-    document.getElementById('nine-front-btn').classList.toggle('tap-btn--active', choice === 'front');
-    document.getElementById('nine-back-btn').classList.toggle('tap-btn--active',  choice === 'back');
-    updateNineRatingPreview(choice);
-  };
-
-  function updateNineRatingPreview(choice) {
-    if (!selectedTee) return;
-    const ratingEl = document.getElementById('teeRatingPreview');
-    if (!ratingEl) return;
-
-    let rating, slope;
-    if (choice === 'front') {
-      rating = selectedTee.front_course_rating || (selectedTee.course_rating / 2);
-      slope  = selectedTee.front_slope_rating  || selectedTee.slope_rating;
-    } else if (choice === 'back') {
-      rating = selectedTee.back_course_rating || (selectedTee.course_rating / 2);
-      slope  = selectedTee.back_slope_rating  || selectedTee.slope_rating;
-    } else {
-      rating = selectedTee.course_rating;
-      slope  = selectedTee.slope_rating;
-    }
-    // Round to 1dp for rating
-    rating = Math.round(rating * 10) / 10;
-    ratingEl.textContent = `${rating} / ${slope} slope`;
-  }
 
   /* ── Step 2 → 3 ─────────────────────────────── */
   window.goToReview = function() {
@@ -663,48 +622,19 @@
     const dateVal  = document.getElementById('date_played').value;
     const holesVal = document.getElementById('holes_played').value;
 
-    // Require Front/Back selection for 9-hole rounds
-    if (holesVal === '9' && !nineHoleSelection) {
-      document.getElementById('nine-hole-group').style.outline = '2px solid var(--gold)';
-      return;
-    }
-    document.getElementById('nine-hole-group').style.outline = '';
-
     document.getElementById('summaryCourseName').textContent = selectedCourse.name;
     document.getElementById('summaryTee').textContent        = selectedTee.name;
-
-    // Task 6: show split rating when 9-hole + front/back selected
-    let displayRating = selectedTee.course_rating;
-    let displaySlope  = selectedTee.slope_rating;
-    if (holesVal === '9' && nineHoleSelection) {
-      if (nineHoleSelection === 'front') {
-        displayRating = selectedTee.front_course_rating || Math.round(selectedTee.course_rating / 2 * 10) / 10;
-        displaySlope  = selectedTee.front_slope_rating  || selectedTee.slope_rating;
-      } else {
-        displayRating = selectedTee.back_course_rating  || Math.round(selectedTee.course_rating / 2 * 10) / 10;
-        displaySlope  = selectedTee.back_slope_rating   || selectedTee.slope_rating;
-      }
-    }
-    document.getElementById('summaryRating').textContent = `${displayRating} / ${displaySlope}`;
+    document.getElementById('summaryRating').textContent     = `${selectedTee.course_rating} / ${selectedTee.slope_rating}`;
     document.getElementById('summaryDate').textContent       = dateVal;
     document.getElementById('summaryHoles').textContent      = holesVal + ' holes';
-
-    // Show / populate the "Course half" summary row
-    const nineRow = document.getElementById('summaryNineRow');
-    if (holesVal === '9' && nineHoleSelection) {
-      document.getElementById('summaryNine').textContent =
-        nineHoleSelection === 'front' ? 'Front 9 (holes 1–9)' : 'Back 9 (holes 10–18)';
-      nineRow.classList.remove('hidden');
-    } else {
-      nineRow.classList.add('hidden');
-    }
+    document.getElementById('summaryStartingHole').textContent = 'Hole ' + startingHole;
 
     // Pre-fill hidden form
-    document.getElementById('hidCourseId').value   = selectedTee.id; // resolved via tee FK in backend
-    document.getElementById('hidTeeSetId').value   = selectedTee.id;
-    document.getElementById('hidDate').value        = dateVal;
-    document.getElementById('hidHoles').value       = holesVal;
-    document.getElementById('hidNineHole').value    = nineHoleSelection || '';
+    document.getElementById('hidCourseId').value      = selectedTee.id;
+    document.getElementById('hidTeeSetId').value      = selectedTee.id;
+    document.getElementById('hidDate').value          = dateVal;
+    document.getElementById('hidHoles').value         = holesVal;
+    document.getElementById('hidStartingHole').value  = startingHole;
 
     goToStep('step-confirm');
   };

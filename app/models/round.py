@@ -14,7 +14,9 @@ class Round(db.Model):
     # Round metadata
     date_played         = db.Column(db.Date, nullable=False, default=datetime.utcnow().date)
     holes_played        = db.Column(db.Integer, default=18)        # actual holes completed (updated at submission)
-    nine_hole_selection = db.Column(db.String(10), nullable=True)  # 'front', 'back', or None
+    nine_hole_selection = db.Column(db.String(10), nullable=True)  # 'front', 'back', or None (legacy)
+    starting_hole       = db.Column(db.Integer, default=1)          # first hole to enter (1–18)
+    is_partial          = db.Column(db.Boolean, default=False)       # True when starting_hole != 1
     tee_set             = db.Column(db.String(50), default='White')
 
     # Totals (computed after submission)

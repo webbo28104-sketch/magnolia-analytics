@@ -21,7 +21,8 @@ class Hole(db.Model):
     approach_distance = db.Column(db.Integer, nullable=True)   # yards (always on par 3; on miss for par 4/5)
 
     # If GIR missed:
-    approach_miss = db.Column(db.String(20), nullable=True)
+    approach_miss = db.Column(db.String(20), nullable=True)   # comma-separated: 'left,long' etc.
+    lie_type      = db.Column(db.String(100), nullable=True)  # comma-separated: 'bunker,rough' etc.
     scramble_distance = db.Column(db.String(20), nullable=True)
 
     # Par 5 second shot

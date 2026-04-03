@@ -13,11 +13,59 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
-  // ── Pill tap-button groups ─────────────────────────────────────────────────
+  // ── Multi-select pill groups (miss direction + lie type) ──────────────────
+  // Group A (miss-dir): Left/Right mutually exclusive; Long/Short mutually exclusive.
+  // Group B (lie-type): fully multi-select, no exclusions.
+
+  function getMissDirValue() {
+    return Array.from(document.querySelectorAll('#miss-dir-pills .he-pill--multi.is-active'))
+                .map(p => p.dataset.value).join(',');
+  }
+
+  function getLieTypeValue() {
+    return Array.from(document.querySelectorAll('#lie-type-pills .he-pill--multi.is-active'))
+                .map(p => p.dataset.value).join(',');
+  }
+
+  document.querySelectorAll('.he-pill--multi').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const group = pill.dataset.group;
+      const value = pill.dataset.value;
+
+      if (group === 'miss-dir') {
+        if (pill.classList.contains('is-active')) {
+          // Tap active pill to deselect
+          pill.classList.remove('is-active');
+        } else {
+          // Auto-deselect the conflicting opposite direction before activating
+          const conflict = { left: 'right', right: 'left', long: 'short', short: 'long' }[value];
+          if (conflict) {
+            document.querySelectorAll(`#miss-dir-pills .he-pill--multi[data-value="${conflict}"]`)
+                    .forEach(p => p.classList.remove('is-active'));
+          }
+          pill.classList.add('is-active');
+        }
+        const newVal = getMissDirValue();
+        const missInput = document.getElementById('approach-miss-input');
+        if (missInput) missInput.value = newVal;
+        handleApproachMissChange(newVal);
+
+      } else if (group === 'lie-type') {
+        // Fully multi-select: toggle on/off freely
+        pill.classList.toggle('is-active');
+        const lieInput = document.getElementById('lie-type-input');
+        if (lieInput) lieInput.value = getLieTypeValue();
+      }
+
+      if (navigator.vibrate) navigator.vibrate(10);
+    });
+  });
+
+
+  // ── Radio pill tap-button groups (all non-multi pills) ────────────────────
   // Each .he-pill carries data-field and data-value.
-  // Tapping an already-active pill deselects it (toggles off) for approach_miss only.
   // Other fields behave as radio buttons (tap again = stays selected).
-  document.querySelectorAll('.he-pill').forEach(pill => {
+  document.querySelectorAll('.he-pill:not(.he-pill--multi)').forEach(pill => {
     pill.addEventListener('click', () => {
       const field  = pill.dataset.field;
       if (!field) return; // handled separately (e.g. tee-shot SVG penalty btn)
@@ -25,16 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const target = pill.dataset.target; // optional explicit hidden input id
 
       const group = pill.closest('.he-pills');
-
-      // Toggle-off support for approach_miss (tap active pill to deselect)
-      if (field === 'approach_miss' && pill.classList.contains('is-active')) {
-        pill.classList.remove('is-active');
-        const missInput = document.getElementById('approach-miss-input');
-        if (missInput) missInput.value = '';
-        handleApproachMissChange('');
-        if (navigator.vibrate) navigator.vibrate(10);
-        return;
-      }
 
       // Deactivate siblings
       if (group) {
@@ -47,9 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const input = document.getElementById(inputId)
                  || document.querySelector(`input[name="${field}"]`);
       if (input) input.value = value;
-
-      // Conditional visibility handlers
-      if (field === 'approach_miss') handleApproachMissChange(value);
 
       // Bucket tap clears the paired exact input (bucket wins until exact overrides)
       const exactMap = {
@@ -88,7 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
       reveal(missReveal, false);
       const missInput = document.getElementById('approach-miss-input');
       if (missInput) missInput.value = '';
-      document.querySelectorAll('#miss-pills .he-pill').forEach(b => b.classList.remove('is-active'));
+      document.querySelectorAll('#miss-dir-pills .he-pill--multi').forEach(b => b.classList.remove('is-active'));
+      document.querySelectorAll('#lie-type-pills .he-pill--multi').forEach(b => b.classList.remove('is-active'));
+      const lieInput = document.getElementById('lie-type-input');
+      if (lieInput) lieInput.value = '';
       handleApproachMissChange('');
       if (navigator.vibrate) navigator.vibrate(10);
     });
@@ -210,6 +248,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pillsEl)   pillsEl.querySelectorAll('.he-pill').forEach(b => b.classList.remove('is-active'));
   }
 
+
+
+  // ── Form submit: require at least one miss direction when GIR = No ─────────
+  const holeForm = document.getElementById('hole-form');
+  if (holeForm) {
+    holeForm.addEventListener('submit', e => {
+      const mr = document.getElementById('miss-reveal');
+      const mi = document.getElementById('approach-miss-input');
+      if (mr && mr.classList.contains('is-visible') && mi && !mi.value) {
+        e.preventDefault();
+        const label = document.querySelector('#miss-dir-pills')
+                              ?.closest('.he-field')?.querySelector('.he-label');
+        if (label) {
+          label.style.color = 'var(--he-red)';
+          label.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    });
+  }
 
 
   // ── Score vs par live label ────────────────────────────────────────────────

@@ -1154,6 +1154,7 @@ h1, h2, h3, h4 {
 
 .badge { font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; }
 .badge--pending { background: var(--green-100); color: var(--green-700); }
+.badge--partial { background: rgba(201,168,76,.15); color: #7a6020; border: 1px solid rgba(201,168,76,.4); }
 
 .empty-state {
   text-align: center;

@@ -101,10 +101,10 @@ def new_round():
         course_id   = request.form.get('course_id')
         tee_set_id  = request.form.get('tee_set_id')
         date_played = request.form.get('date_played', date.today().isoformat())
-        holes_played = int(request.form.get('holes_played', 18))
-        nine_hole_selection = request.form.get('nine_hole_selection') or None
-        if holes_played != 9:
-            nine_hole_selection = None
+        holes_played  = int(request.form.get('holes_played', 18))
+        starting_hole = int(request.form.get('starting_hole', 1) or 1)
+        starting_hole = max(1, min(18, starting_hole))
+        is_partial    = (starting_hole != 1)
 
         if not course_id or not tee_set_id:
             flash('Please select a course and tee.', 'error')
@@ -125,7 +125,8 @@ def new_round():
             date_played=datetime.strptime(date_played, '%Y-%m-%d').date(),
             tee_set=tee_label,
             holes_played=holes_played,
-            nine_hole_selection=nine_hole_selection,
+            starting_hole=starting_hole,
+            is_partial=is_partial,
             status='in_progress'
         )
         db.session.add(round_)
@@ -144,10 +145,10 @@ def enter_hole(round_id, hole_number):
     if hole_number < 1 or hole_number > round_.holes_played:
         return redirect(url_for('rounds.enter_hole', round_id=round_.id, hole_number=1))
 
-    if round_.nine_hole_selection == 'back' and round_.holes_played == 9:
-        actual_hole_number = hole_number + 9
-    else:
-        actual_hole_number = hole_number
+    # Map sequential entry counter (1..holes_played) to actual course hole (1..18).
+    # Wraps after 18: e.g. starting_hole=15, hole_number=5 → actual=(14+4)%18+1=1
+    starting = round_.starting_hole or 1
+    actual_hole_number = ((starting - 1 + hole_number - 1) % 18) + 1
 
     existing = Hole.query.filter_by(round_id=round_id, hole_number=actual_hole_number).first()
 
@@ -189,7 +190,17 @@ def enter_hole(round_id, hole_number):
         hole.score             = int(data.get('score', hole.par))
         hole.tee_shot          = data.get('tee_shot') or None
         hole.approach_distance = int(data['approach_distance']) if data.get('approach_distance') else None
-        hole.approach_miss     = data.get('approach_miss') or None
+        approach_miss = data.get('approach_miss') or None
+        if approach_miss:
+            # Server-side enforcement: Left/Right and Long/Short are mutually exclusive.
+            vals = [v.strip() for v in approach_miss.split(',') if v.strip()]
+            if 'left' in vals and 'right' in vals:
+                vals = [v for v in vals if v != 'right']
+            if 'long' in vals and 'short' in vals:
+                vals = [v for v in vals if v != 'short']
+            approach_miss = ','.join(vals) or None
+        hole.approach_miss     = approach_miss
+        hole.lie_type          = data.get('lie_type') or None
         hole.scramble_distance = data.get('scramble_distance') or None
         hole.gir               = not bool(hole.approach_miss or hole.scramble_distance)
         hole.second_shot_distance = int(data['second_shot_distance']) if data.get('second_shot_distance') else None
@@ -207,10 +218,11 @@ def enter_hole(round_id, hole_number):
 
     is_edit     = round_.holes.count() >= round_.holes_played
 
-    # Running totals for all completed holes before this one
+    # Running totals for all completed holes (excluding current).
+    # Using != rather than < so wrap-around rounds count previously played holes correctly.
     completed_before = Hole.query.filter(
         Hole.round_id == round_id,
-        Hole.hole_number < actual_hole_number,
+        Hole.hole_number != actual_hole_number,
         Hole.score.isnot(None)
     ).all()
     running_gross   = sum(h.score for h in completed_before)

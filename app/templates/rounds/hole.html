@@ -285,6 +285,12 @@
     color: var(--he-gold);
     border-color: var(--he-green);
   }
+  /* Multi-select pills use gold background when active */
+  .he-pill--multi.is-active {
+    background: var(--he-gold);
+    color: var(--he-green);
+    border-color: var(--he-gold);
+  }
 
   /* ── Bottom-border exact input ───────────────────────────────────────────── */
   .he-exact {
@@ -588,21 +594,38 @@
       </div>
     </div>
 
-    <!-- 6. Miss direction + scramble (revealed when GIR = No) ───────── -->
+    <!-- 6. Miss direction + lie type + scramble (revealed when GIR = No) ───── -->
     <div class="he-reveal{% if init_miss %} is-visible{% endif %}" id="miss-reveal">
       <div class="he-reveal-inner">
 
+        <!-- Group A: Miss direction — Left/Right mutually exclusive, Long/Short mutually exclusive -->
         <div class="he-field">
           <label class="he-label">Miss direction</label>
-          <div class="he-pills" id="miss-pills">
-            {% for option, label in [('left','Left'), ('right','Right'), ('short','Short'), ('long','Long'), ('bunker','Bunker')] %}
+          <div class="he-pills" id="miss-dir-pills">
+            {% set miss_vals = (init_miss or '').split(',') %}
+            {% for option, label in [('left','Left'), ('right','Right'), ('long','Long'), ('short','Short')] %}
             <button type="button"
-                    class="he-pill{% if existing and existing.approach_miss == option %} is-active{% endif %}"
-                    data-field="approach_miss" data-value="{{ option }}">{{ label }}</button>
+                    class="he-pill he-pill--multi{% if option in miss_vals %} is-active{% endif %}"
+                    data-group="miss-dir" data-value="{{ option }}">{{ label }}</button>
             {% endfor %}
           </div>
           <input type="hidden" name="approach_miss" id="approach-miss-input"
-                 value="{{ existing.approach_miss or '' }}">
+                 value="{{ init_miss or '' }}">
+        </div>
+
+        <!-- Group B: Lie type — fully multi-select, optional -->
+        <div class="he-field">
+          <label class="he-label">Lie <span class="he-label-hint">optional</span></label>
+          <div class="he-pills he-pills--wrap" id="lie-type-pills">
+            {% set lie_vals = (existing.lie_type or '').split(',') if existing else [] %}
+            {% for option, label in [('fairway','Fairway'), ('rough','Rough'), ('bunker','Bunker'), ('water','Water'), ('trees','Trees'), ('fringe','Fringe')] %}
+            <button type="button"
+                    class="he-pill he-pill--multi{% if option in lie_vals %} is-active{% endif %}"
+                    data-group="lie-type" data-value="{{ option }}">{{ label }}</button>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="lie_type" id="lie-type-input"
+                 value="{{ existing.lie_type or '' }}">
         </div>
 
         <!-- Scramble section (revealed when miss selected) ─────────── -->
@@ -676,7 +699,7 @@
       {%- if is_edit %}Skip to Submit →{% else %}Submit Round Early →{% endif %}
     </a>
     <button type="submit" form="hole-form" class="he-next-btn">
-      {% if hole_number < total_holes %}Hole {{ display_hole_number + 1 }} →{% else %}Review Round →{% endif %}
+      {% if hole_number < total_holes %}Hole {{ (display_hole_number % 18) + 1 }} →{% else %}Review Round →{% endif %}
     </button>
   </div>
 

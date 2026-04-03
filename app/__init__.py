@@ -134,6 +134,9 @@ def _run_column_migrations():
         ('users',     'is_staff',                 'BOOLEAN DEFAULT FALSE'),
         ('waiting_list', 'status',               "VARCHAR(20) DEFAULT 'pending'"),
         ('waiting_list', 'invited_at',           'TIMESTAMP'),
+        ('rounds',    'starting_hole',            'INTEGER DEFAULT 1'),
+        ('rounds',    'is_partial',               'BOOLEAN DEFAULT FALSE'),
+        ('holes',     'lie_type',                 'VARCHAR(100)'),
     ]
     for table, column, col_type in migrations:
         try:

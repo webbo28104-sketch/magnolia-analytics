@@ -431,7 +431,10 @@
     <div class="rounds-list">
       {% for round in recent_rounds %}
       <div class="round-row">
-        <div class="round-date">{{ round.date_played.strftime('%d %b %Y') }}</div>
+        <div class="round-date">
+          {{ round.date_played.strftime('%d %b %Y') }}
+          {% if round.is_partial %}<span class="badge badge--partial">Partial</span>{% endif %}
+        </div>
         <div class="round-course">{{ round.course.name if round.course else 'Unknown Course' }}</div>
         <div class="round-score">
           {% if round.total_score %}
