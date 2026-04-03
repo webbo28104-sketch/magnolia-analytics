@@ -56,7 +56,7 @@ body::before {
 .d4{animation-delay:.35s} .d5{animation-delay:.45s} .d6{animation-delay:.55s}
 .d7{animation-delay:.65s} .d8{animation-delay:.75s} .d9{animation-delay:.85s}
 .masthead { padding: 44px 0 0; display:flex; align-items:center; justify-content:space-between; }
-.brand-line { font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--gold); opacity:.7; }
+.brand-line { font-size:10px; letter-spacing:.24em; text-transform:uppercase; color:var(--gold); opacity:.7; }
 .back-link  { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--cream-faint); text-decoration:none; transition:color .2s; }
 .back-link:hover { color:var(--gold); }
 .hero {
@@ -77,7 +77,7 @@ body::before {
 .hero-gross {
   font-family:'Inter',system-ui,sans-serif;
   font-size:clamp(60px,9vw,96px);
-  font-weight:600; line-height:1; color:var(--gold); letter-spacing:-.03em;
+  font-weight:900; line-height:1; color:var(--gold); letter-spacing:-.03em;
   position:relative;
 }
 .hero-gross::before {
@@ -87,8 +87,8 @@ body::before {
   color:rgba(201,168,76,0.065); white-space:nowrap;
   pointer-events:none; letter-spacing:-.02em; line-height:1;
 }
-.hero-vspar { font-family:'Inter',system-ui,sans-serif; font-size:21px; color:var(--gold-light); font-weight:500; margin-top:4px; }
-.hero-gross-label { font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--cream-faint); margin-top:3px; }
+.hero-vspar { font-family:'Inter',system-ui,sans-serif; font-size:16px; color:var(--gold); font-weight:500; margin-top:4px; }
+.hero-gross-label { font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--cream-faint); margin-top:3px; }
 .context-banner {
   display:grid; grid-template-columns:1fr 1fr 1fr;
   gap:1px; background:var(--border);
@@ -100,20 +100,21 @@ body::before {
 .ctx-label { font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:3px; }
 .ctx-val   { font-size:11px; color:var(--cream); line-height:1.35; font-family:'Inter',system-ui,sans-serif; }
 .ctx-val strong { color:var(--gold-light); }
-.sec-label   { font-size:9px; letter-spacing:.25em; text-transform:uppercase; color:var(--gold); opacity:.65; margin-bottom:14px; margin-top:40px; }
+.sec-label   { font-size:9px; letter-spacing:.28em; text-transform:uppercase; color:var(--gold); opacity:.8; margin-bottom:14px; margin-top:40px; }
 .sec-divider { height:1px; background:var(--border); margin-top:38px; }
 .sum-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-.sum-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:16px 14px 14px; position:relative; overflow:visible; }
-.sum-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); opacity:.45; border-radius:3px 3px 0 0; }
-.sum-card-lbl { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:9px; }
-.sum-card-val { font-family:'Inter',system-ui,sans-serif; font-size:30px; font-weight:500; line-height:1; }
+.sum-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:16px 14px 14px; position:relative; overflow:visible; box-shadow:0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(201,168,76,0.06); }
+.sum-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); opacity:.65; border-radius:3px 3px 0 0; }
+.sum-card-lbl { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); opacity:.55; margin-bottom:9px; }
+.sum-card-val { font-family:'Inter',system-ui,sans-serif; font-size:30px; font-weight:700; line-height:1; }
 .sum-card-sub { font-size:10px; color:var(--cream-faint); margin-top:5px; letter-spacing:.04em; }
 .c-gold { color:var(--gold-light); } .c-red { color:var(--red-soft); } .c-grn { color:var(--green-soft); }
 .split-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.split-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:16px 18px; }
+.split-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:16px 18px; position:relative; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(201,168,76,0.06); }
+.split-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); opacity:.65; border-radius:3px 3px 0 0; }
 .split-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
 .split-title { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--cream-faint); }
-.split-score { font-family:'Inter',system-ui,sans-serif; font-size:26px; font-weight:500; }
+.split-score { font-family:'Inter',system-ui,sans-serif; font-size:26px; font-weight:700; }
 .split-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid rgba(201,168,76,0.07); font-size:10px; }
 .split-row:last-child { border-bottom:none; }
 .split-key { color:var(--cream-faint); } .split-v { color:var(--cream); }
@@ -122,7 +123,7 @@ body::before {
 .sc thead th { font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:var(--cream-faint); padding:6px 7px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap; }
 .sc thead th:first-child { text-align:left; padding-left:0; }
 .sc tbody tr { border-bottom:1px solid rgba(201,168,76,0.065); transition:background .15s; }
-.sc tbody tr:hover { background:var(--gold-glow); }
+.sc tbody tr:hover { background:rgba(201,168,76,0.09); }
 .sc td { padding:6px 7px; text-align:center; color:var(--cream-dim); vertical-align:middle; }
 .sc td:first-child { text-align:left; padding-left:0; font-weight:500; color:var(--cream); font-size:11px; }
 .par-c { color:var(--cream-faint); font-size:11px; }
@@ -140,10 +141,10 @@ body::before {
 .putt-v { font-family:'Inter',system-ui,sans-serif; font-size:14px; }
 .p1 { color:var(--green-soft); } .p2 { color:var(--cream-dim); } .p3 { color:var(--red-soft); }
 .sc .sub-row td { background:var(--gold-dim); font-weight:500; color:var(--cream); padding:7px 7px; border-top:1px solid var(--border-mid); border-bottom:1px solid var(--border-mid); font-size:10px; }
-.sc .tot-row td { background:rgba(201,168,76,0.16); font-family:'Inter',system-ui,sans-serif; font-size:13px; font-weight:600; color:var(--gold-light); padding:9px 7px; border-top:1px solid var(--border-mid); }
+.sc .tot-row td { background:rgba(201,168,76,0.16); font-family:'Inter',system-ui,sans-serif; font-size:14px; font-weight:700; color:var(--gold-light); padding:9px 7px; border-top:1px solid var(--border-mid); }
 .two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-.a-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:20px 18px; }
-.a-card-title { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); opacity:.65; margin-bottom:16px; }
+.a-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:20px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(201,168,76,0.06); }
+.a-card-title { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); opacity:.75; margin-bottom:16px; }
 .bar-row { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
 .bar-lbl { font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--cream-faint); width:56px; flex-shrink:0; }
 .bar-track { flex:1; height:4px; background:rgba(245,240,232,0.07); border-radius:2px; overflow:hidden; }
@@ -159,8 +160,8 @@ body::before {
 .dv-n { font-family:'Inter',system-ui,sans-serif; font-size:18px; font-weight:500; line-height:1; }
 .stat-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(201,168,76,0.07); }
 .stat-row:last-child { border-bottom:none; }
-.sk { font-size:10px; color:var(--cream-faint); letter-spacing:.06em; } .sv { font-size:10px; color:var(--cream); font-weight:500; }
-.insight { font-size:10px; font-family:'Inter',system-ui,sans-serif; line-height:1.58; color:rgba(245,240,232,0.42); margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+.sk { font-size:10px; color:var(--cream-faint); letter-spacing:.06em; } .sv { font-size:11px; color:var(--cream); font-weight:500; }
+.insight { font-size:10px; font-family:'Inter',system-ui,sans-serif; line-height:1.58; color:rgba(245,240,232,0.58); margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
 .insight strong { color:var(--gold-light); }
 .sg-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
 .sg-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:14px 12px; text-align:center; }
@@ -173,7 +174,7 @@ body::before {
 .sg-bars { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:18px 20px; }
 .sg-br { display:flex; align-items:center; gap:12px; margin-bottom:11px; }
 .sg-br:last-child { margin-bottom:0; }
-.sg-bc { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--cream-faint); width:84px; flex-shrink:0; }
+.sg-bc { font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--cream-faint); width:96px; flex-shrink:0; }
 .sg-bt { flex:1; height:5px; background:rgba(245,240,232,0.07); border-radius:3px; position:relative; overflow:hidden; }
 .sg-bz { position:absolute; left:50%; top:0; bottom:0; width:1px; background:rgba(245,240,232,0.25); }
 .sg-bf { position:absolute; top:0; height:100%; border-radius:3px; max-width:50%; }
@@ -184,7 +185,7 @@ body::before {
 /* SG: colour thresholds (±0.2) */
 .sg-positive { color:var(--green-soft); } .sg-neutral { color:var(--cream-dim); } .sg-negative { color:var(--red-soft); }
 /* SG: dual-bar chart */
-.sgb-track    { height:6px; background:rgba(245,240,232,0.07); border-radius:3px; position:relative; overflow:hidden; margin-bottom:3px; }
+.sgb-track    { height:8px; background:rgba(245,240,232,0.07); border-radius:3px; position:relative; overflow:hidden; margin-bottom:3px; }
 .sgb-track-sm { height:3px; background:rgba(245,240,232,0.05); border-radius:2px; position:relative; overflow:hidden; }
 .sgb-zero     { position:absolute; left:50%; top:0; bottom:0; width:1px; background:rgba(245,240,232,0.18); }
 .sgb-bar      { position:absolute; top:0; height:100%; border-radius:2px; max-width:50%; }
@@ -201,8 +202,8 @@ body::before {
 /* SG: value display */
 .sga-vals   { display:flex; gap:10px; align-items:flex-start; justify-content:flex-end; }
 .sga-vb     { display:flex; flex-direction:column; align-items:flex-end; }
-.sga-vt     { font-size:8px; letter-spacing:.1em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:2px; }
-.sga-vn     { font-family:'Inter',system-ui,sans-serif; font-size:20px; font-weight:500; line-height:1; }
+.sga-vt     { font-size:7px; letter-spacing:.14em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:2px; }
+.sga-vn     { font-family:'Inter',system-ui,sans-serif; font-size:20px; font-weight:700; line-height:1; }
 .sga-vn-sm  { font-family:'Inter',system-ui,sans-serif; font-size:14px; font-weight:400; line-height:1; }
 .sga-nd     { font-size:8px; color:var(--cream-faint); font-style:italic; line-height:1.3; text-align:right; }
 /* SG: total summary bar */
@@ -240,7 +241,7 @@ body::before {
 .mini-val { font-family:'Inter',system-ui,sans-serif; font-size:17px; line-height:1; }
 .mini-sub { font-size:8px; color:var(--cream-faint); margin-top:2px; }
 .rpt-footer { margin-top:56px; padding-top:18px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
-.ft-brand { font-family:'Inter',system-ui,sans-serif; font-size:13px; color:var(--gold); opacity:.55; }
+.ft-brand { font-family:'Inter',system-ui,sans-serif; font-size:13px; color:var(--gold); opacity:.7; }
 .ft-meta  { font-size:9px; letter-spacing:.14em; color:rgba(245,240,232,0.22); }
 /* Glossary tooltips */
 .mg-tip { position:relative; display:inline-block; cursor:help; border-bottom:1px dotted rgba(201,168,76,0.35); }
@@ -364,6 +365,33 @@ body::before {
 .sm-pdf-btn:hover{background:#c9a84c;color:#1a2e1a}
 .sm-pdf-hint{color:#8a9e8a;font-size:.75rem;text-align:center}
 
+/* ── Hole score badges (Change 4 visual row) ───────────────────── */
+.sb-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 20px; }
+.score-badge { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 50%; gap: 1px; }
+.score-badge .sb-h { font-size: 7px; letter-spacing: .06em; opacity: .6; }
+.score-badge .sb-s { font-size: 14px; font-weight: 600; line-height: 1; }
+.sb-eagle  { background: rgba(139,92,246,0.22); color: #c4b5fd; border: 1.5px solid rgba(139,92,246,0.45); }
+.sb-birdie { background: rgba(201,168,76,0.22); color: var(--gold-light); border: 1.5px solid rgba(201,168,76,0.45); }
+.sb-par    { background: rgba(74,158,107,0.18); color: var(--green-soft); border: 1.5px solid rgba(74,158,107,0.35); }
+.sb-bogey  { background: rgba(201,168,76,0.08); color: #e8c060; border: 1.5px solid rgba(201,168,76,0.2); }
+.sb-double { background: rgba(232,160,144,0.18); color: var(--red-soft); border: 1.5px solid rgba(232,160,144,0.35); }
+/* Scoring tab — par type breakdown cards */
+.par-type-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.pt-card { background: var(--cream-ghost); border: 1px solid var(--border); border-radius: 4px; padding: 14px 12px; }
+.pt-lbl  { font-size: 8px; letter-spacing: .16em; text-transform: uppercase; color: var(--cream-faint); margin-bottom: 8px; }
+.pt-val  { font-family: 'Inter', system-ui, sans-serif; font-size: 24px; font-weight: 500; line-height: 1; }
+.pt-sub  { font-size: 9px; color: var(--cream-faint); margin-top: 4px; }
+.pt-dist-row { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; font-size: 8px; }
+.pt-dist-badge { padding: 2px 5px; border-radius: 2px; }
+/* Drive distance table */
+.drive-tbl { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px; }
+.drive-tbl th { font-size: 8px; letter-spacing: .14em; text-transform: uppercase; color: var(--cream-faint); padding: 4px 6px; text-align: center; border-bottom: 1px solid var(--border); }
+.drive-tbl th:first-child { text-align: left; }
+.drive-tbl td { padding: 5px 6px; text-align: center; color: var(--cream-dim); border-bottom: 1px solid rgba(201,168,76,0.05); }
+.drive-tbl td:first-child { text-align: left; color: var(--cream); }
+.drive-tbl .tbl-tot td { font-weight: 600; color: var(--gold-light); background: rgba(201,168,76,0.07); border-top: 1px solid var(--border); }
+@media(max-width:640px){ .par-type-grid { grid-template-columns: repeat(2,1fr); } }
+
 /* ── Personal best banner ──────────────────────────────────────── */
 .pb-banner {
   display: flex; align-items: center; gap: 12px;
@@ -434,13 +462,13 @@ body::before {
   flex-shrink: 0;
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
-  color: rgba(245,240,232,0.38);
+  border-bottom: 3px solid transparent;
+  color: rgba(245,240,232,0.52);
   font-family: 'DM Mono', monospace;
   font-size: 9px;
   letter-spacing: .18em;
   text-transform: uppercase;
-  padding: 14px 18px 12px;
+  padding: 16px 20px 13px;
   cursor: pointer;
   white-space: nowrap;
   transition: color .15s, border-color .15s;
@@ -562,6 +590,12 @@ body::before {
 
 {# colour class for score vs par #}
 {% macro svp_cls(diff) %}{% if diff <= -2 %}c-grn{% elif diff < 0 %}c-grn{% elif diff == 0 %}c-gold{% else %}c-red{% endif %}{% endmacro %}
+{# colour class for fairways hit % (0–100) #}
+{% macro fw_cls(pct) %}{% if pct >= 60 %}c-grn{% elif pct >= 40 %}c-gold{% else %}c-red{% endif %}{% endmacro %}
+{# colour class for GIR % (0–100) #}
+{% macro gir_cls(pct) %}{% if pct >= 55 %}c-grn{% elif pct >= 38 %}c-gold{% else %}c-red{% endif %}{% endmacro %}
+{# colour class for total putts #}
+{% macro pt_cls(putts) %}{% if putts <= 30 %}c-grn{% elif putts <= 33 %}c-gold{% else %}c-red{% endif %}{% endmacro %}
 
 <div class="page">
 
@@ -595,7 +629,7 @@ body::before {
     <div class="hero-right">
       <div class="hero-gross">{{ round.total_score }}</div>
       <div class="hero-gross-label">Gross Score</div>
-      <div class="hero-vspar">{{ score_vs_par_label }} to par</div>
+      <div class="hero-vspar {{ svp_cls(score_vs_par) }}">{{ score_vs_par_label }} to par</div>
     </div>
   </div>
 
@@ -614,6 +648,7 @@ body::before {
     <button class="tab-btn" data-tab="approach" role="tab" aria-selected="false">Approach</button>
     <button class="tab-btn" data-tab="atg" role="tab" aria-selected="false">Around the Green</button>
     <button class="tab-btn" data-tab="putting" role="tab" aria-selected="false">Putting</button>
+    <button class="tab-btn" data-tab="scoring" role="tab" aria-selected="false">Scoring</button>
     <button class="tab-btn" data-tab="coaching" role="tab" aria-selected="false">Coaching</button>
   </nav>
 
@@ -642,7 +677,7 @@ body::before {
           <span class="mg-pop">Fairway in Regulation — tee shot lands in the fairway on a par-4 or par-5. Measured against all driveable holes (par-4s and par-5s).</span>
         </span>
       </div>
-      <div class="sum-card-val">{{ round.fairways_hit if round.fairways_hit is not none else '—' }}/{{ round.fairways_available if round.fairways_available is not none else '—' }}</div>
+      <div class="sum-card-val {{ fw_cls(fw_pct) if round.fairways_hit is not none else '' }}">{{ round.fairways_hit if round.fairways_hit is not none else '—' }}/{{ round.fairways_available if round.fairways_available is not none else '—' }}</div>
       <div class="sum-card-sub">{{ fw_pct }}% of available</div>
     </div>
     <div class="sum-card">
@@ -651,12 +686,12 @@ body::before {
           <span class="mg-pop">Green In Regulation — reaching the putting surface in par minus 2 strokes. A par-4 means on the green in 2 or fewer shots. Scratch average is ~60–65%.</span>
         </span>
       </div>
-      <div class="sum-card-val">{{ round.gir_count if round.gir_count is not none else '—' }}/{{ _gir_denom }}</div>
+      <div class="sum-card-val {{ gir_cls(gir_pct) if round.gir_count is not none else '' }}">{{ round.gir_count if round.gir_count is not none else '—' }}/{{ _gir_denom }}</div>
       <div class="sum-card-sub">{{ gir_pct }}%</div>
     </div>
     <div class="sum-card">
       <div class="sum-card-lbl">Total Putts</div>
-      <div class="sum-card-val">{{ round.total_putts if round.total_putts is not none else '—' }}</div>
+      <div class="sum-card-val {{ pt_cls(round.total_putts) if round.total_putts is not none else '' }}">{{ round.total_putts if round.total_putts is not none else '—' }}</div>
       <div class="sum-card-sub">{{ putts_ph }} avg · {{ three_putt_holes | length }} three-putt{{ 's' if three_putt_holes | length != 1 }}</div>
     </div>
   </div>
@@ -870,6 +905,103 @@ body::before {
     </div>
   </div>
 
+  {# ── Estimated Tee Shot Distances (Change 1) ── #}
+  {% set _drive_holes = holes_data | selectattr('est_drive_distance') | list %}
+  {% if _drive_holes %}
+  <div class="sec-divider"></div>
+  <div class="sec-label">Estimated Tee Shot Distances</div>
+  <div class="a-card">
+    <div class="a-card-title">Hole Yardage − Approach Distance · Par 4s &amp; 5s Only</div>
+    <table class="drive-tbl">
+      <thead>
+        <tr><th>Hole</th><th>Par</th><th>Hole Yds</th><th>App Dist</th><th>Est Drive</th></tr>
+      </thead>
+      <tbody>
+        {% for h in _drive_holes %}
+        <tr>
+          <td>{{ h.hole_number }}</td>
+          <td>{{ h.par }}</td>
+          <td>{{ h.yardage ~ 'y' if h.yardage else '—' }}</td>
+          <td>{{ h.approach_distance ~ 'y' if h.approach_distance else '—' }}</td>
+          <td><strong>{{ h.est_drive_distance }}y</strong></td>
+        </tr>
+        {% endfor %}
+        {% if avg_drive_dist %}
+        <tr class="tbl-tot">
+          <td colspan="4">Round Average</td>
+          <td>{{ avg_drive_dist }}y</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+    {% if avg_approach_after_tee %}
+    <div class="stat-row" style="margin-top:12px;">
+      <span class="sk">Avg approach distance left after tee shot</span>
+      <span class="sv">{{ avg_approach_after_tee }}y</span>
+    </div>
+    {% endif %}
+    <div class="insight" style="margin-top:12px;">
+      Estimated drive = hole yardage − distance to pin for approach shot. Approximate — excludes doglegs and elevation. Holes without approach distance data omitted.
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Par 5 Analysis (Change 2) ── #}
+  {% if par5_stats.count > 0 %}
+  <div class="sec-divider"></div>
+  <div class="sec-label">Par 5 Analysis</div>
+  <div class="two-col">
+    <div class="a-card">
+      <div class="a-card-title">Par 5 Second Shot Detail · {{ par5_stats.count }} Hole{{ 's' if par5_stats.count != 1 }}</div>
+      {% for h in par5_stats.holes %}
+      <div class="stat-row">
+        <span class="sk">
+          Hole {{ h.hole_number }}
+          {% if h.heuristic %}
+          <span style="font-size:8px; opacity:.6; margin-left:4px;">≈{{ h.heuristic }}</span>
+          {% endif %}
+        </span>
+        <span class="sv">
+          {% if h.second_shot_dist %}{{ h.second_shot_dist }}y · {% endif %}
+          <span class="{{ 'gir-y' if h.gir else 'gir-n' }}">{{ 'GIR' if h.gir else 'No GIR' }}</span>
+          · <span class="{{ 'c-grn' if h.score_vs_par <= -1 else 'c-gold' if h.score_vs_par == 0 else 'c-red' }}">{{ h.score_label }}</span>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="a-card">
+      <div class="a-card-title">Par 5 Scoring Summary</div>
+      {% set _p5_hctx_avg = historical_ctx.get('avg_score_vs_par') %}
+      <div class="stat-row">
+        <span class="sk">Par 5 scoring avg (vs par)</span>
+        <span class="sv {{ 'c-grn' if par5_stats.avg_score_vs_par <= 0 else 'c-red' }}">
+          {% if par5_stats.avg_score_vs_par > 0 %}+{% endif %}{{ par5_stats.avg_score_vs_par }}
+        </span>
+      </div>
+      {% set _p5_girs = par5_stats.holes | selectattr('gir') | list | length %}
+      <div class="stat-row">
+        <span class="sk">GIR on par 5s</span>
+        <span class="sv">{{ _p5_girs }}/{{ par5_stats.count }}</span>
+      </div>
+      {% set _p5_eagles = par5_stats.holes | selectattr('score_vs_par','le',-2) | list | length %}
+      {% set _p5_birdies = par5_stats.holes | selectattr('score_vs_par','equalto',-1) | list | length %}
+      {% set _p5_pars = par5_stats.holes | selectattr('score_vs_par','equalto',0) | list | length %}
+      {% set _p5_bogeys = par5_stats.holes | selectattr('score_vs_par','ge',1) | list | length %}
+      {% if _p5_eagles %}<div class="stat-row"><span class="sk">Eagles or better</span><span class="sv c-grn">{{ _p5_eagles }}</span></div>{% endif %}
+      {% if _p5_birdies %}<div class="stat-row"><span class="sk">Birdies</span><span class="sv c-grn">{{ _p5_birdies }}</span></div>{% endif %}
+      {% if _p5_pars %}<div class="stat-row"><span class="sk">Pars</span><span class="sv">{{ _p5_pars }}</span></div>{% endif %}
+      {% if _p5_bogeys %}<div class="stat-row"><span class="sk">Bogeys or worse</span><span class="sv c-red">{{ _p5_bogeys }}</span></div>{% endif %}
+      <div class="insight">
+        {% if par5_stats.avg_score_vs_par <= 0 %}
+        <strong>Strong par 5 scoring</strong> — averaging {{ par5_stats.avg_score_vs_par }} vs par. Par 5s are a net positive this round.
+        {% else %}
+        Par 5 average of +{{ par5_stats.avg_score_vs_par }} vs par. These holes should be birdie opportunities — focus on getting within layup range and making the short putt.
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   </div><!-- /tab-off-the-tee -->
 
   <!-- APPROACH PANEL -->
@@ -936,6 +1068,67 @@ body::before {
       </div>
     </div>
   </div>
+
+  {# ── GIR by Par Type ── #}
+  {% if par_type_gir %}
+  <div class="sec-divider"></div>
+  <div class="sec-label">GIR by Par Type</div>
+  <div class="par-type-grid">
+    {% for par_n, data in par_type_gir.items() | sort %}
+    <div class="pt-card">
+      <div class="pt-lbl">Par {{ par_n }}</div>
+      <div class="pt-val {{ 'c-grn' if data.gir_pct >= 50 else 'c-red' if data.gir_pct < 25 else 'c-gold' }}">{{ data.gir_pct }}%</div>
+      <div class="pt-sub">{{ data.girs }}/{{ data.holes }} GIR</div>
+      {% if scoring_by_par.get(par_n) %}
+      {% set _sp = scoring_by_par[par_n] %}
+      <div class="pt-sub" style="margin-top:6px;">
+        Avg {{ '+' if _sp.avg_svp > 0 }}{{ _sp.avg_svp }} vs par
+      </div>
+      <div class="pt-dist-row">
+        {% if _sp.eagles %}<span class="pt-dist-badge sb-eagle">{{ _sp.eagles }}E</span>{% endif %}
+        {% if _sp.birdies %}<span class="pt-dist-badge sb-birdie">{{ _sp.birdies }}B</span>{% endif %}
+        {% if _sp.pars %}<span class="pt-dist-badge sb-par">{{ _sp.pars }}P</span>{% endif %}
+        {% if _sp.bogeys %}<span class="pt-dist-badge sb-bogey">{{ _sp.bogeys }}Bo</span>{% endif %}
+        {% if _sp.doubles %}<span class="pt-dist-badge sb-double">{{ _sp.doubles }}D+</span>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Lie Type Breakdown ── #}
+  {% if lie_types %}
+  <div class="sec-divider"></div>
+  <div class="sec-label">Lie Types on Missed Greens</div>
+  <div class="a-card">
+    <div class="a-card-title">Where the Ball Ended Up · {{ (holes_data | selectattr('gir','equalto',false) | list) | length }} Missed Greens</div>
+    {% set lt_total = lie_types.values() | sum %}
+    {% for lt, cnt in lie_types.items() | sort(attribute='1', reverse=True) %}
+    {% set lt_pct = (cnt / lt_total * 100) | round | int %}
+    <div class="bar-row">
+      <span class="bar-lbl" style="width:76px; text-transform:capitalize;">{{ lt }}</span>
+      <div class="bar-track"><div class="bar-fill bf-gld" style="--w:{{ lt_pct }}%;"></div></div>
+      <span class="bar-pct" style="width:60px; text-align:right;">{{ cnt }} ({{ lt_pct }}%)</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Historical GIR% Comparison ── #}
+  {% set _hist_gir_pct = historical_ctx.get('avg_gir_pct') %}
+  {% if _hist_gir_pct is not none %}
+  <div class="stat-row" style="margin-top:14px; padding: 10px 0; border-bottom: 1px solid var(--border);">
+    <span class="sk">Historical avg GIR%</span>
+    <span class="sv">
+      {{ _hist_gir_pct }}%
+      {% set _gir_diff = gir_pct - _hist_gir_pct %}
+      {% if _gir_diff > 0 %}<span class="c-grn" style="margin-left:6px;">+{{ _gir_diff | round | int }}pp above avg</span>
+      {% elif _gir_diff < 0 %}<span class="c-red" style="margin-left:6px;">{{ _gir_diff | round | int }}pp below avg</span>
+      {% else %}<span style="margin-left:6px; color:var(--cream-faint);">on avg</span>{% endif %}
+    </span>
+  </div>
+  {% endif %}
 
   </div><!-- /tab-approach -->
 
@@ -1010,13 +1203,19 @@ body::before {
   <div class="two-col fu d6">
     <div class="a-card">
       <div class="a-card-title">Putt Distribution</div>
+      {# computed percentages #}
+      {% set _putt_total_holes = holes_data | length %}
+      {% set _1putt_pct = (putt_dist[1] / _putt_total_holes * 100) | round | int if _putt_total_holes else 0 %}
+      {% set _3putt_pct = (putt_dist[3] / _putt_total_holes * 100) | round | int if _putt_total_holes else 0 %}
       <div class="stat-row"><span class="sk">1-Putts</span>
-        <span class="sv c-grn">{{ putt_dist[1] }}{% if one_putt_holes %} (H{{ one_putt_holes | join(', H') }}){% endif %}</span>
+        <span class="sv c-grn">{{ putt_dist[1] }} ({{ _1putt_pct }}%){% if one_putt_holes %} · H{{ one_putt_holes | join(', H') }}{% endif %}</span>
       </div>
-      <div class="stat-row"><span class="sk">2-Putts</span><span class="sv">{{ putt_dist[2] }}</span></div>
-      <div class="stat-row"><span class="sk">3-Putts</span>
+      <div class="stat-row"><span class="sk">2-Putts</span><span class="sv">{{ putt_dist[2] }} ({{ (putt_dist[2] / _putt_total_holes * 100) | round | int if _putt_total_holes else 0 }}%)</span></div>
+      <div class="stat-row"><span class="sk">3-Putts
+        {% if putt_dist[3] > 0 %}<span style="font-size:8px; color:var(--red-soft); margin-left:3px;">blow-up risk</span>{% endif %}
+      </span>
         <span class="sv {{ 'c-red' if putt_dist[3] > 0 }}">
-          {{ putt_dist[3] }}{% if three_putt_holes %} (H{{ three_putt_holes | join(', H') }}){% endif %}
+          {{ putt_dist[3] }} ({{ _3putt_pct }}%){% if three_putt_holes %} · H{{ three_putt_holes | join(', H') }}{% endif %}
         </span>
       </div>
       {% if putt_dist['4+'] > 0 %}
@@ -1024,7 +1223,28 @@ body::before {
       {% endif %}
       <div class="stat-row"><span class="sk">Total Putts</span><span class="sv">{{ round.total_putts }}</span></div>
       <div class="stat-row"><span class="sk">Avg per hole</span><span class="sv">{{ putts_ph }}</span></div>
+      {# Putts per GIR hole #}
+      {% set _gir_holes_list = holes_data | selectattr('gir') | list %}
+      {% if _gir_holes_list %}
+      {% set _putts_gir = (_gir_holes_list | map(attribute='putts') | sum / _gir_holes_list | length) | round(2) %}
+      <div class="stat-row"><span class="sk">Avg putts (GIR holes)</span><span class="sv {{ 'c-grn' if _putts_gir <= 1.8 else 'c-red' if _putts_gir > 2.1 }}">{{ _putts_gir }}</span></div>
+      {% endif %}
       <div class="stat-row"><span class="sk">Avg 1st putt distance</span><span class="sv">{{ avg_fpd ~ 'ft' if avg_fpd is not none else '—' }}</span></div>
+      {# Historical avg putts comparison #}
+      {% set _hist_putts = historical_ctx.get('avg_total_putts') %}
+      {% if _hist_putts is not none %}
+      <div class="stat-row">
+        <span class="sk">Historical avg putts</span>
+        <span class="sv">
+          {{ _hist_putts }}
+          {% if round.total_putts is not none %}
+          {% set _pdiff = round.total_putts - _hist_putts %}
+          {% if _pdiff < 0 %}<span class="c-grn" style="margin-left:4px;">{{ _pdiff | round(1) }} vs avg</span>
+          {% elif _pdiff > 0 %}<span class="c-red" style="margin-left:4px;">+{{ _pdiff | round(1) }} vs avg</span>{% endif %}
+          {% endif %}
+        </span>
+      </div>
+      {% endif %}
       <div class="stat-row">
         <span class="sk">
           <span class="mg-tip">SG Putting<span class="mg-tip-icon">ⓘ</span>
@@ -1071,6 +1291,120 @@ body::before {
   </div>
 
   </div><!-- /tab-putting -->
+
+  <!-- SCORING PANEL -->
+  <div id="tab-scoring" class="tab-panel" role="tabpanel">
+  <div class="sec-divider"></div>
+  <div class="sec-label fu">Scoring Breakdown</div>
+
+  {# ── Change 4: Hole Score Visual Row ── #}
+  <div class="sb-row fu">
+    {% for h in holes_data %}
+    {% if h.score_vs_par <= -2 %}{% set _sbc = 'sb-eagle' %}
+    {% elif h.score_vs_par == -1 %}{% set _sbc = 'sb-birdie' %}
+    {% elif h.score_vs_par == 0 %}{% set _sbc = 'sb-par' %}
+    {% elif h.score_vs_par == 1 %}{% set _sbc = 'sb-bogey' %}
+    {% else %}{% set _sbc = 'sb-double' %}{% endif %}
+    <div class="score-badge {{ _sbc }}">
+      <span class="sb-h">H{{ h.hole_number }}</span>
+      <span class="sb-s">{{ h.score }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {# Legend #}
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:22px; font-size:8px; letter-spacing:.08em; text-transform:uppercase; color:var(--cream-faint);">
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(139,92,246,0.35);border:1px solid rgba(139,92,246,0.6);vertical-align:middle;margin-right:3px;"></span>Eagle</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(201,168,76,0.3);border:1px solid rgba(201,168,76,0.6);vertical-align:middle;margin-right:3px;"></span>Birdie</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(74,158,107,0.25);border:1px solid rgba(74,158,107,0.5);vertical-align:middle;margin-right:3px;"></span>Par</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(232,192,60,0.15);border:1px solid rgba(201,168,76,0.3);vertical-align:middle;margin-right:3px;"></span>Bogey</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(232,160,144,0.25);border:1px solid rgba(232,160,144,0.5);vertical-align:middle;margin-right:3px;"></span>Double+</span>
+  </div>
+
+  {# ── Scoring by Par Type ── #}
+  {% if scoring_by_par %}
+  <div class="sec-divider"></div>
+  <div class="sec-label">Scoring by Par Type</div>
+  <div class="par-type-grid fu">
+    {% for par_n, sp in scoring_by_par.items() | sort %}
+    <div class="pt-card">
+      <div class="pt-lbl">Par {{ par_n }}s · {{ sp.count }} hole{{ 's' if sp.count != 1 }}</div>
+      <div class="pt-val {{ 'c-grn' if sp.avg_svp <= 0 else 'c-red' }}">{{ '+' if sp.avg_svp > 0 }}{{ sp.avg_svp }}</div>
+      <div class="pt-sub">avg vs par</div>
+      <div class="pt-dist-row">
+        {% if sp.eagles %}<span class="pt-dist-badge sb-eagle">{{ sp.eagles }}E</span>{% endif %}
+        {% if sp.birdies %}<span class="pt-dist-badge sb-birdie">{{ sp.birdies }}B</span>{% endif %}
+        {% if sp.pars %}<span class="pt-dist-badge sb-par">{{ sp.pars }}P</span>{% endif %}
+        {% if sp.bogeys %}<span class="pt-dist-badge sb-bogey">{{ sp.bogeys }}Bo</span>{% endif %}
+        {% if sp.doubles %}<span class="pt-dist-badge sb-double">{{ sp.doubles }}D+</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Front / Back Scoring Split ── #}
+  {% if split.front and split.back %}
+  <div class="sec-divider"></div>
+  <div class="sec-label">Front vs Back Scoring</div>
+  <div class="two-col fu">
+    <div class="a-card">
+      <div class="a-card-title">Front Nine · Holes 1–9</div>
+      <div class="stat-row"><span class="sk">Score</span><span class="sv {{ 'c-grn' if split.front.score_vs_par <= 0 else 'c-red' }}">{{ split.front.score }} ({{ split.front.score_label }})</span></div>
+      {% set _fn = holes_data | selectattr('hole_number','le',9) | list %}
+      {% set _fe = _fn | selectattr('score_vs_par','le',-2) | list | length %}
+      {% set _fb = _fn | selectattr('score_vs_par','equalto',-1) | list | length %}
+      {% set _fp = _fn | selectattr('score_vs_par','equalto',0) | list | length %}
+      {% set _fbo = _fn | selectattr('score_vs_par','equalto',1) | list | length %}
+      {% set _fd = _fn | selectattr('score_vs_par','ge',2) | list | length %}
+      {% if _fe %}<div class="stat-row"><span class="sk">Eagles or better</span><span class="sv c-grn">{{ _fe }}</span></div>{% endif %}
+      {% if _fb %}<div class="stat-row"><span class="sk">Birdies</span><span class="sv c-grn">{{ _fb }}</span></div>{% endif %}
+      {% if _fp %}<div class="stat-row"><span class="sk">Pars</span><span class="sv">{{ _fp }}</span></div>{% endif %}
+      {% if _fbo %}<div class="stat-row"><span class="sk">Bogeys</span><span class="sv c-red">{{ _fbo }}</span></div>{% endif %}
+      {% if _fd %}<div class="stat-row"><span class="sk">Doubles or worse</span><span class="sv c-red">{{ _fd }}</span></div>{% endif %}
+    </div>
+    <div class="a-card">
+      <div class="a-card-title">Back Nine · Holes 10–18</div>
+      <div class="stat-row"><span class="sk">Score</span><span class="sv {{ 'c-grn' if split.back.score_vs_par <= 0 else 'c-red' }}">{{ split.back.score }} ({{ split.back.score_label }})</span></div>
+      {% set _bn = holes_data | selectattr('hole_number','gt',9) | list %}
+      {% set _be = _bn | selectattr('score_vs_par','le',-2) | list | length %}
+      {% set _bb = _bn | selectattr('score_vs_par','equalto',-1) | list | length %}
+      {% set _bp = _bn | selectattr('score_vs_par','equalto',0) | list | length %}
+      {% set _bbo = _bn | selectattr('score_vs_par','equalto',1) | list | length %}
+      {% set _bd = _bn | selectattr('score_vs_par','ge',2) | list | length %}
+      {% if _be %}<div class="stat-row"><span class="sk">Eagles or better</span><span class="sv c-grn">{{ _be }}</span></div>{% endif %}
+      {% if _bb %}<div class="stat-row"><span class="sk">Birdies</span><span class="sv c-grn">{{ _bb }}</span></div>{% endif %}
+      {% if _bp %}<div class="stat-row"><span class="sk">Pars</span><span class="sv">{{ _bp }}</span></div>{% endif %}
+      {% if _bbo %}<div class="stat-row"><span class="sk">Bogeys</span><span class="sv c-red">{{ _bbo }}</span></div>{% endif %}
+      {% if _bd %}<div class="stat-row"><span class="sk">Doubles or worse</span><span class="sv c-red">{{ _bd }}</span></div>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Blow-up Holes ── #}
+  {% set _blowup_holes = holes_data | selectattr('score_vs_par','ge',2) | list %}
+  {% if _blowup_holes %}
+  <div class="sec-divider"></div>
+  <div class="sec-label">Blow-up Holes · Double Bogey or Worse</div>
+  <div class="a-card fu">
+    <div class="a-card-title">{{ _blowup_holes | length }} Hole{{ 's' if _blowup_holes | length != 1 }} — {{ (_blowup_holes | map(attribute='score_vs_par') | sum) }} shots dropped combined</div>
+    {% for h in _blowup_holes %}
+    <div class="stat-row">
+      <span class="sk">Hole {{ h.hole_number }} (Par {{ h.par }})</span>
+      <span class="sv c-red">{{ h.score_label }} · {{ h.score }} gross</span>
+    </div>
+    {% if h.gir == false and h.approach_miss %}
+    <div style="font-size:9px; color:var(--cream-faint); padding:0 0 6px 0;">
+      Missed green {{ h.approach_miss }}{% if h.lie_type %} · lie: {{ h.lie_type }}{% endif %}
+    </div>
+    {% endif %}
+    {% endfor %}
+    <div class="insight">
+      Eliminating one blow-up hole per round is typically worth 1–2 strokes. Common causes: aggressive approach club selection, poor scrambling, or three-putts after GIR miss.
+    </div>
+  </div>
+  {% endif %}
+
+  </div><!-- /tab-scoring -->
 
   <!-- COACHING PANEL -->
   <div id="tab-coaching" class="tab-panel" role="tabpanel">
@@ -1320,7 +1654,7 @@ body::before {
 <script>
 // ── Tab switching ─────────────────────────────────────────────────
 (function () {
-  var TABS = ['overview', 'off-the-tee', 'approach', 'atg', 'putting', 'coaching'];
+  var TABS = ['overview', 'off-the-tee', 'approach', 'atg', 'putting', 'scoring', 'coaching'];
 
   function activateTab(tabId, pushHash) {
     if (TABS.indexOf(tabId) === -1) tabId = 'overview';
