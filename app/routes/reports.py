@@ -74,6 +74,12 @@ def _build_holes_data(holes, course_hole_map: dict) -> list:
             'sand_save_attempt':   h.sand_save_attempt,
             'sand_save_made':      h.sand_save_made,
             'penalties':           h.penalties,
+            'lie_type':            h.lie_type,
+            'est_drive_distance':  (
+                (ch.yardage - h.approach_distance)
+                if (ch and ch.yardage and h.approach_distance and h.par in (4, 5))
+                else None
+            ),
         })
     return result
 
@@ -224,6 +230,78 @@ def _first_putt_profile(holes_data: list) -> list:
     return result
 
 
+def _par_type_gir_breakdown(holes_data: list) -> dict:
+    """GIR count and rate segmented by par type."""
+    result = {}
+    for par in (3, 4, 5):
+        subset = [h for h in holes_data if h['par'] == par]
+        if not subset:
+            continue
+        girs = sum(1 for h in subset if h['gir'])
+        result[par] = {
+            'holes':   len(subset),
+            'girs':    girs,
+            'gir_pct': round(girs / len(subset) * 100),
+        }
+    return result
+
+
+def _lie_type_breakdown(holes_data: list) -> dict:
+    """Lie type frequency from GIR misses (comma-separated lie_type field)."""
+    counts: dict = {}
+    for h in holes_data:
+        if not h['gir'] and h.get('lie_type'):
+            for lt in h['lie_type'].split(','):
+                lt = lt.strip()
+                if lt:
+                    counts[lt] = counts.get(lt, 0) + 1
+    return counts
+
+
+def _par5_analysis(holes_data: list) -> dict:
+    """Par 5 per-hole detail and scoring average."""
+    par5s = [h for h in holes_data if h['par'] == 5]
+    if not par5s:
+        return {'holes': [], 'avg_score_vs_par': None, 'count': 0}
+    avg_svp = round(sum(h['score_vs_par'] for h in par5s) / len(par5s), 2)
+    holes_detail = []
+    for h in par5s:
+        sd = h.get('approach_distance')   # treat approach_distance as 2nd-shot dist on par 5
+        heuristic = None
+        if sd is not None:
+            heuristic = 'On/near green' if sd < 100 else 'Layup / long second'
+        holes_detail.append({
+            'hole_number':      h['hole_number'],
+            'score':            h['score'],
+            'score_vs_par':     h['score_vs_par'],
+            'score_label':      h['score_label'],
+            'gir':              h['gir'],
+            'second_shot_dist': sd,
+            'heuristic':        heuristic,
+        })
+    return {'holes': holes_detail, 'avg_score_vs_par': avg_svp, 'count': len(par5s)}
+
+
+def _scoring_by_par_type(holes_data: list) -> dict:
+    """Scoring distribution and average by par type."""
+    result = {}
+    for par in (3, 4, 5):
+        subset = [h for h in holes_data if h['par'] == par]
+        if not subset:
+            continue
+        avg_svp = round(sum(h['score_vs_par'] for h in subset) / len(subset), 2)
+        result[par] = {
+            'count':   len(subset),
+            'avg_svp': avg_svp,
+            'eagles':  sum(1 for h in subset if h['score_vs_par'] <= -2),
+            'birdies': sum(1 for h in subset if h['score_vs_par'] == -1),
+            'pars':    sum(1 for h in subset if h['score_vs_par'] == 0),
+            'bogeys':  sum(1 for h in subset if h['score_vs_par'] == 1),
+            'doubles': sum(1 for h in subset if h['score_vs_par'] >= 2),
+        }
+    return result
+
+
 def _sg_bar_width(sg_value: float, scale: float = 8.0) -> int:
     """
     Map an SG value to a percentage bar width (0–100).
@@ -278,6 +356,18 @@ def _build_historical_context(round_, prev_rounds: list) -> dict:
         if curr_val is not None:
             spark.append(round(curr_val, 2))
         ctx[f'sparkline_{cat}'] = spark if len(spark) >= 5 else []
+
+    # Basic per-round averages — available from 3+ previous rounds
+    _putts_vals = [r.total_putts for r in prev_rounds if r.total_putts is not None]
+    if len(_putts_vals) >= 3:
+        ctx['avg_total_putts'] = round(sum(_putts_vals) / len(_putts_vals), 1)
+    _gir_vals = [
+        r.gir_count / r.holes_played
+        for r in prev_rounds
+        if r.gir_count is not None and r.holes_played
+    ]
+    if len(_gir_vals) >= 3:
+        ctx['avg_gir_pct'] = round(sum(_gir_vals) / len(_gir_vals) * 100, 1)
 
     if round_count < 20 or not prev_rounds:
         return ctx
@@ -398,6 +488,19 @@ def view_report(round_id):
     putt_dist    = _putting_distribution(holes_data)
     first_putt   = _first_putt_profile(holes_data)
     weakest_sg   = _weakest_sg_category(sg_data)
+    par_type_gir  = _par_type_gir_breakdown(holes_data)
+    lie_types     = _lie_type_breakdown(holes_data)
+    par5_stats    = _par5_analysis(holes_data) or {'count': 0, 'holes': [], 'avg_score_vs_par': None}
+    scoring_by_par = _scoring_by_par_type(holes_data)
+
+    # Estimated drive distances (hole_yardage - approach_distance on par 4/5)
+    _drive_holes = [h for h in holes_data if h.get('est_drive_distance') is not None]
+    avg_drive_dist = round(sum(h['est_drive_distance'] for h in _drive_holes) / len(_drive_holes)) if _drive_holes else None
+
+    # Average approach distance left after tee shot (par 4s and 5s)
+    _app_dists = [h['approach_distance'] for h in holes_data
+                  if h['par'] in (4, 5) and h['approach_distance'] is not None]
+    avg_approach_after_tee = round(sum(_app_dists) / len(_app_dists)) if _app_dists else None
 
     # ---- Weather (fetch once, cache in report.weather_json) ----
     weather = get_round_weather(round_)
@@ -482,6 +585,12 @@ def view_report(round_id):
         scramble     = scramble,
         putt_dist    = putt_dist,
         first_putt   = first_putt,
+        par_type_gir          = par_type_gir,
+        lie_types             = lie_types,
+        par5_stats            = par5_stats,
+        scoring_by_par        = scoring_by_par,
+        avg_drive_dist        = avg_drive_dist,
+        avg_approach_after_tee = avg_approach_after_tee,
 
         # Context
         weather      = weather,
