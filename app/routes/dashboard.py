@@ -215,7 +215,21 @@ def _compute_glance(all_rounds):
 
 
 def _compute_sg_avgs(rounds):
-    """Average SG per category across up to 20 rounds. Returns None if < 3 rounds have data."""
+    """
+    Rolling 10-round SG averages per category, normalised to 18-hole equivalent.
+
+    Main bar = average of the last 10 rounds that have non-null SG for that
+    category, each normalised as (raw_sg / holes_played) * 18.
+
+    Delta = how the most recent round shifted the rolling average:
+        after  = avg of all N rounds (what the bar shows)
+        before = avg of rounds 2..N (the rolling avg before the latest round)
+        delta  = after − before
+    Shown only when N >= 2. A positive delta means the last round pulled
+    the average up; negative means it dragged it down.
+
+    Returns None if no category has at least 1 round with reliable SG data.
+    """
     SG_ATTRS = [
         ('Off the Tee',      'sg_off_tee'),
         ('Approach',         'sg_approach'),
@@ -223,58 +237,45 @@ def _compute_sg_avgs(rounds):
         ('Putting',          'sg_putting'),
     ]
 
-    sg_rounds = [
-        r for r in rounds
-        if any(getattr(r, attr) is not None for _, attr in SG_ATTRS)
-    ]
-    if len(sg_rounds) < 3:
-        return None
+    def norm(r, attr):
+        return getattr(r, attr) / r.holes_played * 18
 
-    # Debug: log raw SG values for the last 5 rounds so we can verify the data
-    for r in sg_rounds[:5]:
-        logger.warning(
-            'SG DEBUG round_id=%s date=%s holes=%s ott=%s app=%s atg=%s putt=%s',
-            r.id, r.date_played, r.holes_played,
-            r.sg_off_tee, r.sg_approach, r.sg_atg, r.sg_putting,
-        )
-
-    # Delta: last two rounds that each have data for this specific category.
-    # Only show when both rounds have a real value — never fall back to the
-    # raw round value when there's only one data point (that was the bug).
     categories = []
+    max_count  = 0
+
     for name, attr in SG_ATTRS:
-        # Per-round values normalised to an 18-hole equivalent so 9-hole and
-        # 18-hole rounds are comparable: normalised = raw_total / holes_played * 18
-        vals = [
-            getattr(r, attr) / r.holes_played * 18
-            for r in sg_rounds
-            if getattr(r, attr) is not None and r.holes_played
-        ]
-        if not vals:
+        # Rounds with reliable, computed SG for this specific category.
+        # algo_version guards against old rounds whose SG fields stored 0.0
+        # rather than NULL before the calculation was implemented.
+        cat_rounds = [
+            r for r in rounds
+            if getattr(r, attr) is not None
+            and r.holes_played
+            and r.algo_version is not None
+        ][:10]   # cap at last 10
+
+        if not cat_rounds:
             continue
 
-        # Delta: most recent round vs the one before it, per THIS category.
-        # Only include rounds where SG was properly computed (algo_version set)
-        # to avoid stale/uncomputed rounds whose SG fields default to 0.0.
-        cat_rounds = [r for r in sg_rounds
-                      if getattr(r, attr) is not None
-                      and r.holes_played
-                      and r.algo_version is not None]
-        delta = None
-        if len(cat_rounds) >= 2:
-            curr = getattr(cat_rounds[0], attr) / cat_rounds[0].holes_played * 18
-            prev = getattr(cat_rounds[1], attr) / cat_rounds[1].holes_played * 18
-            delta = round(curr - prev, 2)
-            logger.warning(
-                'SG DELTA %s: curr=%.3f (id=%s holes=%s raw=%.3f) '
-                'prev=%.3f (id=%s holes=%s raw=%.3f) delta=%.3f',
-                name,
-                curr, cat_rounds[0].id, cat_rounds[0].holes_played, getattr(cat_rounds[0], attr),
-                prev, cat_rounds[1].id, cat_rounds[1].holes_played, getattr(cat_rounds[1], attr),
-                delta,
-            )
+        max_count = max(max_count, len(cat_rounds))
 
-        categories.append({'name': name, 'avg': round(sum(vals) / len(vals), 2), 'delta': delta})
+        # Normalised values, index 0 = most recent round
+        vals = [norm(r, attr) for r in cat_rounds]
+
+        avg = sum(vals) / len(vals)   # the number shown on the bar
+
+        # Delta: avg(all N) minus avg(rounds 2..N)
+        delta = None
+        if len(vals) >= 2:
+            before = sum(vals[1:]) / len(vals[1:])
+            delta  = round(avg - before, 2)
+
+        categories.append({
+            'name':  name,
+            'avg':   round(avg, 2),
+            'delta': delta,
+            'count': len(cat_rounds),
+        })
 
     if not categories:
         return None
@@ -289,36 +290,27 @@ def _compute_sg_avgs(rounds):
         else:
             cat['color'] = 'mid'
 
-    # Dynamic scale — zero near the RIGHT (negative bars extend left, positive right)
-    avgs    = [c['avg'] for c in categories]
-    min_val = min(avgs)
-    max_val = max(avgs)
-
-    # Round the most negative value DOWN to nearest integer for the left-edge anchor.
-    # e.g. -2.68 → -3, -3.1 → -4. This guarantees the worst bar never fully
-    # reaches the left edge — there is always a small visual gap.
-    floor_min = math.floor(min_val)   # always ≤ min_val
-
-    # Right-side allowance: at least 0.5 SG of space beyond zero for positive values
-    right_range = max(max_val, 0.0) + 0.5
-
-    # Total scale range and zero position (% from left edge)
+    # Dynamic scale — zero anchored at zero_pct from the left edge.
+    # Negative bars extend left; positive bars extend right.
+    avgs        = [c['avg'] for c in categories]
+    min_val     = min(avgs)
+    max_val     = max(avgs)
+    floor_min   = math.floor(min_val)        # always ≤ min_val; guarantees gap at left edge
+    right_range = max(max_val, 0.0) + 0.5   # at least 0.5 SG of space right of zero
     total_range = abs(floor_min) + right_range
-    zero_pct    = round(abs(floor_min) / total_range * 100, 1)   # ~80–85 % from left
+    zero_pct    = round(abs(floor_min) / total_range * 100, 1)
 
     for cat in categories:
         v = cat['avg']
         if v < 0:
-            # Negative bar: extends LEFT from zero line
             cat['width_pct'] = round(abs(v) / total_range * 100, 2)
             cat['positive']  = False
         else:
-            # Positive bar: extends RIGHT from zero line
             cat['width_pct'] = round(v / total_range * 100, 2)
             cat['positive']  = True
 
     return {
         'categories':   categories,
-        'rounds_count': len(sg_rounds),
+        'rounds_count': max_count,
         'zero_pct':     zero_pct,
     }
