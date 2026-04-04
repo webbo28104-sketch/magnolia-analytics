@@ -870,8 +870,9 @@ body::before {
     <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(232,160,144,0.25);border:1px solid rgba(232,160,144,0.5);vertical-align:middle;margin-right:3px;"></span>Double+</span>
   </div>
 
+  {# Row 1: Par type summary cards — always 3 columns #}
   {% if scoring_by_par %}
-  <div class="par-type-grid fu d4" style="grid-template-columns:repeat(3,1fr)">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px;" class="fu d4">
     {% for par_n, sp in scoring_by_par.items() | sort %}
     <div class="pt-card">
       <div class="pt-lbl">Par {{ par_n }}s · {{ sp.count }} hole{{ 's' if sp.count != 1 }}</div>
@@ -889,12 +890,13 @@ body::before {
   </div>
   {% endif %}
 
+  {# Row 2: Score type count cards — auto-fit so items always stretch to full width #}
   {% set n_pars    = holes_data | selectattr('score_vs_par','equalto',0) | list | length %}
   {% set n_bogeys  = holes_data | selectattr('score_vs_par','equalto',1) | list | length %}
   {% set n_doubles = holes_data | selectattr('score_vs_par','ge',2) | list | length %}
   {% set n_birdies = holes_data | selectattr('score_vs_par','equalto',-1) | list | length %}
   {% set n_eagles  = holes_data | selectattr('score_vs_par','le',-2) | list | length %}
-  <div class="rp-tiles fu d4" style="margin-top:0;grid-template-columns:repeat(auto-fill,minmax(110px,1fr))">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:20px;" class="fu d4">
     {% if n_eagles %}<div class="rp-tile"><div class="rp-tile-lbl">Eagles</div><div class="rp-tile-val" style="color:#7ecf9e">{{ n_eagles }}</div><div class="rp-tile-sub">{{ (n_eagles / holes_data|length * 100)|round|int }}% of holes</div></div>{% endif %}
     {% if n_birdies %}<div class="rp-tile"><div class="rp-tile-lbl">Birdies</div><div class="rp-tile-val c-grn">{{ n_birdies }}</div><div class="rp-tile-sub">{{ (n_birdies / holes_data|length * 100)|round|int }}% of holes</div></div>{% endif %}
     <div class="rp-tile"><div class="rp-tile-lbl">Pars</div><div class="rp-tile-val">{{ n_pars }}</div><div class="rp-tile-sub">{{ (n_pars / holes_data|length * 100)|round|int }}% of holes</div></div>
