@@ -941,8 +941,8 @@ body::before {
     <div style="flex:1;min-width:0;">
       <script>
       var TEE_DRIVES = [
-        {% for h in holes_data if h.yardage and h.approach_distance and h.par in [4,5] %}
-        {col:'{{ "fwy" if h.tee_shot == "fairway" else h.tee_shot if h.tee_shot in ["left","right"] else "fwy" }}', dist:{{ h.yardage - h.approach_distance }}},
+        {% for h in holes_data if h.est_drive_distance %}
+        {col:'{{ "fwy" if h.tee_shot == "fairway" else h.tee_shot if h.tee_shot in ["left","right"] else "fwy" }}', dist:{{ h.est_drive_distance }}},
         {% endfor %}
       ];
       </script>
