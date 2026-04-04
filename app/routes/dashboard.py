@@ -253,9 +253,13 @@ def _compute_sg_avgs(rounds):
         if not vals:
             continue
 
-        # Delta: most recent round vs the one before it, per THIS category
+        # Delta: most recent round vs the one before it, per THIS category.
+        # Only include rounds where SG was properly computed (algo_version set)
+        # to avoid stale/uncomputed rounds whose SG fields default to 0.0.
         cat_rounds = [r for r in sg_rounds
-                      if getattr(r, attr) is not None and r.holes_played]
+                      if getattr(r, attr) is not None
+                      and r.holes_played
+                      and r.algo_version is not None]
         delta = None
         if len(cat_rounds) >= 2:
             curr = getattr(cat_rounds[0], attr) / cat_rounds[0].holes_played * 18
