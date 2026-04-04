@@ -382,6 +382,10 @@ TONE RULES
 - Never repeat the same observation across paragraphs
 - Vary sentence structure; avoid chains of "your X was Y" constructions
 - Write as if you watched the round, not as if you scanned a scorecard
+- Do not reference weather, temperature, wind, or external conditions unless the user has explicitly noted them in the round data
+- Do not compare score to handicap as a primary metric; use strokes gained as the primary analytical lens
+- If fewer than 20 rounds of history exist, focus analysis on the current round's shot data only; do not draw handicap trend conclusions
+- Write in direct, plain sentences; do not use hedging language or qualify every observation with uncertainty
 
 OUTPUT
 Write 4–5 paragraphs of plain text, separated by blank lines. No markdown, no HTML, no bullet points, no section headers.

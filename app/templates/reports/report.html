@@ -227,7 +227,7 @@ body::before {
 .ai-block::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
 .ai-eyebrow { font-size:9px; letter-spacing:.22em; text-transform:uppercase; color:var(--gold); opacity:.7; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
 .ai-eyebrow::after { content:''; flex:1; height:1px; background:var(--border); }
-.ai-body { font-family:'Inter',system-ui,sans-serif; font-style:italic; font-size:15px; line-height:1.78; color:rgba(245,240,232,0.5); letter-spacing:.01em; }
+.ai-body { font-family:'Inter',system-ui,sans-serif; font-size:15px; line-height:1.78; color:rgba(245,240,232,0.5); letter-spacing:.01em; }
 .ai-body p + p { margin-top:1.1em; }
 .ai-cta { margin-top:18px; padding-top:16px; border-top:1px solid var(--border); font-size:10px; letter-spacing:.1em; color:var(--gold); opacity:.55; }
 .pri-list { display:flex; flex-direction:column; gap:9px; }
@@ -543,6 +543,27 @@ body::before {
 }
 .pro-lock-card .plc-btn:hover { background: var(--gold-light); }
 
+.rp-tiles { display:grid; gap:10px; margin-bottom:20px; }
+.rp-tiles-4 { grid-template-columns:repeat(4,1fr); }
+.rp-tile { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:18px 16px 14px; position:relative; overflow:hidden; }
+.rp-tile::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); opacity:.5; border-radius:0; }
+.rp-tile-lbl { font-size:8px; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); opacity:.6; margin-bottom:10px; }
+.rp-tile-val { font-family:'Inter',system-ui,sans-serif; font-size:32px; font-weight:700; line-height:1; letter-spacing:-.02em; }
+.rp-tile-sub { font-size:10px; color:var(--cream-faint); margin-top:6px; }
+.rp-viz { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:20px; margin-bottom:18px; }
+.rp-viz-title { font-size:8px; letter-spacing:.2em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:14px; }
+.rp-insight { font-size:13px; line-height:1.68; color:rgba(245,240,232,0.62); padding:16px 20px; background:var(--cream-ghost); border:1px solid var(--border); border-left:3px solid var(--gold-dim); border-radius:0; margin-top:4px; }
+.rp-insight strong { color:var(--gold-light); }
+.c-grn { color:var(--green-soft); }
+.c-red { color:var(--red-soft); }
+.scramble-row { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); font-size:11px; }
+.scramble-row:last-child { border-bottom:none; }
+.sr-hole { color:var(--cream-faint); width:28px; flex-shrink:0; }
+.sr-icon { width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; flex-shrink:0; }
+.sr-icon-save { background:rgba(126,207,158,0.18); color:var(--green-soft); border:1px solid rgba(126,207,158,0.3); }
+.sr-icon-miss { background:rgba(220,80,80,0.12); color:var(--red-soft); border:1px solid rgba(220,80,80,0.2); }
+.sr-detail { flex:1; color:var(--cream-faint); }
+
 </style>
 {# Dynamic watermark text for hero::before #}
 <style>.hero-gross::before { content: '{{ course_name_upper }}'; }</style>
@@ -655,14 +676,6 @@ body::before {
 
   <!-- OVERVIEW PANEL -->
   <div id="tab-overview" class="tab-panel active" role="tabpanel">
-
-  <!-- CONTEXT SUMMARY -->
-  {% if summary_text %}
-  <div class="ctx-summary fu d3">
-    <div class="ctx-summary-eyebrow">Summary</div>
-    <div class="ctx-summary-body">{{ summary_text }}</div>
-  </div>
-  {% endif %}
 
   <!-- ROUND SUMMARY -->
   <div class="sec-label fu d3">Round Summary</div>
@@ -1132,62 +1145,68 @@ body::before {
   <div id="tab-atg" class="tab-panel" role="tabpanel">
   <div class="sec-divider"></div>
   <div class="sec-label fu d6">Around the Green</div>
-  <div class="two-col fu d6">
-    <div class="a-card">
-      <div class="a-card-title">Scramble · {{ scramble.attempts }} Missed Greens</div>
-      {% set sand_attempt_holes = holes_data | selectattr('sand_save_attempt') | list %}
-      {% set sand_saves = sand_attempt_holes | selectattr('sand_save_made') | list | length %}
-      <div class="stat-row"><span class="sk">Up-and-downs made</span>
-        <span class="sv {{ 'c-grn' if scramble.save_pct and scramble.save_pct >= 50 else 'c-red' if scramble.save_pct and scramble.save_pct < 30 }}">
-          {{ scramble.saves }}/{{ scramble.attempts }}{% if scramble.save_pct is not none %} ({{ scramble.save_pct }}%){% endif %}
-        </span>
-      </div>
-      {% if sand_attempt_holes %}
-      <div class="stat-row"><span class="sk">Sand saves</span>
-        <span class="sv {{ 'c-grn' if sand_saves > 0 else 'c-red' }}">{{ sand_saves }}/{{ sand_attempt_holes | length }}</span>
-      </div>
-      {% else %}
-      <div class="stat-row"><span class="sk">Sand save attempts</span><span class="sv">0</span></div>
-      {% endif %}
-      {% set double_plus = holes_data | selectattr('gir','equalto',false) | selectattr('score_vs_par','ge',2) | map(attribute='hole_number') | list %}
-      {% if double_plus %}
-      <div class="stat-row"><span class="sk">Doubles+ from GIR miss</span><span class="sv c-red">H{{ double_plus | join(', H') }}</span></div>
-      {% endif %}
-      <div class="stat-row">
-        <span class="sk">
-          <span class="mg-tip">SG Around Green<span class="mg-tip-icon">ⓘ</span>
-            <span class="mg-pop">Strokes Gained: Around the Green — measures performance on shots within ~30 yards of the green (chips, pitches, bunker shots) versus the scratch average.</span>
-          </span>
-        </span>
-        <span class="sv {{ 'c-grn' if (sg_atg_ok and sg_data.sg_atg >= 0) else 'c-red' if sg_atg_ok }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</span>
-      </div>
-      {% if scramble.save_pct is not none %}
-      <div class="insight">
-        {% if scramble.save_pct >= 50 %}
-        <strong>Good scrambling</strong> — {{ scramble.save_pct }}% conversion rate (scratch average ~55%).
-        {% else %}
-        Scramble rate at {{ scramble.save_pct }}%. With {{ scramble.attempts }} opportunities, converting one more per round would be worth roughly one stroke.
-        {% endif %}
-      </div>
-      {% endif %}
+
+  {# Hero SG ATG #}
+  <div style="display:flex;align-items:baseline;gap:10px;margin:4px 0 22px" class="fu d6">
+    <div style="font-size:64px;font-weight:900;line-height:1;letter-spacing:-.04em;{{ 'color:var(--green-soft)' if sg_atg_ok and sg_data.sg_atg >= 0 else 'color:var(--red-soft)' if sg_atg_ok else 'color:var(--cream-faint)' }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</div>
+    <div style="font-size:13px;color:var(--cream-faint);font-weight:400">SG Around the Green</div>
+  </div>
+
+  {# 4-tile grid #}
+  {% set sand_attempt_holes = holes_data | selectattr('sand_save_attempt') | list %}
+  {% set sand_saves = sand_attempt_holes | selectattr('sand_save_made') | list | length %}
+  {% set gir_miss_holes = holes_data | selectattr('gir','equalto',false) | list %}
+  {% set avg_putts_miss = (gir_miss_holes | map(attribute='putts') | sum / gir_miss_holes | length) | round(2) if gir_miss_holes else none %}
+  <div class="rp-tiles rp-tiles-4 fu d6">
+    <div class="rp-tile">
+      <div class="rp-tile-lbl">Up &amp; Downs</div>
+      <div class="rp-tile-val {{ 'c-grn' if scramble.save_pct and scramble.save_pct >= 50 else 'c-red' if scramble.save_pct and scramble.save_pct < 30 else '' }}">{{ scramble.saves }}/{{ scramble.attempts }}</div>
+      <div class="rp-tile-sub">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% conversion</div>
     </div>
-    <div class="a-card">
-      <div class="a-card-title">Short Game Context</div>
-      {% set gir_miss_holes = holes_data | selectattr('gir','equalto',false) | list %}
-      {% if gir_miss_holes %}
-        {% set avg_putts_after_miss = (gir_miss_holes | map(attribute='putts') | sum / gir_miss_holes | length) | round(2) %}
-        <div class="stat-row"><span class="sk">Avg putts after GIR miss</span><span class="sv">{{ avg_putts_after_miss }}</span></div>
-      {% endif %}
-      <div class="stat-row"><span class="sk">GIR rate</span><span class="sv">{{ gir_pct }}%</span></div>
-      <div class="stat-row"><span class="sk">Scramble rate</span><span class="sv">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}%</span></div>
-      {% set best_scramble = holes_data | selectattr('gir','equalto',false) | selectattr('score_vs_par','equalto',0) | map(attribute='hole_number') | list %}
-      {% if best_scramble %}
-      <div class="stat-row"><span class="sk">Par saves (scramble)</span><span class="sv c-grn">H{{ best_scramble | join(', H') }}</span></div>
-      {% endif %}
-      <div class="insight">
-        Around the green performance most directly impacts bogey avoidance. With {{ scramble.attempts }} GIR misses, each additional conversion is worth one shot.
-      </div>
+    <div class="rp-tile">
+      <div class="rp-tile-lbl">Scramble %</div>
+      <div class="rp-tile-val {{ 'c-grn' if scramble.save_pct and scramble.save_pct >= 50 else 'c-red' if scramble.save_pct and scramble.save_pct < 30 else '' }}">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}%</div>
+      <div class="rp-tile-sub">scratch avg ~55%</div>
     </div>
+    <div class="rp-tile">
+      <div class="rp-tile-lbl">Avg Putts (Miss)</div>
+      <div class="rp-tile-val">{{ avg_putts_miss if avg_putts_miss is not none else '—' }}</div>
+      <div class="rp-tile-sub">after GIR miss</div>
+    </div>
+    <div class="rp-tile">
+      <div class="rp-tile-lbl">Sand Saves</div>
+      <div class="rp-tile-val">{{ sand_saves }}/{{ sand_attempt_holes | length }}</div>
+      <div class="rp-tile-sub">{{ 'no bunker holes' if not sand_attempt_holes else '' }}</div>
+    </div>
+  </div>
+
+  {# Scramble timeline #}
+  <div class="rp-viz fu d6">
+    <div class="rp-viz-title">Hole by Hole · GIR Misses</div>
+    {% for h in holes_data | selectattr('gir','equalto',false) | list %}
+    {% set _saved = h.score_vs_par <= 0 %}
+    <div class="scramble-row">
+      <span class="sr-hole">H{{ h.hole_number }}</span>
+      <span class="sr-icon {{ 'sr-icon-save' if _saved else 'sr-icon-miss' }}">{{ '✓' if _saved else '✕' }}</span>
+      <span class="sr-detail">
+        Par {{ h.par }} · {{ h.score_label }}
+        {% if h.lie_type %} · {{ h.lie_type }}{% endif %}
+        {% if h.putts is not none %} · {{ h.putts }} putt{{ 's' if h.putts != 1 }}{% endif %}
+      </span>
+    </div>
+    {% else %}
+    <div style="font-size:12px;color:var(--cream-faint);padding:10px 0;">All greens hit in regulation this round.</div>
+    {% endfor %}
+  </div>
+
+  {# Insight #}
+  {% set best_scramble = holes_data | selectattr('gir','equalto',false) | selectattr('score_vs_par','equalto',0) | map(attribute='hole_number') | list %}
+  <div class="rp-insight fu d6">
+    {% if scramble.save_pct is not none and scramble.save_pct >= 50 %}
+    <strong>Good scrambling</strong> — {{ scramble.save_pct }}% conversion rate above the scratch average of ~55%. {% if best_scramble %}Par saves on H{{ best_scramble | join(', H') }} directly prevented additional bogeys.{% endif %}
+    {% else %}
+    Scramble rate at {{ scramble.save_pct if scramble.save_pct is not none else '—' }}% from {{ scramble.attempts }} opportunities. Converting one more per round is worth roughly one stroke.
+    {% endif %}
   </div>
 
   </div><!-- /tab-atg -->
@@ -1323,6 +1342,20 @@ body::before {
   </div>
   {% endif %}
 
+  {# ── Score Distribution Tiles ── #}
+  {% set n_pars    = holes_data | selectattr('score_vs_par','equalto',0) | list | length %}
+  {% set n_bogeys  = holes_data | selectattr('score_vs_par','equalto',1) | list | length %}
+  {% set n_doubles = holes_data | selectattr('score_vs_par','ge',2) | list | length %}
+  {% set n_birdies = holes_data | selectattr('score_vs_par','equalto',-1) | list | length %}
+  {% set n_eagles  = holes_data | selectattr('score_vs_par','le',-2) | list | length %}
+  <div class="rp-tiles rp-tiles-4 fu" style="margin-top:0">
+    {% if n_eagles %}<div class="rp-tile"><div class="rp-tile-lbl">Eagles</div><div class="rp-tile-val" style="color:#7ecf9e">{{ n_eagles }}</div><div class="rp-tile-sub">{{ (n_eagles / holes_data|length * 100)|round|int }}% of holes</div></div>{% endif %}
+    {% if n_birdies %}<div class="rp-tile"><div class="rp-tile-lbl">Birdies</div><div class="rp-tile-val c-grn">{{ n_birdies }}</div><div class="rp-tile-sub">{{ (n_birdies / holes_data|length * 100)|round|int }}% of holes</div></div>{% endif %}
+    <div class="rp-tile"><div class="rp-tile-lbl">Pars</div><div class="rp-tile-val">{{ n_pars }}</div><div class="rp-tile-sub">{{ (n_pars / holes_data|length * 100)|round|int }}% of holes</div></div>
+    <div class="rp-tile"><div class="rp-tile-lbl">Bogeys</div><div class="rp-tile-val {{ 'c-red' if n_bogeys > 0 else '' }}">{{ n_bogeys }}</div><div class="rp-tile-sub">{{ (n_bogeys / holes_data|length * 100)|round|int }}% of holes</div></div>
+    {% if n_doubles %}<div class="rp-tile"><div class="rp-tile-lbl">Doubles+</div><div class="rp-tile-val c-red">{{ n_doubles }}</div><div class="rp-tile-sub">blow-up holes</div></div>{% endif %}
+  </div>
+
   {# ── Front / Back Scoring Split ── #}
   {% if split.front and split.back %}
   <div class="sec-divider"></div>
@@ -1402,112 +1435,29 @@ body::before {
       <span class="mg-pop">Strokes Gained (SG) measures performance in each area relative to a scratch handicap baseline, following Mark Broadie's methodology. Positive = gained strokes vs scratch; negative = lost strokes. Values are estimates derived from your shot data.</span>
     </span>
   </div>
-  <p class="sg-baseline-note fu d7">0 = scratch handicap level · Positive = gaining strokes on a scratch golfer · Negative = losing strokes</p>
-
-  {# Colour class macro — thresholds ±0.2 #}
-  {% macro sgcol(val) %}{% if val > 0.2 %}sg-positive{% elif val < -0.2 %}sg-negative{% else %}sg-neutral{% endif %}{% endmacro %}
-
-  {# Dual bar macro: current round track (6px) + optional avg track (3px below) #}
-  {% macro dualbar(curr_val, curr_ok, avg_val) %}
-  {% if curr_ok %}
-  {% set cp = [[(( curr_val | abs) / 3 * 50) | round | int, 0] | max, 50] | min %}
-  <div class="sgb-track">
-    <div class="sgb-zero"></div>
-    <div class="sgb-bar {{ 'sgb-pos' if curr_val >= 0 else 'sgb-neg' }}" style="width:{{ cp }}%;"></div>
-  </div>
-  {% if avg_val is not none %}
-  {% set ap = [[(( avg_val | abs) / 3 * 50) | round | int, 0] | max, 50] | min %}
-  <div class="sgb-track-sm">
-    <div class="sgb-zero"></div>
-    <div class="sgb-bar {{ 'sgb-avg-pos' if avg_val >= 0 else 'sgb-avg-neg' }}" style="width:{{ ap }}%;"></div>
-  </div>
-  {% endif %}
-  {% endif %}
-  {% endmacro %}
-
-  {# Sparkline SVG macro — vals: list of floats oldest→newest, must be >= 5 points #}
-  {% macro sparkline(vals) %}
-  {% if vals | length >= 5 %}
-  {% set n = vals | length %}
-  {% set ns = namespace(pts='') %}
-  {% for v in vals %}
-    {% set xi = (loop.index0 / (n - 1) * 80) | round(1) %}
-    {% set raw_y = 16 - v / 3 * 16 %}
-    {% set yi = (0 if raw_y < 0 else (32 if raw_y > 32 else raw_y)) | round(1) %}
-    {% if loop.first %}{% set ns.pts = xi | string + ',' + yi | string %}
-    {% else %}{% set ns.pts = ns.pts + ' ' + xi | string + ',' + yi | string %}{% endif %}
-  {% endfor %}
-  <svg class="sg-spark" viewBox="0 0 80 32" preserveAspectRatio="none">
-    <line x1="0" y1="16" x2="80" y2="16" class="sg-spark-zero" stroke-width="0.5"/>
-    <polyline class="sg-spark-line" points="{{ ns.pts }}"/>
-    {% for v in vals %}
-      {% set xi = (loop.index0 / (n - 1) * 80) | round(1) %}
-      {% set raw_y = 16 - v / 3 * 16 %}
-      {% set yi = (0 if raw_y < 0 else (32 if raw_y > 32 else raw_y)) | round(1) %}
-      <circle cx="{{ xi }}" cy="{{ yi }}" r="1.8" class="{{ 'sg-spark-curr' if loop.last else 'sg-spark-dot' }}"/>
-    {% endfor %}
-  </svg>
-  {% endif %}
-  {% endmacro %}
-
-  {# Safe access to historical context #}
-  {% set _hctx = historical_ctx if historical_ctx is defined else {} %}
-
-  <div class="sg-bars fu d7">
-
-    {# Legend #}
-    <div class="sg-legend">
-      <div class="sg-legend-item">
-        <div class="sg-legend-bar"></div>
-        <span class="sg-legend-lbl">This round</span>
-      </div>
-      <div class="sg-legend-item">
-        <div class="sg-legend-bar-sm"></div>
-        <span class="sg-legend-lbl">Your avg</span>
-      </div>
-    </div>
-
-    {# Rows: (data-sufficiency flag, historical-context key, display label, current value) #}
-    {% set _sg_cat_rows = [
-      (sg_ott_ok,  'sg_off_tee',  'Off Tee',      sg_data.sg_off_tee),
-      (sg_app_ok,  'sg_approach', 'Approach',      sg_data.sg_approach),
-      (sg_atg_ok,  'sg_atg',      'Around Green',  sg_data.sg_atg),
-      (sg_putt_ok, 'sg_putting',  'Putting',       sg_data.sg_putting.total),
+  <div class="rp-tiles rp-tiles-4 fu d7">
+    {% set _sg_cat_tiles = [
+      (sg_ott_ok,  'Off the Tee',     sg_data.sg_off_tee),
+      (sg_app_ok,  'Approach',        sg_data.sg_approach),
+      (sg_atg_ok,  'Around Green',    sg_data.sg_atg),
+      (sg_putt_ok, 'Putting',         sg_data.sg_putting.total),
     ] %}
-
-    {% for row_ok, cat_key, row_label, row_curr in _sg_cat_rows %}
-    {% set row_avg   = _hctx.get('avg_' + cat_key) %}
-    {% set row_spark = _hctx.get('sparkline_' + cat_key, []) %}
-    <div class="sg-br">
-      <span class="sg-bc">{{ row_label }}</span>
-      <div style="flex:1; min-width:0;">
-        {{ dualbar(row_curr, row_ok, row_avg) }}
-        {% if row_spark %}{{ sparkline(row_spark) }}{% endif %}
-      </div>
-      <div class="sga-vals">
-        <div class="sga-vb">
-          <div class="sga-vt">Round</div>
-          {% if row_ok %}
-          <div class="sga-vn {{ sgcol(row_curr) }}">{{ sgfmt(row_curr) }}</div>
-          {% else %}
-          <div class="sga-vn sg-neutral">—</div>
-          {% endif %}
-        </div>
-        {% if row_avg is not none %}
-        <div class="sga-vb">
-          <div class="sga-vt">Avg</div>
-          <div class="sga-vn-sm {{ sgcol(row_avg) }}">{{ sgfmt(row_avg) }}</div>
-        </div>
-        {% elif row_ok %}
-        <div class="sga-nd">Not enough<br>data</div>
-        {% endif %}
-      </div>
+    {% for tile_ok, tile_lbl, tile_val in _sg_cat_tiles %}
+    <div class="rp-tile">
+      <div class="rp-tile-lbl">{{ tile_lbl }}</div>
+      {% if tile_ok %}
+      <div class="rp-tile-val {{ 'c-grn' if tile_val >= 0 else 'c-red' if tile_val < -1 else '' }}">{{ sgfmt(tile_val) }}</div>
+      <div class="rp-tile-sub">{{ 'gaining on scratch' if tile_val >= 0 else 'losing to scratch' }}</div>
+      {% else %}
+      <div class="rp-tile-val" style="color:var(--cream-faint);">—</div>
+      <div class="rp-tile-sub">not enough data</div>
+      {% endif %}
     </div>
     {% endfor %}
-
   </div>
 
   {# SG Total summary #}
+  {% set _hctx = historical_ctx if historical_ctx is defined else {} %}
   {% if sg_total_ok %}
   {% set _avg_sg_total = _hctx.get('avg_sg_total') %}
   {% set _sg_vals_named = {} %}
@@ -1548,65 +1498,74 @@ body::before {
         <p>{{ narrative }}</p>
       {% endif %}
     </div>
-    <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(201,168,76,0.45);margin:18px 0 10px;padding-top:14px;border-top:1px solid rgba(201,168,76,0.12);">Practice Priorities</div>
-    <div class="pri-list">
-    {# Priority 1 — weakest SG category #}
+    <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(201,168,76,0.45);margin:20px 0 12px;padding-top:16px;border-top:1px solid rgba(201,168,76,0.12);">Practice Priorities</div>
+    {% if weakest_sg == 'Off the Tee' %}
     <div class="pri-item">
       <div class="pri-n">1</div>
       <div>
-        {% if weakest_sg == 'Off the Tee' %}
         <div class="pri-title">Tee Shot Consistency</div>
-        <div class="pri-desc">With {{ fw_pct }}% fairways hit this round, tee shot accuracy is the highest-leverage improvement. One session on tee shot shape — whether a committed draw or improved alignment — could recover the {{ round.fairways_available - round.fairways_hit }} missed fairways and shorten approach distances across the board.</div>
-        {% elif weakest_sg == 'Approach' %}
-        <div class="pri-title">Approach Distance Control</div>
-        <div class="pri-desc">{{ gir_pct }}% GIR this round. Target your most common approach distance — practice half-shots and three-quarter shots into your 150–175y range. Better distance control from this band converts GIR misses directly into GIRs and shorter putts.</div>
-        {% elif weakest_sg == 'Around the Green' %}
-        <div class="pri-title">Short Game — Scramble Rate</div>
-        <div class="pri-desc">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% scramble rate from {{ scramble.attempts }} attempts. Spend 15 minutes per session on bump-and-run technique from 10–20y — the most common scramble distance in UK golf. One additional conversion per round is a free stroke.</div>
-        {% else %}
-        <div class="pri-title">Lag Putting — Distance Control</div>
-        <div class="pri-desc">{{ round.total_putts }} putts this round{% if avg_fpd is not none %}, {{ avg_fpd }}ft average first putt{% endif %}.
-          {% if three_putt_holes %}Three-putt on H{{ three_putt_holes | join(', H') }}.{% endif %}
-          Ten minutes per session on putts from 20–35ft, focusing on pace rather than line. Lag putting improvement reduces blow-up holes without requiring technical swing changes.</div>
-        {% endif %}
+        <div class="pri-desc">With {{ fw_pct }}% fairways hit this round, tee shot accuracy is the highest-leverage improvement. One committed shape per tee shot could recover the {{ round.fairways_available - round.fairways_hit }} missed fairways and shorten approach distances across the board.</div>
       </div>
     </div>
-    {# Priority 2 — approach or GIR-based #}
+    {% elif weakest_sg == 'Approach' %}
+    <div class="pri-item">
+      <div class="pri-n">1</div>
+      <div>
+        <div class="pri-title">Approach Distance Control</div>
+        <div class="pri-desc">{{ gir_pct }}% GIR this round. {% if approach_bds %}{% set worst_app = approach_bds | sort(attribute='gir_pct') | first %}The {{ worst_app.label }} band produced {{ worst_app.gir_pct }}% GIR — focused range work at this distance is the highest-leverage session available.{% endif %}</div>
+      </div>
+    </div>
+    {% elif weakest_sg == 'Around the Green' %}
+    <div class="pri-item">
+      <div class="pri-n">1</div>
+      <div>
+        <div class="pri-title">Short Game — Scramble Rate</div>
+        <div class="pri-desc">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% scramble rate from {{ scramble.attempts }} attempts. One additional conversion per round is a free stroke — spend 15 minutes per session on bump-and-run from 10–20y.</div>
+      </div>
+    </div>
+    {% else %}
+    <div class="pri-item">
+      <div class="pri-n">1</div>
+      <div>
+        <div class="pri-title">Lag Putting — Distance Control</div>
+        <div class="pri-desc">{{ round.total_putts }} putts this round{% if avg_fpd is not none %}, {{ avg_fpd }}ft average first putt{% endif %}. {% if three_putt_holes %}Three-putt on H{{ three_putt_holes | join(', H') }}.{% endif %} Ten minutes per session on putts from 20–35ft, focusing on pace rather than line.</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if weakest_sg != 'Approach' %}
     <div class="pri-item">
       <div class="pri-n">2</div>
       <div>
-        {% if weakest_sg != 'Approach' %}
         <div class="pri-title">Approach Zone — {{ gir_pct }}% GIR Rate</div>
-        <div class="pri-desc">
-          {% if approach_bds %}
-            {% set worst_app = approach_bds | sort(attribute='gir_pct') | first %}
-            The <strong>{{ worst_app.label }}</strong> band produced {{ worst_app.gir_pct }}% GIR — your weakest approach distance. Spend range time at this specific yardage focusing on trajectory control.
-          {% else %}
-            GIR rate at {{ gir_pct }}% — practice targeted approach sessions at your most common distances.
-          {% endif %}
-        </div>
-        {% else %}
-        <div class="pri-title">Tee Shot Shape Under Pressure</div>
-        <div class="pri-desc">Even with solid approach stats, better tee shots create shorter, easier approaches. Commit to a pre-shot routine that reinforces your target shape on every tee shot — this consistency compounds over a round.</div>
-        {% endif %}
+        <div class="pri-desc">{% if approach_bds %}{% set worst_app = approach_bds | sort(attribute='gir_pct') | first %}The {{ worst_app.label }} band produced {{ worst_app.gir_pct }}% GIR. Spend range time at this specific yardage focusing on trajectory control.{% else %}GIR rate at {{ gir_pct }}% — targeted approach sessions at your most common distances.{% endif %}</div>
       </div>
     </div>
-    {# Priority 3 — putting or short game #}
+    {% else %}
+    <div class="pri-item">
+      <div class="pri-n">2</div>
+      <div>
+        <div class="pri-title">Tee Shot Shape Under Pressure</div>
+        <div class="pri-desc">Better tee shots create shorter, easier approaches. Commit to a pre-shot routine that reinforces your target shape on every tee shot — this consistency compounds over a round.</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if weakest_sg != 'Putting' %}
     <div class="pri-item">
       <div class="pri-n">3</div>
       <div>
-        {% if weakest_sg != 'Putting' %}
         <div class="pri-title">Putting Routine — Short Range</div>
-        <div class="pri-desc">{{ putt_dist[1] }} one-putt{{ 's' if putt_dist[1] != 1 }} this round from inside 13ft.
-          {% if one_putt_holes %}Strong short-range converting on H{{ one_putt_holes | join(', H') }}.{% endif %}
-          Maintain this with a focused 5-minute pre-round routine from 4–6ft — hold the stroke rather than jabbing at it.</div>
-        {% else %}
-        <div class="pri-title">Scramble — Up-and-Down Conversion</div>
-        <div class="pri-desc">{{ scramble.save_pct if scramble.save_pct is not none else 'Limited' }}% scramble rate from {{ scramble.attempts }} misses. Practice chip-to-putt sequences: chip, then immediately putt out without resetting. Building the mental routine of "finish the hole" sharpens scramble conversion under pressure.</div>
-        {% endif %}
+        <div class="pri-desc">{{ putt_dist[1] }} one-putt{{ 's' if putt_dist[1] != 1 }} this round from inside 13ft. Maintain with a focused 5-minute pre-round routine from 4–6ft — hold the stroke rather than jabbing at it.</div>
       </div>
     </div>
-  </div>{# /pri-list #}
+    {% else %}
+    <div class="pri-item">
+      <div class="pri-n">3</div>
+      <div>
+        <div class="pri-title">Scramble — Up-and-Down Conversion</div>
+        <div class="pri-desc">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% scramble rate from {{ scramble.attempts }} misses. Practice chip-to-putt sequences to sharpen conversion under pressure.</div>
+      </div>
+    </div>
+    {% endif %}
   </div>{# /ai-block #}
 
   <!-- FOOTER -->
