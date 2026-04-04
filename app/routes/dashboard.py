@@ -231,6 +231,9 @@ def _compute_sg_avgs(rounds):
     # 18-hole rounds are comparable.  For each round we convert the raw SG value
     # to a per-hole rate (÷ holes_played) then scale back to 18 holes (× 18).
     # Averaging these 18-hole equivalents gives a fair cross-format mean.
+    # Last two rounds with SG data — used to compute round-on-round delta
+    last_two = sg_rounds[:2]
+
     categories = []
     for name, attr in SG_ATTRS:
         vals = [
@@ -240,7 +243,23 @@ def _compute_sg_avgs(rounds):
         ]
         if not vals:
             continue
-        categories.append({'name': name, 'avg': round(sum(vals) / len(vals), 2)})
+
+        # Delta: most recent round vs previous round (both normalised to 18-hole equiv)
+        delta = None
+        if len(last_two) == 2:
+            v0 = getattr(last_two[0], attr)
+            v1 = getattr(last_two[1], attr)
+            if v0 is not None and last_two[0].holes_played and \
+               v1 is not None and last_two[1].holes_played:
+                curr = v0 / last_two[0].holes_played * 18
+                prev = v1 / last_two[1].holes_played * 18
+                delta = round(curr - prev, 2)
+        elif len(last_two) == 1:
+            v0 = getattr(last_two[0], attr)
+            if v0 is not None and last_two[0].holes_played:
+                delta = round(v0 / last_two[0].holes_played * 18, 2)
+
+        categories.append({'name': name, 'avg': round(sum(vals) / len(vals), 2), 'delta': delta})
 
     if not categories:
         return None

@@ -60,7 +60,7 @@ h1, h2, h3, h4 {
   color: var(--green-800);
 }
 
-.mono, .stat-value, .score-number {
+.mono, .score-number {
   font-family: var(--font-mono);
 }
 
@@ -1111,9 +1111,9 @@ h1, h2, h3, h4 {
 }
 
 .stat-value {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 2rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--green-800);
   margin-bottom: 6px;
 }

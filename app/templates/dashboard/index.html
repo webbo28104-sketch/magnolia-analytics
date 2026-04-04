@@ -143,6 +143,20 @@
 .glance-label { font-size: 0.74rem; color: var(--color-text-muted, #888); margin-top: 2px; line-height: 1.35; }
 @media (max-width: 480px) { .glance-grid { grid-template-columns: 1fr; } }
 
+/* ── SG delta chip ───────────────────────────────────────────── */
+.sg-delta {
+  font-size: .7rem;
+  font-weight: 600;
+  font-family: var(--font-sans, 'Inter', sans-serif);
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+.sg-delta--up   { color: #2d6a4f; background: rgba(45,106,79,.09); }
+.sg-delta--down { color: #c0635a; background: rgba(192,99,90,.09); }
+.sg-delta--flat { color: var(--text-muted, #888); background: var(--cream-mid, #ede9e1); }
+
 /* ── Strokes Gained chart ────────────────────────────────────── */
 .sg-chart {
   display: flex;
@@ -403,7 +417,18 @@
     <div class="sg-chart">
       {% for cat in sg_avgs.categories %}
       <div class="sg-row">
-        <div class="sg-lbl">{{ cat.name }}</div>
+        <div class="sg-lbl" style="display:flex;align-items:center;justify-content:flex-end;gap:5px;">
+          {{ cat.name }}
+          {% if cat.delta is not none %}
+            {% if cat.delta > 0.04 %}
+            <span class="sg-delta sg-delta--up">+{{ '%.2f'|format(cat.delta) }}</span>
+            {% elif cat.delta < -0.04 %}
+            <span class="sg-delta sg-delta--down">{{ '%.2f'|format(cat.delta) }}</span>
+            {% else %}
+            <span class="sg-delta sg-delta--flat">—</span>
+            {% endif %}
+          {% endif %}
+        </div>
         <div class="sg-track">
           <div class="sg-zero" style="left:{{ sg_avgs.zero_pct }}%"></div>
           {% if cat.positive %}
