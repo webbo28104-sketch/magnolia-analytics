@@ -1,0 +1,18 @@
+{
+  "name": "Magnolia Analytics",
+  "short_name": "Magnolia",
+  "description": "Premium golf performance tracking — log every round, understand every shot.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1B4332",
+  "theme_color": "#1B4332",
+  "icons": [
+    {
+      "src": "/static/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

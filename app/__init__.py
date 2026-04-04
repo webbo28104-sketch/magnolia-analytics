@@ -48,8 +48,10 @@ def create_app(config_name='default'):
     # Access gate: redirect unauthenticated visitors to /waitlist
     @app.before_request
     def _access_gate():
-        # Always allow static files
+        # Always allow static files and PWA assets
         if request.endpoint and request.endpoint == 'static':
+            return None
+        if request.endpoint in ('main.service_worker', 'main.manifest'):
             return None
         # Always allow the waitlist page itself
         if request.endpoint in ('waitlist.index',):
