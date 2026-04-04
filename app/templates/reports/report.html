@@ -376,12 +376,12 @@ body::before {
 .sb-bogey  { background: rgba(201,168,76,0.08); color: #e8c060; border: 1.5px solid rgba(201,168,76,0.2); }
 .sb-double { background: rgba(232,160,144,0.18); color: var(--red-soft); border: 1.5px solid rgba(232,160,144,0.35); }
 /* Scoring tab — par type breakdown cards */
-.par-type-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
-.pt-card { background: var(--cream-ghost); border: 1px solid var(--border); border-radius: 4px; padding: 14px 12px; }
-.pt-lbl  { font-size: 8px; letter-spacing: .16em; text-transform: uppercase; color: var(--cream-faint); margin-bottom: 8px; }
-.pt-val  { font-family: 'Inter', system-ui, sans-serif; font-size: 24px; font-weight: 500; line-height: 1; }
-.pt-sub  { font-size: 9px; color: var(--cream-faint); margin-top: 4px; }
-.pt-dist-row { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; font-size: 8px; }
+.par-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; align-items: start; }
+.pt-card { background: var(--cream-ghost); border: 1px solid var(--border); border-radius: 4px; padding: 16px 14px; }
+.pt-lbl  { font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); opacity: .55; margin-bottom: 10px; }
+.pt-val  { font-family: 'Inter', system-ui, sans-serif; font-size: 26px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+.pt-sub  { font-size: 9px; color: var(--cream-faint); margin-top: 5px; letter-spacing: .02em; }
+.pt-dist-row { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; font-size: 8px; }
 .pt-dist-badge { padding: 2px 5px; border-radius: 2px; }
 /* Drive distance table */
 .drive-tbl { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px; }
@@ -1015,7 +1015,7 @@ body::before {
   {% set _best_band  = approach_bds | sort(attribute='gir_pct', reverse=True) | first if approach_bds else none %}
   {% set _worst_band = approach_bds | sort(attribute='gir_pct') | first if approach_bds else none %}
   {% set _dom_miss   = miss_dirs | dictsort(by='value', reverse=True) | first if miss_dirs else none %}
-  <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;" class="fu d5">
+  <div style="display:flex;gap:20px;align-items:center;margin-bottom:20px;" class="fu d5">
     <div style="width:180px;flex-shrink:0;">
       <div class="a-card" style="text-align:center;padding:20px 14px;">
         <div class="a-card-title" style="margin-bottom:10px;">SG: Approach</div>
@@ -1032,6 +1032,7 @@ body::before {
       ];
       </script>
       <canvas id="app-chart" style="width:340px;max-width:100%;height:260px;display:block"></canvas>
+      <div style="text-align:center;font-size:7px;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,240,232,0.25);margin-top:5px;">GIR dots show first putt distance only · position is approximate</div>
     </div>
   </div>
   <div class="sum-grid fu d5" style="margin-bottom:14px;">
@@ -1218,7 +1219,7 @@ body::before {
   {% set _putt_total_holes = holes_data | length %}
   {% set _1putt_pct = (putt_dist[1] / _putt_total_holes * 100) | round | int if _putt_total_holes else 0 %}
   {% set _3putt_pct = (putt_dist[3] / _putt_total_holes * 100) | round | int if _putt_total_holes else 0 %}
-  <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;" class="fu d6">
+  <div style="display:flex;gap:20px;align-items:center;margin-bottom:20px;" class="fu d6">
     <div style="width:180px;flex-shrink:0;">
       <div class="a-card" style="text-align:center;padding:20px 14px;">
         <div class="a-card-title" style="margin-bottom:10px;">SG: Putting</div>
@@ -1722,12 +1723,12 @@ function drawAppChart(canvas, misses, girHits) {
     var angle = ng > 1 ? (i/ng)*Math.PI*2 - Math.PI/2 : -Math.PI/2;
     var dx = Math.cos(angle)*px, dy = Math.sin(angle)*px;
     var dotX = cx+dx, dotY = cy+dy;
-    ctx.beginPath(); ctx.arc(dotX, dotY, 5, 0, Math.PI*2);
-    ctx.fillStyle='rgba(74,158,107,0.85)'; ctx.fill();
-    ctx.fillStyle='rgba(245,240,232,0.65)'; ctx.font='9px Inter,sans-serif';
+    ctx.beginPath(); ctx.arc(dotX, dotY, 4, 0, Math.PI*2);
+    ctx.fillStyle='rgba(74,158,107,0.9)'; ctx.fill();
+    ctx.fillStyle='rgba(245,240,232,0.5)'; ctx.font='8px Inter,sans-serif';
     ctx.textAlign = dx>=0 ? 'left' : 'right';
     ctx.textBaseline='middle';
-    ctx.fillText(dist+'ft', dotX+(dx>=0?8:-8), dotY);
+    ctx.fillText(dist+'ft', dotX+(dx>=0?7:-7), dotY);
   });
 
   // Miss bubbles — directional positions around green
@@ -1753,26 +1754,28 @@ function drawAppChart(canvas, misses, girHits) {
   Object.keys(misses).forEach(function(dir) {
     var cnt = misses[dir]; if (!cnt) return;
     var pos = dirPos[dir]; if (!pos) return;
-    var r = Math.min(Math.max(10 + (cnt-1)*4, 10), 22);
+    var r = Math.min(9 + (cnt-1)*2, 15);
     ctx.beginPath(); ctx.arc(pos.x, pos.y, r, 0, Math.PI*2);
-    ctx.fillStyle='rgba(232,160,144,0.15)'; ctx.fill();
-    ctx.strokeStyle='rgba(232,160,144,0.4)'; ctx.lineWidth=1.2; ctx.stroke();
-    ctx.fillStyle='#e8a090'; ctx.font='bold 11px Inter,sans-serif';
+    ctx.fillStyle='rgba(232,160,144,0.08)'; ctx.fill();
+    ctx.strokeStyle='rgba(232,160,144,0.3)'; ctx.lineWidth=0.8; ctx.stroke();
+    ctx.fillStyle='rgba(232,160,144,0.9)'; ctx.font='10px Inter,sans-serif';
     ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(cnt, pos.x, pos.y);
-    ctx.fillStyle='rgba(232,160,144,0.65)'; ctx.font='7px Inter,sans-serif'; ctx.textBaseline='top';
-    ctx.fillText(dir, pos.x, pos.y+r+3);
+    var lbl = dir.replace(/_/g,' ').replace(/,/g,' ');
+    ctx.fillStyle='rgba(245,240,232,0.32)'; ctx.font='6.5px Inter,sans-serif'; ctx.textBaseline='top';
+    ctx.fillText(lbl, pos.x, pos.y+r+3);
   });
 
   // Legend
-  var ly = H-12, lx = (W-200)/2;
-  ctx.beginPath(); ctx.arc(lx+5, ly-2, 5, 0, Math.PI*2);
-  ctx.fillStyle='rgba(232,160,144,0.7)'; ctx.fill();
-  ctx.fillStyle='rgba(245,240,232,0.4)'; ctx.font='8px Inter,sans-serif';
-  ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText('Miss · size = count', lx+13, ly-2);
-  lx += 115;
-  ctx.beginPath(); ctx.arc(lx+5, ly-2, 5, 0, Math.PI*2);
+  var ly = H-10, lx = (W-210)/2;
+  ctx.beginPath(); ctx.arc(lx+4, ly-2, 4, 0, Math.PI*2);
+  ctx.fillStyle='rgba(232,160,144,0.55)'; ctx.fill();
+  ctx.strokeStyle='rgba(232,160,144,0.3)'; ctx.lineWidth=0.6; ctx.stroke();
+  ctx.fillStyle='rgba(245,240,232,0.35)'; ctx.font='7.5px Inter,sans-serif';
+  ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText('Miss · size = count', lx+11, ly-2);
+  lx += 118;
+  ctx.beginPath(); ctx.arc(lx+4, ly-2, 4, 0, Math.PI*2);
   ctx.fillStyle='rgba(74,158,107,0.85)'; ctx.fill();
-  ctx.fillStyle='rgba(245,240,232,0.4)'; ctx.fillText('GIR · dot = 1st putt dist', lx+13, ly-2);
+  ctx.fillStyle='rgba(245,240,232,0.35)'; ctx.fillText('GIR · 1st putt dist', lx+11, ly-2);
 }
 
 // ── First-putt scatter chart ──────────────────────────────────────
@@ -1786,7 +1789,7 @@ function drawPuttChart(canvas, putts) {
   ctx.clearRect(0, 0, W, H); if (!n) return;
 
   var maxDist = Math.max.apply(null, putts.map(function(p){return p.dist||0;}));
-  var yMax = Math.ceil(Math.max(maxDist+10, 30)/10)*10;
+  var yMax = Math.max(Math.ceil(maxDist * 1.15 / 10) * 10, 20);
   function ypP(d) { return pT + ch - (d/yMax)*ch; }
   var botY = ypP(0);
 
@@ -1796,14 +1799,16 @@ function drawPuttChart(canvas, putts) {
     var y1=ypP(Math.min(z[1],yMax)), y2=ypP(z[0]); ctx.fillStyle=z[2]; ctx.fillRect(pL,y1,cw,y2-y1);
   });
 
-  // Gridlines at 0, 6, 15, 30, then every 20ft above
-  var grids=[0,6,15,30]; for (var g=50;g<=yMax;g+=20) grids.push(g);
+  // Gridlines: zone markers + regular step up to yMax
+  var grids=[0,6,15,30];
+  var gStep = yMax <= 30 ? 10 : yMax <= 60 ? 10 : 20;
+  for (var g=gStep; g<=yMax; g+=gStep) { if (grids.indexOf(g)<0) grids.push(g); }
   grids.forEach(function(ft) {
     if (ft>yMax) return;
     var gy=ypP(ft);
-    ctx.strokeStyle='rgba(245,240,232,0.08)'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+    ctx.strokeStyle='rgba(245,240,232,0.07)'; ctx.lineWidth=1; ctx.setLineDash([2,4]);
     ctx.beginPath(); ctx.moveTo(pL,gy); ctx.lineTo(W-pR,gy); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle='rgba(245,240,232,0.3)'; ctx.font='9px Inter,sans-serif';
+    ctx.fillStyle='rgba(245,240,232,0.38)'; ctx.font='8px Inter,sans-serif';
     ctx.textAlign='right'; ctx.textBaseline='middle'; ctx.fillText(ft+'ft', pL-5, gy);
   });
 
@@ -1813,11 +1818,11 @@ function drawPuttChart(canvas, putts) {
   putts.forEach(function(p,i) {
     var x = pL + (i+0.5)*colW;
     // Guide line
-    ctx.strokeStyle='rgba(245,240,232,0.05)'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+    ctx.strokeStyle='rgba(245,240,232,0.04)'; ctx.lineWidth=1; ctx.setLineDash([2,4]);
     ctx.beginPath(); ctx.moveTo(x,pT); ctx.lineTo(x,pT+ch); ctx.stroke(); ctx.setLineDash([]);
     // Hole label
-    ctx.fillStyle='rgba(245,240,232,0.28)'; ctx.font='8px Inter,sans-serif';
-    ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText(p.n, x, pT+ch+4);
+    ctx.fillStyle='rgba(245,240,232,0.32)'; ctx.font='7px Inter,sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText(p.n, x, pT+ch+5);
 
     if (p.putts===0) {
       // Chip-in star
@@ -1826,13 +1831,13 @@ function drawPuttChart(canvas, putts) {
     } else {
       var y = p.dist ? ypP(p.dist) : botY-8;
       var color = pColors[Math.min(p.putts,3)] || pColors[3];
-      ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI*2); ctx.fillStyle=color; ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI*2); ctx.fillStyle=color; ctx.fill();
       if (p.dist) {
-        ctx.fillStyle='rgba(245,240,232,0.65)'; ctx.font='9px Inter,sans-serif'; ctx.textAlign='center';
+        ctx.fillStyle='rgba(245,240,232,0.55)'; ctx.font='8px Inter,sans-serif'; ctx.textAlign='center';
         var above = (i%2===0);
         ctx.textBaseline = above ? 'bottom' : 'top';
-        var ly2 = above ? y-12 : y+12;
-        if (above && ly2 < pT+2) { ctx.textBaseline='top'; ly2=y+12; }
+        var ly2 = above ? y-11 : y+11;
+        if (above && ly2 < pT+2) { ctx.textBaseline='top'; ly2=y+11; }
         ctx.fillText(p.dist+'ft', x, ly2);
       }
     }
@@ -1841,9 +1846,9 @@ function drawPuttChart(canvas, putts) {
   // Legend
   var lx=pL, lly=H-8;
   [{l:'1-Putt',c:pColors[1]},{l:'2-Putt',c:pColors[2]},{l:'3-Putt',c:pColors[3]}].forEach(function(item){
-    ctx.beginPath(); ctx.arc(lx+5, lly-4, 4, 0, Math.PI*2); ctx.fillStyle=item.c; ctx.fill();
-    ctx.fillStyle='rgba(245,240,232,0.4)'; ctx.font='8px Inter,sans-serif';
-    ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText(item.l, lx+12, lly-4); lx+=55;
+    ctx.beginPath(); ctx.arc(lx+4, lly-4, 3.5, 0, Math.PI*2); ctx.fillStyle=item.c; ctx.fill();
+    ctx.fillStyle='rgba(245,240,232,0.38)'; ctx.font='7.5px Inter,sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText(item.l, lx+10, lly-4); lx+=52;
   });
 }
 
