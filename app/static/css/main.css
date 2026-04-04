@@ -1111,7 +1111,7 @@ h1, h2, h3, h4 {
 }
 
 .stat-value {
-  font-family: var(--font-sans);
+  font-family: var(--font-sans) !important;
   font-size: 2rem;
   font-weight: 600;
   color: var(--green-800);

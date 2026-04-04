@@ -1,6 +1,9 @@
 from flask import Blueprint, render_template, url_for
 from flask_login import login_required, current_user
 import math
+import logging
+
+logger = logging.getLogger(__name__)
 from datetime import date, timedelta
 from app.models.round import Round
 from app.models.hole import Hole
@@ -227,15 +230,21 @@ def _compute_sg_avgs(rounds):
     if len(sg_rounds) < 3:
         return None
 
-    # Compute averages normalised to an 18-hole equivalent so that 9-hole and
-    # 18-hole rounds are comparable.  For each round we convert the raw SG value
-    # to a per-hole rate (÷ holes_played) then scale back to 18 holes (× 18).
-    # Averaging these 18-hole equivalents gives a fair cross-format mean.
-    # Last two rounds with SG data — used to compute round-on-round delta
-    last_two = sg_rounds[:2]
+    # Debug: log raw SG values for the last 5 rounds so we can verify the data
+    for r in sg_rounds[:5]:
+        logger.warning(
+            'SG DEBUG round_id=%s date=%s holes=%s ott=%s app=%s atg=%s putt=%s',
+            r.id, r.date_played, r.holes_played,
+            r.sg_off_tee, r.sg_approach, r.sg_atg, r.sg_putting,
+        )
 
+    # Delta: last two rounds that each have data for this specific category.
+    # Only show when both rounds have a real value — never fall back to the
+    # raw round value when there's only one data point (that was the bug).
     categories = []
     for name, attr in SG_ATTRS:
+        # Per-round values normalised to an 18-hole equivalent so 9-hole and
+        # 18-hole rounds are comparable: normalised = raw_total / holes_played * 18
         vals = [
             getattr(r, attr) / r.holes_played * 18
             for r in sg_rounds
@@ -244,20 +253,22 @@ def _compute_sg_avgs(rounds):
         if not vals:
             continue
 
-        # Delta: most recent round vs previous round (both normalised to 18-hole equiv)
+        # Delta: most recent round vs the one before it, per THIS category
+        cat_rounds = [r for r in sg_rounds
+                      if getattr(r, attr) is not None and r.holes_played]
         delta = None
-        if len(last_two) == 2:
-            v0 = getattr(last_two[0], attr)
-            v1 = getattr(last_two[1], attr)
-            if v0 is not None and last_two[0].holes_played and \
-               v1 is not None and last_two[1].holes_played:
-                curr = v0 / last_two[0].holes_played * 18
-                prev = v1 / last_two[1].holes_played * 18
-                delta = round(curr - prev, 2)
-        elif len(last_two) == 1:
-            v0 = getattr(last_two[0], attr)
-            if v0 is not None and last_two[0].holes_played:
-                delta = round(v0 / last_two[0].holes_played * 18, 2)
+        if len(cat_rounds) >= 2:
+            curr = getattr(cat_rounds[0], attr) / cat_rounds[0].holes_played * 18
+            prev = getattr(cat_rounds[1], attr) / cat_rounds[1].holes_played * 18
+            delta = round(curr - prev, 2)
+            logger.warning(
+                'SG DELTA %s: curr=%.3f (id=%s holes=%s raw=%.3f) '
+                'prev=%.3f (id=%s holes=%s raw=%.3f) delta=%.3f',
+                name,
+                curr, cat_rounds[0].id, cat_rounds[0].holes_played, getattr(cat_rounds[0], attr),
+                prev, cat_rounds[1].id, cat_rounds[1].holes_played, getattr(cat_rounds[1], attr),
+                delta,
+            )
 
         categories.append({'name': name, 'avg': round(sum(vals) / len(vals), 2), 'delta': delta})
 
