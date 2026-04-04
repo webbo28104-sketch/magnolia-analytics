@@ -1475,7 +1475,7 @@ body::before {
       {% if tile_ok %}
       <div class="rp-tile-val {{ 'c-grn' if tile_val >= 0 else 'c-red' if tile_val < -1 else '' }}">{{ sgfmt(tile_val) }}</div>
       {% set _hcp_equiv = (tile_val * -6) | round | int %}
-      <div class="rp-tile-sub">{% if tile_val > 0 %}gaining on scratch average{% elif _hcp_equiv <= 0 %}scratch hcp{% else %}≈ {{ [_hcp_equiv, 54] | min }} hcp equiv{% endif %}</div>
+      <div class="rp-tile-sub">{% if tile_val > 0 %}gaining on scratch average{% elif _hcp_equiv <= 0 %}scratch hcp{% else %}{{ [_hcp_equiv, 54] | min }} hcp equiv{% endif %}</div>
       {% else %}
       <div class="rp-tile-val" style="color:var(--cream-faint);">—</div>
       <div class="rp-tile-sub">not enough data</div>
