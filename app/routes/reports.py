@@ -22,6 +22,9 @@ from app.services.weather_service import get_round_weather
 from app.services.calendar_service import get_calendar_context
 from app.services.claude_service import generate_narrative, generate_context_summary
 
+import logging
+logger = logging.getLogger(__name__)
+
 reports_bp = Blueprint('reports', __name__)
 
 
@@ -49,6 +52,40 @@ def _hole_score_class(diff: int) -> str:
     if diff == 1:
         return 'bogey'
     return 'double'   # double or worse
+
+
+def _drive_dist_src(h) -> str | None:
+    """Return which field was used for drive distance estimation, for logging."""
+    if h.par not in (4, 5):
+        return None
+    if h.second_shot_distance:
+        return 'second_shot'
+    if h.approach_distance:
+        return 'approach'
+    return None
+
+
+def _est_drive_distance(ch, h) -> int | None:
+    """
+    Estimate tee-shot distance as hole_yardage minus the distance from which
+    the second shot was played.
+
+    Priority:
+      1. second_shot_distance — explicitly logged 2nd-shot distance to pin
+         (always present on par 5s when recorded; absent on par 4s where the
+         approach IS the 2nd shot, so approach_distance doubles as the source)
+      2. approach_distance  — fallback when no second_shot_distance is logged
+
+    Only computed for par 4s and 5s. Result must be positive; zero or negative
+    means inconsistent data (e.g. shot distance > hole length) — excluded.
+    """
+    if not (ch and ch.yardage and h.par in (4, 5)):
+        return None
+    shot_dist = h.second_shot_distance or h.approach_distance
+    if not shot_dist:
+        return None
+    est = ch.yardage - shot_dist
+    return est if est > 0 else None
 
 
 def _build_holes_data(holes, course_hole_map: dict) -> list:
@@ -81,11 +118,8 @@ def _build_holes_data(holes, course_hole_map: dict) -> list:
             'sand_save_made':      h.sand_save_made,
             'penalties':           h.penalties,
             'lie_type':            h.lie_type,
-            'est_drive_distance':  (
-                (ch.yardage - h.approach_distance)
-                if (ch and ch.yardage and h.approach_distance and h.par in (4, 5))
-                else None
-            ),
+            'est_drive_distance':  _est_drive_distance(ch, h),
+            'drive_dist_src':      _drive_dist_src(h),
         })
     return result
 
@@ -610,9 +644,17 @@ def view_report(round_id):
     par5_stats    = _par5_analysis(holes_data) or {'count': 0, 'holes': [], 'avg_score_vs_par': None}
     scoring_by_par = _scoring_by_par_type(holes_data)
 
-    # Estimated drive distances (hole_yardage - approach_distance on par 4/5)
+    # Estimated drive distances: hole_yardage − second_shot_distance (fallback: approach_distance)
     _drive_holes = [h for h in holes_data if h.get('est_drive_distance') is not None]
     avg_drive_dist = round(sum(h['est_drive_distance'] for h in _drive_holes) / len(_drive_holes)) if _drive_holes else None
+    for _dh in _drive_holes:
+        logger.info(
+            'DRIVE EST hole=%s par=%s yardage=%s src=%s shot_dist=%s est=%s',
+            _dh['hole_number'], _dh['par'], _dh['yardage'],
+            _dh.get('drive_dist_src'),
+            (_dh['yardage'] - _dh['est_drive_distance']) if _dh['yardage'] else '?',
+            _dh['est_drive_distance'],
+        )
 
     # Average approach distance left after tee shot (par 4s and 5s)
     _app_dists = [h['approach_distance'] for h in holes_data
