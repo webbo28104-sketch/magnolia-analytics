@@ -1031,8 +1031,8 @@ body::before {
         {% for h in holes_data if h.gir and h.first_putt_distance %}{{ h.first_putt_distance }},{% endfor %}
       ];
       </script>
-      <canvas id="app-chart" style="width:340px;max-width:100%;height:260px;display:block"></canvas>
-      <div style="text-align:center;font-size:7px;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,240,232,0.25);margin-top:5px;">GIR dots show first putt distance only · position is approximate</div>
+      <canvas id="app-chart" style="width:340px;max-width:100%;height:300px;display:block"></canvas>
+      <div style="text-align:center;font-size:7px;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,240,232,0.22);margin-top:6px;">GIR dots show first putt distance · stacked below pin, closest first</div>
     </div>
   </div>
   <div class="sum-grid fu d5" style="margin-bottom:14px;">
@@ -1701,81 +1701,108 @@ function drawAppChart(canvas, misses, girHits) {
   if (!s) return;
   var ctx = s.ctx, W = s.w, H = s.h;
   ctx.clearRect(0, 0, W, H);
-  var cx = W/2, cy = H/2 - 10, gW = 65, gH = 90;
 
-  // Outer green
-  ctx.beginPath(); ctx.ellipse(cx, cy, gW, gH, 0, 0, Math.PI*2);
-  ctx.fillStyle='rgba(74,158,107,0.1)'; ctx.fill();
-  ctx.strokeStyle='rgba(74,158,107,0.22)'; ctx.lineWidth=1.5; ctx.stroke();
-  // Inner putting surface
-  ctx.beginPath(); ctx.ellipse(cx, cy, gW*0.4, gH*0.4, 0, 0, Math.PI*2);
-  ctx.fillStyle='rgba(74,158,107,0.18)'; ctx.fill();
-  // Flag pin
-  ctx.strokeStyle='rgba(201,168,76,0.7)'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy-18); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx, cy-18); ctx.lineTo(cx+11, cy-13); ctx.lineTo(cx, cy-8); ctx.closePath();
-  ctx.fillStyle='rgba(201,168,76,0.9)'; ctx.fill();
+  // ── Layout ────────────────────────────────────────────────────────
+  // Horizontal margins sized for miss circles; vertical for long/short misses + legend
+  var mL = 56, mR = 56, mT = 34, mB = 36;
+  var cx = W / 2;
+  var cy = mT + (H - mT - mB) / 2;
+  var gW = (W - mL - mR) / 2;   // green semi-width
+  var gH = (H - mT - mB) / 2;   // green semi-height
+  var pinX = cx, pinY = cy - gH * 0.38;  // pin sits in upper third of green
 
-  // GIR hit dots — distribute evenly around pin
-  var ng = girHits.length;
-  girHits.forEach(function(dist, i) {
-    var px = Math.min(dist * 1.2, gH * 0.72);
-    var angle = ng > 1 ? (i/ng)*Math.PI*2 - Math.PI/2 : -Math.PI/2;
-    var dx = Math.cos(angle)*px, dy = Math.sin(angle)*px;
-    var dotX = cx+dx, dotY = cy+dy;
-    ctx.beginPath(); ctx.arc(dotX, dotY, 4, 0, Math.PI*2);
-    ctx.fillStyle='rgba(74,158,107,0.9)'; ctx.fill();
-    ctx.fillStyle='rgba(245,240,232,0.5)'; ctx.font='8px Inter,sans-serif';
-    ctx.textAlign = dx>=0 ? 'left' : 'right';
-    ctx.textBaseline='middle';
-    ctx.fillText(dist+'ft', dotX+(dx>=0?7:-7), dotY);
+  // ── Distance scale ────────────────────────────────────────────────
+  var maxFPD = girHits.length ? Math.max.apply(null, girHits) : 15;
+  var availPx = (cy + gH * 0.88) - pinY;
+  var scale = availPx / (maxFPD + 5);  // px per foot
+
+  // ── Outer green ───────────────────────────────────────────────────
+  ctx.beginPath(); ctx.ellipse(cx, cy, gW, gH, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(74,158,107,0.07)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(74,158,107,0.18)'; ctx.lineWidth = 1; ctx.stroke();
+
+  // ── Concentric distance rings ─────────────────────────────────────
+  var ringStep = maxFPD <= 10 ? 2 : maxFPD <= 20 ? 5 : 10;
+  var ringMax = Math.ceil((maxFPD + 2) / ringStep) * ringStep;
+  for (var rd = ringStep; rd <= ringMax; rd += ringStep) {
+    var rPx = rd * scale;
+    var rX  = rPx * (gW / gH);
+    if (rPx > gH * 0.93 || rX > gW * 0.93) break;
+    ctx.beginPath(); ctx.ellipse(pinX, pinY, rX, rPx, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(74,158,107,0.16)'; ctx.lineWidth = 0.5;
+    ctx.setLineDash([2, 4]); ctx.stroke(); ctx.setLineDash([]);
+    // Ring label — left side, inside green
+    ctx.fillStyle = 'rgba(245,240,232,0.22)'; ctx.font = '6px Inter,sans-serif';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText(rd + 'ft', pinX - rX - 3, pinY);
+  }
+
+  // ── Flag ─────────────────────────────────────────────────────────
+  ctx.strokeStyle = 'rgba(201,168,76,0.7)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pinX, pinY + 2); ctx.lineTo(pinX, pinY - 18); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pinX, pinY - 18); ctx.lineTo(pinX + 10, pinY - 13);
+  ctx.lineTo(pinX, pinY - 8); ctx.closePath();
+  ctx.fillStyle = 'rgba(201,168,76,0.88)'; ctx.fill();
+
+  // ── GIR dots — vertical centre line, closest first ────────────────
+  var sortedGir = girHits.slice().sort(function(a, b) { return a - b; });
+  sortedGir.forEach(function(dist) {
+    var dotY = Math.min(pinY + dist * scale, cy + gH - 6);
+    ctx.beginPath(); ctx.arc(pinX, dotY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(74,158,107,0.9)'; ctx.fill();
+    ctx.fillStyle = 'rgba(245,240,232,0.52)'; ctx.font = '8px Inter,sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(dist + 'ft', pinX + 8, dotY);
   });
 
-  // Miss bubbles — directional positions around green
+  // ── Miss bubbles ──────────────────────────────────────────────────
   var dirPos = {
-    'left':        {x:cx-gW-22,    y:cy},
-    'right':       {x:cx+gW+22,    y:cy},
-    'short':       {x:cx,          y:cy+gH+22},
-    'long':        {x:cx,          y:cy-gH-22},
-    'short_left':  {x:cx-gW*0.6,   y:cy+gH*0.82},
-    'short,left':  {x:cx-gW*0.6,   y:cy+gH*0.82},
-    'left,short':  {x:cx-gW*0.6,   y:cy+gH*0.82},
-    'short_right': {x:cx+gW*0.6,   y:cy+gH*0.82},
-    'short,right': {x:cx+gW*0.6,   y:cy+gH*0.82},
-    'right,short': {x:cx+gW*0.6,   y:cy+gH*0.82},
-    'long_left':   {x:cx-gW*0.6,   y:cy-gH*0.82},
-    'long,left':   {x:cx-gW*0.6,   y:cy-gH*0.82},
-    'left,long':   {x:cx-gW*0.6,   y:cy-gH*0.82},
-    'long_right':  {x:cx+gW*0.6,   y:cy-gH*0.82},
-    'long,right':  {x:cx+gW*0.6,   y:cy-gH*0.82},
-    'right,long':  {x:cx+gW*0.6,   y:cy-gH*0.82},
-    'bunker':      {x:cx+gW+12,    y:cy+gH*0.5}
+    'left':        {x: cx - gW - 26,   y: cy},
+    'right':       {x: cx + gW + 26,   y: cy},
+    'short':       {x: cx,             y: cy + gH + 22},
+    'long':        {x: cx,             y: cy - gH - 22},
+    'short_left':  {x: cx - gW * 0.6,  y: cy + gH + 14},
+    'short,left':  {x: cx - gW * 0.6,  y: cy + gH + 14},
+    'left,short':  {x: cx - gW * 0.6,  y: cy + gH + 14},
+    'short_right': {x: cx + gW * 0.6,  y: cy + gH + 14},
+    'short,right': {x: cx + gW * 0.6,  y: cy + gH + 14},
+    'right,short': {x: cx + gW * 0.6,  y: cy + gH + 14},
+    'long_left':   {x: cx - gW * 0.6,  y: cy - gH - 14},
+    'long,left':   {x: cx - gW * 0.6,  y: cy - gH - 14},
+    'left,long':   {x: cx - gW * 0.6,  y: cy - gH - 14},
+    'long_right':  {x: cx + gW * 0.6,  y: cy - gH - 14},
+    'long,right':  {x: cx + gW * 0.6,  y: cy - gH - 14},
+    'right,long':  {x: cx + gW * 0.6,  y: cy - gH - 14},
+    'bunker':      {x: cx + gW + 14,   y: cy + gH * 0.35}
   };
   Object.keys(misses).forEach(function(dir) {
     var cnt = misses[dir]; if (!cnt) return;
     var pos = dirPos[dir]; if (!pos) return;
-    var r = Math.min(9 + (cnt-1)*2, 15);
-    ctx.beginPath(); ctx.arc(pos.x, pos.y, r, 0, Math.PI*2);
-    ctx.fillStyle='rgba(232,160,144,0.08)'; ctx.fill();
-    ctx.strokeStyle='rgba(232,160,144,0.3)'; ctx.lineWidth=0.8; ctx.stroke();
-    ctx.fillStyle='rgba(232,160,144,0.9)'; ctx.font='10px Inter,sans-serif';
-    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(cnt, pos.x, pos.y);
-    var lbl = dir.replace(/_/g,' ').replace(/,/g,' ');
-    ctx.fillStyle='rgba(245,240,232,0.32)'; ctx.font='6.5px Inter,sans-serif'; ctx.textBaseline='top';
-    ctx.fillText(lbl, pos.x, pos.y+r+3);
+    var r = Math.min(9 + (cnt - 1) * 2, 15);
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(232,160,144,0.08)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(232,160,144,0.3)'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.fillStyle = 'rgba(232,160,144,0.9)'; ctx.font = '10px Inter,sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(cnt, pos.x, pos.y);
+    var lbl = dir.replace(/_/g, ' ').replace(/,/g, ' ');
+    ctx.fillStyle = 'rgba(245,240,232,0.3)'; ctx.font = '6.5px Inter,sans-serif';
+    // Render label away from canvas edge
+    var lblBelow = (pos.y + r + 3 + 10 < H);
+    ctx.textBaseline = lblBelow ? 'top' : 'bottom';
+    ctx.fillText(lbl, pos.x, pos.y + (lblBelow ? r + 3 : -(r + 3)));
   });
 
-  // Legend
-  var ly = H-10, lx = (W-210)/2;
-  ctx.beginPath(); ctx.arc(lx+4, ly-2, 4, 0, Math.PI*2);
-  ctx.fillStyle='rgba(232,160,144,0.55)'; ctx.fill();
-  ctx.strokeStyle='rgba(232,160,144,0.3)'; ctx.lineWidth=0.6; ctx.stroke();
-  ctx.fillStyle='rgba(245,240,232,0.35)'; ctx.font='7.5px Inter,sans-serif';
-  ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText('Miss · size = count', lx+11, ly-2);
+  // ── Legend ────────────────────────────────────────────────────────
+  var ly = H - 10, lx = (W - 210) / 2;
+  ctx.beginPath(); ctx.arc(lx + 4, ly - 2, 4, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(232,160,144,0.55)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(232,160,144,0.3)'; ctx.lineWidth = 0.6; ctx.stroke();
+  ctx.fillStyle = 'rgba(245,240,232,0.35)'; ctx.font = '7.5px Inter,sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText('Miss · size = count', lx + 11, ly - 2);
   lx += 118;
-  ctx.beginPath(); ctx.arc(lx+4, ly-2, 4, 0, Math.PI*2);
-  ctx.fillStyle='rgba(74,158,107,0.85)'; ctx.fill();
-  ctx.fillStyle='rgba(245,240,232,0.35)'; ctx.fillText('GIR · 1st putt dist', lx+11, ly-2);
+  ctx.beginPath(); ctx.arc(lx + 4, ly - 2, 4, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(74,158,107,0.85)'; ctx.fill();
+  ctx.fillStyle = 'rgba(245,240,232,0.35)'; ctx.fillText('GIR · 1st putt dist', lx + 11, ly - 2);
 }
 
 // ── First-putt scatter chart ──────────────────────────────────────
@@ -1788,8 +1815,11 @@ function drawPuttChart(canvas, putts) {
   var n = putts.length;
   ctx.clearRect(0, 0, W, H); if (!n) return;
 
-  var maxDist = Math.max.apply(null, putts.map(function(p){return p.dist||0;}));
+  var allDists = putts.map(function(p){ return typeof p.dist === 'number' ? p.dist : 0; });
+  var maxDist = allDists.length ? Math.max.apply(null, allDists) : 0;
   var yMax = Math.max(Math.ceil(maxDist * 1.15 / 10) * 10, 20);
+  // Debug: log to console so data issues can be identified
+  console.log('[putt-chart] hole dists:', allDists, '| maxDist:', maxDist, '| yMax:', yMax);
   function ypP(d) { return pT + ch - (d/yMax)*ch; }
   var botY = ypP(0);
 
