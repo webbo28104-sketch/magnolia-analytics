@@ -545,6 +545,7 @@ body::before {
 
 .rp-tiles { display:grid; gap:10px; margin-bottom:20px; }
 .rp-tiles-4 { grid-template-columns:repeat(4,1fr); }
+.rp-tiles-3 { grid-template-columns:repeat(3,1fr); }
 .rp-tile { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:18px 16px 14px; position:relative; overflow:hidden; }
 .rp-tile::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); opacity:.5; border-radius:0; }
 .rp-tile-lbl { font-size:8px; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); opacity:.6; margin-bottom:10px; }
@@ -870,7 +871,7 @@ body::before {
   </div>
 
   {% if scoring_by_par %}
-  <div class="par-type-grid fu d4">
+  <div class="par-type-grid fu d4" style="grid-template-columns:repeat(3,1fr)">
     {% for par_n, sp in scoring_by_par.items() | sort %}
     <div class="pt-card">
       <div class="pt-lbl">Par {{ par_n }}s · {{ sp.count }} hole{{ 's' if sp.count != 1 }}</div>
@@ -893,7 +894,7 @@ body::before {
   {% set n_doubles = holes_data | selectattr('score_vs_par','ge',2) | list | length %}
   {% set n_birdies = holes_data | selectattr('score_vs_par','equalto',-1) | list | length %}
   {% set n_eagles  = holes_data | selectattr('score_vs_par','le',-2) | list | length %}
-  <div class="rp-tiles rp-tiles-4 fu d4" style="margin-top:0">
+  <div class="rp-tiles fu d4" style="margin-top:0;grid-template-columns:repeat(auto-fill,minmax(110px,1fr))">
     {% if n_eagles %}<div class="rp-tile"><div class="rp-tile-lbl">Eagles</div><div class="rp-tile-val" style="color:#7ecf9e">{{ n_eagles }}</div><div class="rp-tile-sub">{{ (n_eagles / holes_data|length * 100)|round|int }}% of holes</div></div>{% endif %}
     {% if n_birdies %}<div class="rp-tile"><div class="rp-tile-lbl">Birdies</div><div class="rp-tile-val c-grn">{{ n_birdies }}</div><div class="rp-tile-sub">{{ (n_birdies / holes_data|length * 100)|round|int }}% of holes</div></div>{% endif %}
     <div class="rp-tile"><div class="rp-tile-lbl">Pars</div><div class="rp-tile-val">{{ n_pars }}</div><div class="rp-tile-sub">{{ (n_pars / holes_data|length * 100)|round|int }}% of holes</div></div>
@@ -905,7 +906,7 @@ body::before {
   {% if top_sg_moments %}
   <div class="sec-divider"></div>
   <div class="sec-label fu d4">Top Strokes Gained Shots</div>
-  <div class="rp-tiles rp-tiles-4 fu d4" style="margin-top:0">
+  <div class="rp-tiles rp-tiles-3 fu d4" style="margin-top:0">
     {% for m in top_sg_moments %}
     <div class="rp-tile">
       <div class="rp-tile-lbl">H{{ m.hole_number }} · {{ m.category }}</div>
@@ -1204,7 +1205,7 @@ body::before {
   {% if par_type_gir %}
   <div class="sec-divider"></div>
   <div class="sec-label">GIR by Par Type</div>
-  <div class="par-type-grid">
+  <div class="par-type-grid" style="grid-template-columns:repeat(3,1fr)">
     {% for par_n, data in par_type_gir.items() | sort %}
     <div class="pt-card">
       <div class="pt-lbl">Par {{ par_n }}</div>
@@ -1471,9 +1472,8 @@ body::before {
       <div class="rp-tile-lbl">{{ tile_lbl }}</div>
       {% if tile_ok %}
       <div class="rp-tile-val {{ 'c-grn' if tile_val >= 0 else 'c-red' if tile_val < -1 else '' }}">{{ sgfmt(tile_val) }}</div>
-      <div class="rp-tile-sub">{{ 'gaining on scratch' if tile_val >= 0 else 'losing to scratch' }}</div>
-      {% set _hcp_equiv = [(-tile_val * 10) | round | int, 0] | max %}
-      <div style="font-size:9px;color:var(--cream-faint);letter-spacing:.06em;margin-top:5px;">{% if _hcp_equiv == 0 %}≈ scratch{% else %}≈ {{ [_hcp_equiv, 54] | min }} hcp equiv{% endif %}</div>
+      {% set _hcp_equiv = (tile_val * -6) | round | int %}
+      <div class="rp-tile-sub">{% if _hcp_equiv <= 0 %}gaining on scratch average{% else %}≈ {{ [_hcp_equiv, 54] | min }} hcp equiv{% endif %}</div>
       {% else %}
       <div class="rp-tile-val" style="color:var(--cream-faint);">—</div>
       <div class="rp-tile-sub">not enough data</div>
