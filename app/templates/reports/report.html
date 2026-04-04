@@ -1766,6 +1766,31 @@ function drawAppChart(canvas, misses, girHits) {
   }
   ctx.restore();
 
+  // ── Greenside bunkers — one at every miss position ───────────────
+  // Drawn before miss circles so they sit underneath.
+  // Each bunker is a slightly-rotated ellipse styled with sandy gold.
+  var bunkers = [
+    {x: cx - gW - 26,        y: cy,              rx: 22, ry: 14, rot: 0},           // left
+    {x: cx + gW + 26,        y: cy,              rx: 22, ry: 14, rot: 0},           // right
+    {x: cx,                  y: cy + gH + 22,    rx: 28, ry: 13, rot: 0},           // short
+    {x: cx,                  y: cy - gH - 22,    rx: 28, ry: 13, rot: 0},           // long
+    {x: cx - gW * 0.6,       y: cy + gH + 14,    rx: 19, ry: 12, rot:  0.35},      // short-left
+    {x: cx + gW * 0.6,       y: cy + gH + 14,    rx: 19, ry: 12, rot: -0.35},      // short-right
+    {x: cx - gW * 0.6,       y: cy - gH - 14,    rx: 19, ry: 12, rot: -0.35},      // long-left
+    {x: cx + gW * 0.6,       y: cy - gH - 14,    rx: 19, ry: 12, rot:  0.35},      // long-right
+    {x: cx + gW + 14,        y: cy + gH * 0.35,  rx: 17, ry: 13, rot:  0.5},       // dedicated bunker
+  ];
+  bunkers.forEach(function(b) {
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(b.rot);
+    ctx.beginPath(); ctx.ellipse(0, 0, b.rx, b.ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(201,168,76,0.1)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(201,168,76,0.3)'; ctx.lineWidth = 0.8;
+    ctx.setLineDash([2, 3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+  });
+
   // ── Flag ─────────────────────────────────────────────────────────
   ctx.strokeStyle = 'rgba(201,168,76,0.7)'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(pinX, pinY + 2); ctx.lineTo(pinX, pinY - 18); ctx.stroke();
