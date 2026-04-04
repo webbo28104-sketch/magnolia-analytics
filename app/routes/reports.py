@@ -9,6 +9,12 @@ from app.utils.strokes_gained import (
     strokes_gained_off_tee,
     strokes_gained_approach,
     strokes_gained_around_green,
+    expected_putts,
+    expected_approach,
+    expected_ott,
+    expected_scramble,
+    _tee_shot_lie,
+    _parse_yards,
 )
 from app.utils.round_stats import build_course_hole_map
 from app.utils.personal_bests import check_recent_personal_best
@@ -110,10 +116,11 @@ def _split_totals(holes_data: list) -> dict:
     }
 
 
-def _tee_shot_gir_breakdown(holes_data: list) -> dict:
-    """GIR hit rate segmented by tee-shot outcome."""
+def _tee_shot_gir_breakdown(holes_data: list, hole_sg_by_num: dict = None) -> dict:
+    """GIR hit rate segmented by tee-shot outcome. Optionally includes SG per outcome."""
     cats = {'fairway': [0, 0], 'left': [0, 0], 'right': [0, 0],
             'penalty': [0, 0], 'other': [0, 0]}
+    sg_by_cat: dict = {k: [] for k in cats}
     for h in holes_data:
         if h['par'] not in (4, 5):
             continue
@@ -122,19 +129,25 @@ def _tee_shot_gir_breakdown(holes_data: list) -> dict:
         cats[key][0] += 1
         if h['gir']:
             cats[key][1] += 1
+        if hole_sg_by_num:
+            sg_val = hole_sg_by_num.get(h['hole_number'], {}).get('sg_ott')
+            if sg_val is not None:
+                sg_by_cat[key].append(sg_val)
     result = {}
     for k, (attempts, girs) in cats.items():
         if attempts:
+            sg_vals = sg_by_cat.get(k, [])
             result[k] = {
                 'attempts': attempts,
                 'girs':     girs,
                 'gir_pct':  round(girs / attempts * 100),
+                'sg':       round(sum(sg_vals), 2) if sg_vals else None,
             }
     return result
 
 
-def _approach_distance_breakdown(holes_data: list) -> list:
-    """Shots grouped into distance bands with GIR rates."""
+def _approach_distance_breakdown(holes_data: list, hole_sg_by_num: dict = None) -> list:
+    """Shots grouped into distance bands with GIR rates. Optionally includes SG per band."""
     bands = [
         ('< 75 yds',    0,   75),
         ('75–100 yds',  75,  100),
@@ -153,11 +166,21 @@ def _approach_distance_breakdown(holes_data: list) -> list:
         if not subset:
             continue
         girs = sum(1 for h in subset if h['gir'])
+        sg_total = None
+        if hole_sg_by_num:
+            sg_vals = [
+                hole_sg_by_num[h['hole_number']]['sg_approach']
+                for h in subset
+                if hole_sg_by_num.get(h['hole_number'], {}).get('sg_approach') is not None
+            ]
+            if sg_vals:
+                sg_total = round(sum(sg_vals), 2)
         result.append({
             'label':    label,
             'attempts': len(subset),
             'girs':     girs,
             'gir_pct':  round(girs / len(subset) * 100),
+            'sg':       sg_total,
         })
     return result
 
@@ -300,6 +323,86 @@ def _scoring_by_par_type(holes_data: list) -> dict:
             'doubles': sum(1 for h in subset if h['score_vs_par'] >= 2),
         }
     return result
+
+
+def _per_hole_sg(holes, course_hole_map: dict) -> list:
+    """Compute per-hole SG values for putting, approach, off-the-tee, and ATG.
+    Returns list of dicts keyed by hole_number; values are None when not computable."""
+    result = []
+    for h in holes:
+        ch = course_hole_map.get(h.hole_number)
+        row: dict = {
+            'hole_number': h.hole_number,
+            'par':         h.par,
+            'sg_putt':     None,
+            'sg_ott':      None,
+            'sg_approach': None,
+            'sg_atg':      None,
+        }
+
+        # SG: Putting
+        if h.first_putt_distance and h.putts:
+            row['sg_putt'] = round(expected_putts(h.first_putt_distance) - h.putts, 3)
+
+        # SG: Off the Tee (par 4/5 only)
+        if h.par in (4, 5) and h.tee_shot:
+            lie      = _tee_shot_lie(h.tee_shot)
+            remaining = (h.approach_distance if h.par == 4
+                         else _parse_yards(h.second_shot_distance))
+            yardage  = ch.yardage if (ch and ch.yardage) else None
+            if yardage and remaining:
+                row['sg_ott'] = round(
+                    expected_ott(yardage) - 1 - expected_approach(remaining, lie), 3)
+
+        # SG: Approach
+        dist    = h.approach_distance
+        lie     = _tee_shot_lie(h.tee_shot) if (h.tee_shot and h.par in (4, 5)) else 'fairway'
+        atg_lie = 'bunker' if h.approach_miss == 'bunker' else 'rough'
+        sdist   = _parse_yards(h.scramble_distance)
+
+        if h.par == 3 and dist:
+            exp_start = expected_approach(dist, 'fairway')
+            if h.gir and h.first_putt_distance:
+                row['sg_approach'] = round(exp_start - 1 - expected_putts(h.first_putt_distance), 3)
+            elif not h.gir and sdist:
+                row['sg_approach'] = round(exp_start - 1 - expected_scramble(sdist, atg_lie), 3)
+        elif h.par in (4, 5):
+            if h.gir and dist and h.first_putt_distance:
+                row['sg_approach'] = round(
+                    expected_approach(dist, lie) - 1 - expected_putts(h.first_putt_distance), 3)
+            elif not h.gir and dist and sdist:
+                row['sg_approach'] = round(
+                    expected_approach(dist, lie) - 1 - expected_scramble(sdist, atg_lie), 3)
+
+        # SG: Around the Green (GIR misses only)
+        if not h.gir and sdist and h.first_putt_distance:
+            row['sg_atg'] = round(
+                expected_scramble(sdist, atg_lie) - 1 - expected_putts(h.first_putt_distance), 3)
+
+        result.append(row)
+    return result
+
+
+def _top_sg_moments(hole_sg: list, n: int = 3) -> list:
+    """Return the top n SG shots across all categories, sorted best first."""
+    _cat_labels = {
+        'sg_putt':     'Putting',
+        'sg_ott':      'Off the Tee',
+        'sg_approach': 'Approach',
+        'sg_atg':      'Around the Green',
+    }
+    moments = []
+    for row in hole_sg:
+        for cat, label in _cat_labels.items():
+            val = row.get(cat)
+            if val is not None:
+                moments.append({
+                    'hole_number': row['hole_number'],
+                    'par':         row['par'],
+                    'category':    label,
+                    'sg':          val,
+                })
+    return sorted(moments, key=lambda x: x['sg'], reverse=True)[:n]
 
 
 def _sg_bar_width(sg_value: float, scale: float = 8.0) -> int:
@@ -480,9 +583,23 @@ def view_report(round_id):
         'total':    {'value': sg_total,    'width': _sg_bar_width(sg_total, scale=20),          'positive': sg_total >= 0},
     }
 
+    # ---- Per-hole SG (used for top moments, best-shot callouts, band SG) ----
+    hole_sg         = _per_hole_sg(holes, course_hole_map)
+    hole_sg_by_num  = {h['hole_number']: h for h in hole_sg}
+    top_sg_moments  = _top_sg_moments(hole_sg, n=3)
+
+    # Best shot per category (highest SG in each)
+    best_sg_by_cat: dict = {}
+    for cat in ('sg_putt', 'sg_ott', 'sg_approach', 'sg_atg'):
+        candidates = [(h[cat], h['hole_number'], h['par'])
+                      for h in hole_sg if h.get(cat) is not None]
+        if candidates:
+            best = max(candidates, key=lambda x: x[0])
+            best_sg_by_cat[cat] = {'sg': best[0], 'hole_number': best[1], 'par': best[2]}
+
     # ---- Analysis sections ----
-    tee_gir      = _tee_shot_gir_breakdown(holes_data)
-    approach_bds = _approach_distance_breakdown(holes_data)
+    tee_gir      = _tee_shot_gir_breakdown(holes_data, hole_sg_by_num)
+    approach_bds = _approach_distance_breakdown(holes_data, hole_sg_by_num)
     miss_dirs    = _miss_direction_counts(holes_data)
     scramble     = _scramble_stats(holes_data)
     putt_dist    = _putting_distribution(holes_data)
@@ -603,6 +720,10 @@ def view_report(round_id):
 
         # Personal best
         pb_banner    = pb_banner,
+
+        # Per-hole SG (top moments + best-shot callouts)
+        top_sg_moments  = top_sg_moments,
+        best_sg_by_cat  = best_sg_by_cat,
     )
 
 

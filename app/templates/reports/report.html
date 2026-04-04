@@ -670,7 +670,6 @@ body::before {
     <button class="tab-btn" data-tab="approach" role="tab" aria-selected="false">Approach</button>
     <button class="tab-btn" data-tab="atg" role="tab" aria-selected="false">Around the Green</button>
     <button class="tab-btn" data-tab="putting" role="tab" aria-selected="false">Putting</button>
-    <button class="tab-btn" data-tab="scoring" role="tab" aria-selected="false">Scoring</button>
     <button class="tab-btn" data-tab="coaching" role="tab" aria-selected="false">Coaching</button>
   </nav>
 
@@ -845,6 +844,78 @@ body::before {
     </table>
   </div>
 
+  {# ── Scoring Breakdown ── #}
+  <div class="sec-divider"></div>
+  <div class="sec-label fu d4">Scoring Breakdown</div>
+
+  <div class="sb-row fu d4">
+    {% for h in holes_data %}
+    {% if h.score_vs_par <= -2 %}{% set _sbc = 'sb-eagle' %}
+    {% elif h.score_vs_par == -1 %}{% set _sbc = 'sb-birdie' %}
+    {% elif h.score_vs_par == 0 %}{% set _sbc = 'sb-par' %}
+    {% elif h.score_vs_par == 1 %}{% set _sbc = 'sb-bogey' %}
+    {% else %}{% set _sbc = 'sb-double' %}{% endif %}
+    <div class="score-badge {{ _sbc }}">
+      <span class="sb-h">H{{ h.hole_number }}</span>
+      <span class="sb-s">{{ h.score }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:22px; font-size:8px; letter-spacing:.08em; text-transform:uppercase; color:var(--cream-faint);">
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(139,92,246,0.35);border:1px solid rgba(139,92,246,0.6);vertical-align:middle;margin-right:3px;"></span>Eagle</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(201,168,76,0.3);border:1px solid rgba(201,168,76,0.6);vertical-align:middle;margin-right:3px;"></span>Birdie</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(74,158,107,0.25);border:1px solid rgba(74,158,107,0.5);vertical-align:middle;margin-right:3px;"></span>Par</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(232,192,60,0.15);border:1px solid rgba(201,168,76,0.3);vertical-align:middle;margin-right:3px;"></span>Bogey</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(232,160,144,0.25);border:1px solid rgba(232,160,144,0.5);vertical-align:middle;margin-right:3px;"></span>Double+</span>
+  </div>
+
+  {% if scoring_by_par %}
+  <div class="par-type-grid fu d4">
+    {% for par_n, sp in scoring_by_par.items() | sort %}
+    <div class="pt-card">
+      <div class="pt-lbl">Par {{ par_n }}s · {{ sp.count }} hole{{ 's' if sp.count != 1 }}</div>
+      <div class="pt-val {{ 'c-grn' if sp.avg_svp <= 0 else 'c-red' }}">{{ '+' if sp.avg_svp > 0 }}{{ sp.avg_svp }}</div>
+      <div class="pt-sub">avg vs par</div>
+      <div class="pt-dist-row">
+        {% if sp.eagles %}<span class="pt-dist-badge sb-eagle">{{ sp.eagles }}E</span>{% endif %}
+        {% if sp.birdies %}<span class="pt-dist-badge sb-birdie">{{ sp.birdies }}B</span>{% endif %}
+        {% if sp.pars %}<span class="pt-dist-badge sb-par">{{ sp.pars }}P</span>{% endif %}
+        {% if sp.bogeys %}<span class="pt-dist-badge sb-bogey">{{ sp.bogeys }}Bo</span>{% endif %}
+        {% if sp.doubles %}<span class="pt-dist-badge sb-double">{{ sp.doubles }}D+</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% set n_pars    = holes_data | selectattr('score_vs_par','equalto',0) | list | length %}
+  {% set n_bogeys  = holes_data | selectattr('score_vs_par','equalto',1) | list | length %}
+  {% set n_doubles = holes_data | selectattr('score_vs_par','ge',2) | list | length %}
+  {% set n_birdies = holes_data | selectattr('score_vs_par','equalto',-1) | list | length %}
+  {% set n_eagles  = holes_data | selectattr('score_vs_par','le',-2) | list | length %}
+  <div class="rp-tiles rp-tiles-4 fu d4" style="margin-top:0">
+    {% if n_eagles %}<div class="rp-tile"><div class="rp-tile-lbl">Eagles</div><div class="rp-tile-val" style="color:#7ecf9e">{{ n_eagles }}</div><div class="rp-tile-sub">{{ (n_eagles / holes_data|length * 100)|round|int }}% of holes</div></div>{% endif %}
+    {% if n_birdies %}<div class="rp-tile"><div class="rp-tile-lbl">Birdies</div><div class="rp-tile-val c-grn">{{ n_birdies }}</div><div class="rp-tile-sub">{{ (n_birdies / holes_data|length * 100)|round|int }}% of holes</div></div>{% endif %}
+    <div class="rp-tile"><div class="rp-tile-lbl">Pars</div><div class="rp-tile-val">{{ n_pars }}</div><div class="rp-tile-sub">{{ (n_pars / holes_data|length * 100)|round|int }}% of holes</div></div>
+    <div class="rp-tile"><div class="rp-tile-lbl">Bogeys</div><div class="rp-tile-val {{ 'c-red' if n_bogeys > 0 else '' }}">{{ n_bogeys }}</div><div class="rp-tile-sub">{{ (n_bogeys / holes_data|length * 100)|round|int }}% of holes</div></div>
+    {% if n_doubles %}<div class="rp-tile"><div class="rp-tile-lbl">Doubles+</div><div class="rp-tile-val c-red">{{ n_doubles }}</div><div class="rp-tile-sub">blow-up holes</div></div>{% endif %}
+  </div>
+
+  {# ── Top Strokes Gained Moments ── #}
+  {% if top_sg_moments %}
+  <div class="sec-divider"></div>
+  <div class="sec-label fu d4">Top Strokes Gained Shots</div>
+  <div class="rp-tiles rp-tiles-4 fu d4" style="margin-top:0">
+    {% for m in top_sg_moments %}
+    <div class="rp-tile">
+      <div class="rp-tile-lbl">H{{ m.hole_number }} · {{ m.category }}</div>
+      <div class="rp-tile-val {{ 'c-grn' if m.sg > 0 else 'c-red' if m.sg < 0 else '' }}">{{ '+' if m.sg > 0 }}{{ '%.2f'|format(m.sg) }}</div>
+      <div class="rp-tile-sub">SG vs scratch</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   </div><!-- /tab-overview -->
 
   <!-- OFF THE TEE PANEL -->
@@ -908,6 +979,24 @@ body::before {
       Driving accuracy at {{ fw_pct }}%. Track across multiple rounds to identify shape tendencies.
     {% endif %}
   </div>
+
+  {# ── SG by Tee Shot Outcome ── #}
+  {% set _ott_outcomes = [('fairway','Fairway'),('left','Rough Left'),('right','Rough Right'),('penalty','Penalty')] %}
+  {% set _ott_any_sg = tee_gir.values() | selectattr('sg') | list | length > 0 %}
+  {% if sg_ott_ok and _ott_any_sg %}
+  <div class="a-card fu d5" style="margin-bottom:14px;">
+    <div class="a-card-title">SG Off the Tee by Outcome</div>
+    {% for key, lbl in _ott_outcomes %}
+    {% set _oc = tee_gir.get(key, {}) %}
+    {% if _oc.get('attempts') %}
+    <div class="stat-row">
+      <span class="sk">{{ lbl }}</span>
+      <span class="sv">{{ _oc.attempts }} hole{{ 's' if _oc.attempts != 1 }} · {{ _oc.gir_pct }}% GIR{% if _oc.sg is not none %} · <span class="{{ 'c-grn' if _oc.sg >= 0 else 'c-red' }}">SG {{ '+' if _oc.sg > 0 }}{{ '%.2f'|format(_oc.sg) }}</span>{% endif %}</span>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
 
   {# ── Estimated Tee Shot Distances (Change 1) ── #}
   {% set _drive_holes = holes_data | selectattr('est_drive_distance') | list %}
@@ -1006,6 +1095,16 @@ body::before {
   </div>
   {% endif %}
 
+  {# ── Best Tee Shot ── #}
+  {% set _best_ott = best_sg_by_cat.get('sg_ott') %}
+  {% if _best_ott %}
+  <div class="sec-divider"></div>
+  <div class="rp-insight fu" style="display:flex;align-items:center;gap:14px;">
+    <div style="font-size:22px;font-weight:900;color:var(--green-soft);letter-spacing:-.02em;flex-shrink:0;">{{ '+' if _best_ott.sg > 0 }}{{ '%.2f'|format(_best_ott.sg) }}</div>
+    <div><strong>Best tee shot — Hole {{ _best_ott.hole_number }} (Par {{ _best_ott.par }})</strong>. This tee shot gained the most strokes vs scratch off the tee this round.</div>
+  </div>
+  {% endif %}
+
   </div><!-- /tab-off-the-tee -->
 
   <!-- APPROACH PANEL -->
@@ -1028,7 +1127,7 @@ body::before {
       <script>
       var APP_MISSES  = {{ miss_dirs | tojson }};
       var APP_GIR_HITS = [
-        {% for h in holes_data if h.gir and h.first_putt_distance %}{{ h.first_putt_distance }},{% endfor %}
+        {% for h in holes_data if h.gir and h.first_putt_distance %}{d:{{ h.first_putt_distance }}, p:{{ h.putts if h.putts else 2 }}},{% endfor %}
       ];
       </script>
       <div style="display:flex;align-items:flex-start;gap:12px;">
@@ -1041,9 +1140,13 @@ body::before {
             <span style="width:10px;height:10px;border-radius:50%;background:rgba(232,160,144,0.6);border:1px solid rgba(232,160,144,0.4);flex-shrink:0;display:inline-block;"></span>
             <span style="font-size:10px;line-height:1.45;color:rgba(245,240,232,0.42);">Miss<br><span style="font-size:8.5px;opacity:.8;">size = count</span></span>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="width:10px;height:10px;border-radius:50%;background:rgba(74,158,107,0.85);flex-shrink:0;display:inline-block;"></span>
-            <span style="font-size:10px;line-height:1.45;color:rgba(245,240,232,0.42);">GIR<br><span style="font-size:8.5px;opacity:.8;">1st putt dist</span></span>
+          <div style="display:flex;align-items:flex-start;gap:8px;">
+            <div style="display:flex;flex-direction:column;gap:3px;margin-top:1px;">
+              <span style="width:9px;height:9px;border-radius:50%;background:rgba(126,207,158,0.95);display:inline-block;"></span>
+              <span style="width:9px;height:9px;border-radius:50%;background:rgba(201,168,76,0.9);display:inline-block;"></span>
+              <span style="width:9px;height:9px;border-radius:50%;background:rgba(232,160,144,0.9);display:inline-block;"></span>
+            </div>
+            <span style="font-size:10px;line-height:1.55;color:rgba(245,240,232,0.42);">GIR dot<br><span style="font-size:8.5px;opacity:.8;">green=1-putt<br>gold=2-putt<br>red=3-putt</span></span>
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <span style="width:10px;height:10px;border-radius:50%;border:1px dashed rgba(74,158,107,0.35);flex-shrink:0;display:inline-block;"></span>
@@ -1081,7 +1184,7 @@ body::before {
     {% for band in approach_bds %}
     <div class="stat-row">
       <span class="sk">{{ band.label }}</span>
-      <span class="sv">{{ band.attempts }} hole{{ 's' if band.attempts != 1 }} · {{ band.girs }} GIR ({{ band.gir_pct }}%)</span>
+      <span class="sv">{{ band.attempts }} hole{{ 's' if band.attempts != 1 }} · {{ band.girs }} GIR ({{ band.gir_pct }}%){% if band.sg is not none %} · <span class="{{ 'c-grn' if band.sg >= 0 else 'c-red' }}">SG {{ '+' if band.sg > 0 }}{{ '%.2f'|format(band.sg) }}</span>{% endif %}</span>
     </div>
     {% endfor %}
     {% if _best_band and _worst_band and _best_band.label != _worst_band.label %}
@@ -1158,6 +1261,16 @@ body::before {
   </div>
   {% endif %}
 
+  {# ── Best Approach Shot ── #}
+  {% set _best_app = best_sg_by_cat.get('sg_approach') %}
+  {% if _best_app %}
+  <div class="sec-divider"></div>
+  <div class="rp-insight" style="display:flex;align-items:center;gap:14px;">
+    <div style="font-size:22px;font-weight:900;color:var(--green-soft);letter-spacing:-.02em;flex-shrink:0;">{{ '+' if _best_app.sg > 0 }}{{ '%.2f'|format(_best_app.sg) }}</div>
+    <div><strong>Best approach — Hole {{ _best_app.hole_number }} (Par {{ _best_app.par }})</strong>. Most strokes gained on approach relative to scratch this round.</div>
+  </div>
+  {% endif %}
+
   </div><!-- /tab-approach -->
 
   <!-- AROUND THE GREEN PANEL -->
@@ -1228,6 +1341,15 @@ body::before {
     {% endif %}
   </div>
 
+  {# ── Best ATG Shot ── #}
+  {% set _best_atg = best_sg_by_cat.get('sg_atg') %}
+  {% if _best_atg %}
+  <div class="rp-insight" style="display:flex;align-items:center;gap:14px;margin-top:14px;">
+    <div style="font-size:22px;font-weight:900;color:var(--green-soft);letter-spacing:-.02em;flex-shrink:0;">{{ '+' if _best_atg.sg > 0 }}{{ '%.2f'|format(_best_atg.sg) }}</div>
+    <div><strong>Best scramble shot — Hole {{ _best_atg.hole_number }} (Par {{ _best_atg.par }})</strong>. Most strokes gained around the green this round.</div>
+  </div>
+  {% endif %}
+
   </div><!-- /tab-atg -->
 
   <!-- PUTTING PANEL -->
@@ -1291,10 +1413,11 @@ body::before {
       {% endfor %}
     </div>
     {% for band in first_putt %}
+    {% set _bsg = sg_data.sg_putting.bands.get(band.label) if sg_putt_ok else none %}
     <div class="bar-row">
       <span class="bar-lbl" style="width:56px;">{{ band.label }}</span>
       <div class="bar-track"><div class="bar-fill {{ 'bf-grn' if band.make_pct >= 50 else 'bf-gld' if band.make_pct >= 25 else 'bf-red' }}" style="--w:{{ (band.attempts / round.holes_played * 100) | round | int }}%;"></div></div>
-      <span class="bar-pct">{{ band.attempts }} holes</span>
+      <span class="bar-pct">{{ band.attempts }} holes{% if _bsg and _bsg.sg is not none %} · <span class="{{ 'c-grn' if _bsg.sg >= 0 else 'c-red' if _bsg.sg < -0.3 else '' }}">SG {{ '+' if _bsg.sg > 0 }}{{ '%.2f'|format(_bsg.sg) }}</span>{% endif %}</span>
     </div>
     {% endfor %}
     {% if sg_putt_ok and sg_data.sg_putting.bands %}
@@ -1309,135 +1432,17 @@ body::before {
   </div>
   {% endif %}
 
+  {# ── Best Putt ── #}
+  {% set _best_putt = best_sg_by_cat.get('sg_putt') %}
+  {% if _best_putt %}
+  <div class="sec-divider"></div>
+  <div class="rp-insight" style="display:flex;align-items:center;gap:14px;">
+    <div style="font-size:22px;font-weight:900;color:var(--green-soft);letter-spacing:-.02em;flex-shrink:0;">{{ '+' if _best_putt.sg > 0 }}{{ '%.2f'|format(_best_putt.sg) }}</div>
+    <div><strong>Best putting hole — Hole {{ _best_putt.hole_number }} (Par {{ _best_putt.par }})</strong>. Most strokes gained on the greens relative to scratch this round.</div>
+  </div>
+  {% endif %}
+
   </div><!-- /tab-putting -->
-
-  <!-- SCORING PANEL -->
-  <div id="tab-scoring" class="tab-panel" role="tabpanel">
-  <div class="sec-divider"></div>
-  <div class="sec-label fu">Scoring Breakdown</div>
-
-  {# ── Change 4: Hole Score Visual Row ── #}
-  <div class="sb-row fu">
-    {% for h in holes_data %}
-    {% if h.score_vs_par <= -2 %}{% set _sbc = 'sb-eagle' %}
-    {% elif h.score_vs_par == -1 %}{% set _sbc = 'sb-birdie' %}
-    {% elif h.score_vs_par == 0 %}{% set _sbc = 'sb-par' %}
-    {% elif h.score_vs_par == 1 %}{% set _sbc = 'sb-bogey' %}
-    {% else %}{% set _sbc = 'sb-double' %}{% endif %}
-    <div class="score-badge {{ _sbc }}">
-      <span class="sb-h">H{{ h.hole_number }}</span>
-      <span class="sb-s">{{ h.score }}</span>
-    </div>
-    {% endfor %}
-  </div>
-  {# Legend #}
-  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:22px; font-size:8px; letter-spacing:.08em; text-transform:uppercase; color:var(--cream-faint);">
-    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(139,92,246,0.35);border:1px solid rgba(139,92,246,0.6);vertical-align:middle;margin-right:3px;"></span>Eagle</span>
-    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(201,168,76,0.3);border:1px solid rgba(201,168,76,0.6);vertical-align:middle;margin-right:3px;"></span>Birdie</span>
-    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(74,158,107,0.25);border:1px solid rgba(74,158,107,0.5);vertical-align:middle;margin-right:3px;"></span>Par</span>
-    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(232,192,60,0.15);border:1px solid rgba(201,168,76,0.3);vertical-align:middle;margin-right:3px;"></span>Bogey</span>
-    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgba(232,160,144,0.25);border:1px solid rgba(232,160,144,0.5);vertical-align:middle;margin-right:3px;"></span>Double+</span>
-  </div>
-
-  {# ── Scoring by Par Type ── #}
-  {% if scoring_by_par %}
-  <div class="sec-divider"></div>
-  <div class="sec-label">Scoring by Par Type</div>
-  <div class="par-type-grid fu">
-    {% for par_n, sp in scoring_by_par.items() | sort %}
-    <div class="pt-card">
-      <div class="pt-lbl">Par {{ par_n }}s · {{ sp.count }} hole{{ 's' if sp.count != 1 }}</div>
-      <div class="pt-val {{ 'c-grn' if sp.avg_svp <= 0 else 'c-red' }}">{{ '+' if sp.avg_svp > 0 }}{{ sp.avg_svp }}</div>
-      <div class="pt-sub">avg vs par</div>
-      <div class="pt-dist-row">
-        {% if sp.eagles %}<span class="pt-dist-badge sb-eagle">{{ sp.eagles }}E</span>{% endif %}
-        {% if sp.birdies %}<span class="pt-dist-badge sb-birdie">{{ sp.birdies }}B</span>{% endif %}
-        {% if sp.pars %}<span class="pt-dist-badge sb-par">{{ sp.pars }}P</span>{% endif %}
-        {% if sp.bogeys %}<span class="pt-dist-badge sb-bogey">{{ sp.bogeys }}Bo</span>{% endif %}
-        {% if sp.doubles %}<span class="pt-dist-badge sb-double">{{ sp.doubles }}D+</span>{% endif %}
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  {# ── Score Distribution Tiles ── #}
-  {% set n_pars    = holes_data | selectattr('score_vs_par','equalto',0) | list | length %}
-  {% set n_bogeys  = holes_data | selectattr('score_vs_par','equalto',1) | list | length %}
-  {% set n_doubles = holes_data | selectattr('score_vs_par','ge',2) | list | length %}
-  {% set n_birdies = holes_data | selectattr('score_vs_par','equalto',-1) | list | length %}
-  {% set n_eagles  = holes_data | selectattr('score_vs_par','le',-2) | list | length %}
-  <div class="rp-tiles rp-tiles-4 fu" style="margin-top:0">
-    {% if n_eagles %}<div class="rp-tile"><div class="rp-tile-lbl">Eagles</div><div class="rp-tile-val" style="color:#7ecf9e">{{ n_eagles }}</div><div class="rp-tile-sub">{{ (n_eagles / holes_data|length * 100)|round|int }}% of holes</div></div>{% endif %}
-    {% if n_birdies %}<div class="rp-tile"><div class="rp-tile-lbl">Birdies</div><div class="rp-tile-val c-grn">{{ n_birdies }}</div><div class="rp-tile-sub">{{ (n_birdies / holes_data|length * 100)|round|int }}% of holes</div></div>{% endif %}
-    <div class="rp-tile"><div class="rp-tile-lbl">Pars</div><div class="rp-tile-val">{{ n_pars }}</div><div class="rp-tile-sub">{{ (n_pars / holes_data|length * 100)|round|int }}% of holes</div></div>
-    <div class="rp-tile"><div class="rp-tile-lbl">Bogeys</div><div class="rp-tile-val {{ 'c-red' if n_bogeys > 0 else '' }}">{{ n_bogeys }}</div><div class="rp-tile-sub">{{ (n_bogeys / holes_data|length * 100)|round|int }}% of holes</div></div>
-    {% if n_doubles %}<div class="rp-tile"><div class="rp-tile-lbl">Doubles+</div><div class="rp-tile-val c-red">{{ n_doubles }}</div><div class="rp-tile-sub">blow-up holes</div></div>{% endif %}
-  </div>
-
-  {# ── Front / Back Scoring Split ── #}
-  {% if split.front and split.back %}
-  <div class="sec-divider"></div>
-  <div class="sec-label">Front vs Back Scoring</div>
-  <div class="two-col fu">
-    <div class="a-card">
-      <div class="a-card-title">Front Nine · Holes 1–9</div>
-      <div class="stat-row"><span class="sk">Score</span><span class="sv {{ 'c-grn' if split.front.score_vs_par <= 0 else 'c-red' }}">{{ split.front.score }} ({{ split.front.score_label }})</span></div>
-      {% set _fn = holes_data | selectattr('hole_number','le',9) | list %}
-      {% set _fe = _fn | selectattr('score_vs_par','le',-2) | list | length %}
-      {% set _fb = _fn | selectattr('score_vs_par','equalto',-1) | list | length %}
-      {% set _fp = _fn | selectattr('score_vs_par','equalto',0) | list | length %}
-      {% set _fbo = _fn | selectattr('score_vs_par','equalto',1) | list | length %}
-      {% set _fd = _fn | selectattr('score_vs_par','ge',2) | list | length %}
-      {% if _fe %}<div class="stat-row"><span class="sk">Eagles or better</span><span class="sv c-grn">{{ _fe }}</span></div>{% endif %}
-      {% if _fb %}<div class="stat-row"><span class="sk">Birdies</span><span class="sv c-grn">{{ _fb }}</span></div>{% endif %}
-      {% if _fp %}<div class="stat-row"><span class="sk">Pars</span><span class="sv">{{ _fp }}</span></div>{% endif %}
-      {% if _fbo %}<div class="stat-row"><span class="sk">Bogeys</span><span class="sv c-red">{{ _fbo }}</span></div>{% endif %}
-      {% if _fd %}<div class="stat-row"><span class="sk">Doubles or worse</span><span class="sv c-red">{{ _fd }}</span></div>{% endif %}
-    </div>
-    <div class="a-card">
-      <div class="a-card-title">Back Nine · Holes 10–18</div>
-      <div class="stat-row"><span class="sk">Score</span><span class="sv {{ 'c-grn' if split.back.score_vs_par <= 0 else 'c-red' }}">{{ split.back.score }} ({{ split.back.score_label }})</span></div>
-      {% set _bn = holes_data | selectattr('hole_number','gt',9) | list %}
-      {% set _be = _bn | selectattr('score_vs_par','le',-2) | list | length %}
-      {% set _bb = _bn | selectattr('score_vs_par','equalto',-1) | list | length %}
-      {% set _bp = _bn | selectattr('score_vs_par','equalto',0) | list | length %}
-      {% set _bbo = _bn | selectattr('score_vs_par','equalto',1) | list | length %}
-      {% set _bd = _bn | selectattr('score_vs_par','ge',2) | list | length %}
-      {% if _be %}<div class="stat-row"><span class="sk">Eagles or better</span><span class="sv c-grn">{{ _be }}</span></div>{% endif %}
-      {% if _bb %}<div class="stat-row"><span class="sk">Birdies</span><span class="sv c-grn">{{ _bb }}</span></div>{% endif %}
-      {% if _bp %}<div class="stat-row"><span class="sk">Pars</span><span class="sv">{{ _bp }}</span></div>{% endif %}
-      {% if _bbo %}<div class="stat-row"><span class="sk">Bogeys</span><span class="sv c-red">{{ _bbo }}</span></div>{% endif %}
-      {% if _bd %}<div class="stat-row"><span class="sk">Doubles or worse</span><span class="sv c-red">{{ _bd }}</span></div>{% endif %}
-    </div>
-  </div>
-  {% endif %}
-
-  {# ── Blow-up Holes ── #}
-  {% set _blowup_holes = holes_data | selectattr('score_vs_par','ge',2) | list %}
-  {% if _blowup_holes %}
-  <div class="sec-divider"></div>
-  <div class="sec-label">Blow-up Holes · Double Bogey or Worse</div>
-  <div class="a-card fu">
-    <div class="a-card-title">{{ _blowup_holes | length }} Hole{{ 's' if _blowup_holes | length != 1 }} — {{ (_blowup_holes | map(attribute='score_vs_par') | sum) }} shots dropped combined</div>
-    {% for h in _blowup_holes %}
-    <div class="stat-row">
-      <span class="sk">Hole {{ h.hole_number }} (Par {{ h.par }})</span>
-      <span class="sv c-red">{{ h.score_label }} · {{ h.score }} gross</span>
-    </div>
-    {% if h.gir == false and h.approach_miss %}
-    <div style="font-size:9px; color:var(--cream-faint); padding:0 0 6px 0;">
-      Missed green {{ h.approach_miss }}{% if h.lie_type %} · lie: {{ h.lie_type }}{% endif %}
-    </div>
-    {% endif %}
-    {% endfor %}
-    <div class="insight">
-      Eliminating one blow-up hole per round is typically worth 1–2 strokes. Common causes: aggressive approach club selection, poor scrambling, or three-putts after GIR miss.
-    </div>
-  </div>
-  {% endif %}
-
-  </div><!-- /tab-scoring -->
 
   <!-- COACHING PANEL -->
   <div id="tab-coaching" class="tab-panel" role="tabpanel">
@@ -1467,6 +1472,8 @@ body::before {
       {% if tile_ok %}
       <div class="rp-tile-val {{ 'c-grn' if tile_val >= 0 else 'c-red' if tile_val < -1 else '' }}">{{ sgfmt(tile_val) }}</div>
       <div class="rp-tile-sub">{{ 'gaining on scratch' if tile_val >= 0 else 'losing to scratch' }}</div>
+      {% set _hcp_equiv = [(-tile_val * 10) | round | int, 0] | max %}
+      <div style="font-size:9px;color:var(--cream-faint);letter-spacing:.06em;margin-top:5px;">{% if _hcp_equiv == 0 %}≈ scratch{% else %}≈ {{ [_hcp_equiv, 54] | min }} hcp equiv{% endif %}</div>
       {% else %}
       <div class="rp-tile-val" style="color:var(--cream-faint);">—</div>
       <div class="rp-tile-sub">not enough data</div>
@@ -1730,7 +1737,7 @@ function drawAppChart(canvas, misses, girHits) {
   var pinX = cx, pinY = cy - gH * 0.38;  // pin sits in upper third of green
 
   // ── Distance scale ────────────────────────────────────────────────
-  var maxFPD = girHits.length ? Math.max.apply(null, girHits) : 15;
+  var maxFPD = girHits.length ? Math.max.apply(null, girHits.map(function(g){ return g.d; })) : 15;
   var availPx = (cy + gH * 0.88) - pinY;
   var scale = availPx / (maxFPD + 5);  // px per foot
 
@@ -1764,15 +1771,17 @@ function drawAppChart(canvas, misses, girHits) {
   ctx.lineTo(pinX, pinY - 8); ctx.closePath();
   ctx.fillStyle = 'rgba(201,168,76,0.88)'; ctx.fill();
 
-  // ── GIR dots — vertical centre line, closest first ────────────────
-  var sortedGir = girHits.slice().sort(function(a, b) { return a - b; });
-  sortedGir.forEach(function(dist) {
-    var dotY = Math.min(pinY + dist * scale, cy + gH - 6);
+  // ── GIR dots — vertical centre line, closest first, coloured by putts ────
+  var puttColors = {1:'rgba(126,207,158,0.95)', 2:'rgba(201,168,76,0.9)', 3:'rgba(232,160,144,0.9)'};
+  var sortedGir = girHits.slice().sort(function(a, b) { return a.d - b.d; });
+  sortedGir.forEach(function(g) {
+    var dotY = Math.min(pinY + g.d * scale, cy + gH - 6);
+    var col = puttColors[Math.min(g.p, 3)] || puttColors[3];
     ctx.beginPath(); ctx.arc(pinX, dotY, 4, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(74,158,107,0.9)'; ctx.fill();
+    ctx.fillStyle = col; ctx.fill();
     ctx.fillStyle = 'rgba(245,240,232,0.52)'; ctx.font = '8px Inter,sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(dist + 'ft', pinX + 8, dotY);
+    ctx.fillText(g.d + 'ft', pinX + 8, dotY);
   });
 
   // ── Miss bubbles ──────────────────────────────────────────────────
@@ -1905,7 +1914,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 // ── Tab switching ─────────────────────────────────────────────────
 (function () {
-  var TABS = ['overview', 'off-the-tee', 'approach', 'atg', 'putting', 'scoring', 'coaching'];
+  var TABS = ['overview', 'off-the-tee', 'approach', 'atg', 'putting', 'coaching'];
 
   function activateTab(tabId, pushHash) {
     if (TABS.indexOf(tabId) === -1) tabId = 'overview';
