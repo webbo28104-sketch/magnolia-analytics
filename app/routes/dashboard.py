@@ -165,6 +165,18 @@ def _compute_glance(all_rounds):
             break
     glance['streak'] = streak                  # always >= 1
 
+    # Avg score vs par across all rounds within the streak window
+    streak_weeks = set()
+    temp_check = all_rounds[0].date_played
+    for _ in range(streak):
+        iso = temp_check.isocalendar()
+        streak_weeks.add((iso[0], iso[1]))
+        temp_check -= timedelta(weeks=1)
+    streak_rounds = [r for r in all_rounds
+                     if (r.date_played.isocalendar()[0], r.date_played.isocalendar()[1]) in streak_weeks]
+    svp_vals = [v for v in (r.score_vs_par() for r in streak_rounds) if v is not None]
+    glance['streak_avg_vs_par'] = round(sum(svp_vals) / len(svp_vals), 1) if svp_vals else None
+
     # 2. Rounds this month vs last month
     glance['this_month'] = sum(
         1 for r in all_rounds
@@ -177,7 +189,7 @@ def _compute_glance(all_rounds):
         if r.date_played.year == last_month_year and r.date_played.month == last_month_num
     )
 
-    # 3. Best SG category across last 5 rounds with trend (need >= 2 rounds with SG data)
+    # 3. Most improved SG category over last 5 rounds
     sg_cats = {
         'Putting':          'sg_putting',
         'Off the Tee':      'sg_off_tee',
@@ -187,25 +199,31 @@ def _compute_glance(all_rounds):
     last5_sg = [r for r in all_rounds[:5] if any(getattr(r, a) is not None for a in sg_cats.values())]
 
     if len(last5_sg) >= 2:
-        avgs = {}
-        for cat_name, attr in sg_cats.items():
-            vals = [getattr(r, attr) for r in last5_sg if getattr(r, attr) is not None]
-            if vals:
-                avgs[cat_name] = sum(vals) / len(vals)
+        n     = len(last5_sg)
+        split = max(1, n // 2)
+        recent_sg = last5_sg[:split]
+        older_sg  = last5_sg[split:]
 
-        if avgs:
-            best_cat = max(avgs, key=avgs.get)
-            attr     = sg_cats[best_cat]
-            newest   = getattr(last5_sg[0], attr)
-            oldest   = getattr(last5_sg[-1], attr)
-            trend    = ('up' if newest > oldest else 'down') if (newest is not None and oldest is not None) else None
-            glance['best_sg_cat']    = best_cat
-            glance['best_sg_trend']  = trend
-            glance['sg_rounds_count'] = len(last5_sg)
+        deltas = {}
+        for cat_name, attr in sg_cats.items():
+            recent_vals = [getattr(r, attr) for r in recent_sg if getattr(r, attr) is not None]
+            older_vals  = [getattr(r, attr) for r in older_sg  if getattr(r, attr) is not None]
+            if recent_vals and older_vals:
+                deltas[cat_name] = round(
+                    sum(recent_vals) / len(recent_vals) - sum(older_vals) / len(older_vals), 2
+                )
+
+        if deltas:
+            best_cat   = max(deltas, key=deltas.get)
+            best_delta = deltas[best_cat]
+            glance['sg_improved_cat']   = best_cat
+            glance['sg_improved_delta'] = best_delta
+            glance['sg_improved_label'] = 'Most Improved' if best_delta > 0 else 'Holding Steady'
+            glance['sg_rounds_count']   = len(last5_sg)
         else:
-            glance['best_sg_cat'] = None
+            glance['sg_improved_cat'] = None
     else:
-        glance['best_sg_cat'] = None
+        glance['sg_improved_cat'] = None
 
     # 4. Personal best — scan the last 5 rounds, each vs same-format previous rounds.
     # Checking 5 rounds catches cases where the most recent round isn't the relevant

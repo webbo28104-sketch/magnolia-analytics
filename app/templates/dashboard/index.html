@@ -333,7 +333,7 @@
       <div class="glance-stat">
         <span class="glance-stat-sym">✦ &nbsp;Streak</span>
         <div class="glance-stat-value">{{ glance.streak }} week{{ 's' if glance.streak != 1 }}</div>
-        <div class="glance-stat-label">consecutive weeks with a round logged</div>
+        <div class="glance-stat-label">Consecutive weeks with a round logged{% if glance.streak_avg_vs_par is not none %} · Avg {% if glance.streak_avg_vs_par > 0 %}+{% endif %}{{ glance.streak_avg_vs_par }} vs par{% endif %}</div>
       </div>
       {% endif %}
 
@@ -343,19 +343,21 @@
         <div class="glance-stat-value">{{ glance.this_month }} round{{ 's' if glance.this_month != 1 }}</div>
         <div class="glance-stat-label">
           {% if glance.prev_month > 0 %}
-            {% if glance.this_month > glance.prev_month %}up from {{ glance.prev_month }} last month
-            {% elif glance.this_month < glance.prev_month %}down from {{ glance.prev_month }} last month
-            {% else %}same as last month ({{ glance.prev_month }}){% endif %}
-          {% else %}no rounds last month{% endif %}
+            {% if glance.this_month > glance.prev_month %}Up from {{ glance.prev_month }} last month
+            {% elif glance.this_month < glance.prev_month %}Down from {{ glance.prev_month }} last month
+            {% else %}Same as last month ({{ glance.prev_month }}){% endif %}
+          {% else %}No rounds last month{% endif %}
         </div>
       </div>
       {% endif %}
 
-      {% if glance.best_sg_cat %}
+      {% if glance.sg_improved_cat %}
       <div class="glance-stat">
-        <span class="glance-stat-sym">✦ &nbsp;Strongest Area</span>
-        <div class="glance-stat-value">{{ glance.best_sg_cat }}</div>
-        <div class="glance-stat-label">over last {{ glance.sg_rounds_count }} rounds{% if glance.best_sg_trend == 'up' %} · improving ↑{% elif glance.best_sg_trend == 'down' %} · trending down ↓{% endif %}</div>
+        <span class="glance-stat-sym">✦ &nbsp;{{ glance.sg_improved_label }}</span>
+        <div class="glance-stat-value">{{ glance.sg_improved_cat }}</div>
+        <div class="glance-stat-label">
+          {% if glance.sg_improved_delta > 0 %}+{{ glance.sg_improved_delta }} SG improvement over your last {{ glance.sg_rounds_count }} rounds{% else %}Most consistent category over your last {{ glance.sg_rounds_count }} rounds{% endif %}
+        </div>
       </div>
       {% endif %}
 
@@ -363,7 +365,7 @@
       <div class="glance-stat glance-stat--pb">
         <span class="glance-stat-sym">✦ &nbsp;Personal Best</span>
         <div class="glance-stat-value">New record</div>
-        <div class="glance-stat-label">{{ glance.recent_pb.label }} in a recent round</div>
+        <div class="glance-stat-label">{{ glance.recent_pb.label }}</div>
       </div>
       {% endif %}
 
