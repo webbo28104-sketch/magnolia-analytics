@@ -32,7 +32,7 @@
 /* ---- Reset & Base ---- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { font-size: 16px; scroll-behavior: smooth; overflow-x: hidden; }
+html { font-size: 16px; scroll-behavior: smooth; overflow-x: hidden; max-width: 100%; }
 
 body {
   font-family: var(--font-sans);
@@ -45,6 +45,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  max-width: 100%;
 }
 
 a { color: var(--gold); text-decoration: none; }
@@ -75,8 +76,8 @@ h1, h2, h3, h4 {
 
 /* ---- Navigation ---- */
 .nav {
-  background: var(--green-800);
-  border-bottom: 1px solid var(--green-700);
+  background: var(--green-900);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -892,6 +893,25 @@ h1, h2, h3, h4 {
   .mock-score-block { text-align: left; }
   .mock-sg-label { width: 80px; }
   .mock-tab { padding: 10px 12px; font-size: 0.72rem; }
+}
+
+/* ---- Global mobile overflow guard ---- */
+@media (max-width: 480px) {
+  .container,
+  .nav-inner,
+  .lp-hero-inner,
+  .lp-how-inner,
+  .lp-report-inner,
+  .lp-features-inner,
+  .lp-founding-inner,
+  .lp-install-inner,
+  .lp-footer-inner {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .lp-proof-item { white-space: normal; padding: 4px 8px; }
+  .mock-sg-label { width: 70px; font-size: 0.7rem; }
+  .mock-sg-bar { font-size: 0.7rem; padding: 0 6px; }
 }
 
 /* ---- Install as App ---- */
