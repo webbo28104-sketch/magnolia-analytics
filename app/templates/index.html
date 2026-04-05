@@ -663,7 +663,7 @@
 .lp-install-step {
   counter-increment: install-step;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   font-size: 0.84rem;
   color: #8ab8a0;
@@ -684,7 +684,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 1px;
+  flex-shrink: 0;
+  align-self: center;
 }
 .lp-install-step strong { color: var(--white); }
 .lp-install-hint {
@@ -1082,7 +1083,7 @@
 
       <div class="lp-feature-block">
         <div class="lp-feature-icon-row">
-          <div class="lp-feature-icon">🤖</div>
+          <div class="lp-feature-icon">🎯</div>
           <div class="lp-feature-headline">Coaching that reads your round</div>
         </div>
         <p class="lp-feature-benefit">Coaching analysis · Your actual data</p>
@@ -1166,10 +1167,10 @@
           <span class="lp-install-platform-name">iPhone &mdash; Safari</span>
         </div>
         <ol class="lp-install-steps">
-          <li class="lp-install-step">Open the site in <strong>Safari</strong></li>
-          <li class="lp-install-step">Tap the <strong>Share button</strong> <span class="lp-install-hint">(box with arrow, bottom of screen)</span></li>
-          <li class="lp-install-step">Scroll and tap <strong>"Add to Home Screen"</strong></li>
-          <li class="lp-install-step">Tap <strong>"Add"</strong> to confirm</li>
+          <li class="lp-install-step"><span>Open the site in <strong>Safari</strong></span></li>
+          <li class="lp-install-step"><span>Tap the <strong>Share button</strong> <span class="lp-install-hint">(box with arrow, bottom of screen)</span></span></li>
+          <li class="lp-install-step"><span>Scroll and tap <strong>"Add to Home Screen"</strong></span></li>
+          <li class="lp-install-step"><span>Tap <strong>"Add"</strong> to confirm</span></li>
         </ol>
       </div>
 
@@ -1187,10 +1188,10 @@
           <span class="lp-install-platform-name">Android &mdash; Chrome</span>
         </div>
         <ol class="lp-install-steps">
-          <li class="lp-install-step">Open the site in <strong>Chrome</strong></li>
-          <li class="lp-install-step">Tap the <strong>three-dot menu</strong> (top right)</li>
-          <li class="lp-install-step">Tap <strong>"Add to Home screen"</strong></li>
-          <li class="lp-install-step">Tap <strong>"Add"</strong> to confirm</li>
+          <li class="lp-install-step"><span>Open the site in <strong>Chrome</strong></span></li>
+          <li class="lp-install-step"><span>Tap the <strong>three-dot menu</strong> <span class="lp-install-hint">(top right)</span></span></li>
+          <li class="lp-install-step"><span>Tap <strong>"Add to Home screen"</strong></span></li>
+          <li class="lp-install-step"><span>Tap <strong>"Add"</strong> to confirm</span></li>
         </ol>
       </div>
 
@@ -1247,3 +1248,6 @@
 </script>
 
 {% endblock %}
+
+{# Suppress base.html footer — landing page has its own lp-footer above #}
+{% block footer %}{% endblock %}
