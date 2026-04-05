@@ -174,8 +174,16 @@ def _compute_glance(all_rounds):
         temp_check -= timedelta(weeks=1)
     streak_rounds = [r for r in all_rounds
                      if (r.date_played.isocalendar()[0], r.date_played.isocalendar()[1]) in streak_weeks]
-    svp_vals = [v for v in (r.score_vs_par() for r in streak_rounds) if v is not None]
-    glance['streak_avg_vs_par'] = round(sum(svp_vals) / len(svp_vals), 1) if svp_vals else None
+    # Normalise per hole then scale to 18-hole equivalent so 9-hole and
+    # 18-hole rounds contribute fairly (e.g. +4 over 9 holes == +8 over 18).
+    per_hole_rates = []
+    for r in streak_rounds:
+        if not r.holes_played:
+            continue
+        svp = r.score_vs_par()
+        if svp is not None:
+            per_hole_rates.append(svp / r.holes_played * 18)
+    glance['streak_avg_vs_par'] = round(sum(per_hole_rates) / len(per_hole_rates), 1) if per_hole_rates else None
 
     # 2. Rounds this month vs last month
     glance['this_month'] = sum(
