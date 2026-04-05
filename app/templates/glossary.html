@@ -13,6 +13,8 @@
 <div class="glossary-page">
   <div class="container">
 
+    <p class="glossary-section-intro" style="margin-bottom:48px;">Every term in your Magnolia report is explained here — from the basics of scoring to the strokes gained metrics that power your analysis. If something in your report isn't clear, this is the place to start.</p>
+
     <!-- Strokes Gained -->
     <div class="glossary-section">
       <h2 class="glossary-section-title">Strokes Gained</h2>
@@ -50,6 +52,14 @@
           </div>
           <p class="glossary-term-def">Measures putting performance relative to scratch, taking into account the distance of each putt. Holing a 20-footer gains more strokes than making a 3-footer — because the baseline expectation differs.</p>
         </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Strokes Gained: Total</span>
+            <span class="glossary-term-abbr">SG: TOT</span>
+          </div>
+          <p class="glossary-term-def">The sum of all four SG categories (Off the Tee, Approach, Around the Green, Putting). Gives a single number representing overall performance vs the Tour baseline for that round. A player who gains 1.2 off the tee but loses 2.1 on approach has an SG: Total of −0.9 for those two categories combined. In Magnolia, SG: Total is shown in the round overview and used to estimate your handicap equivalent.</p>
+        </div>
       </div>
     </div>
 
@@ -58,6 +68,12 @@
       <h2 class="glossary-section-title">Scoring Terms</h2>
 
       <div class="glossary-grid glossary-grid--scores">
+        <div class="glossary-term glossary-term--score glossary-term--albatross">
+          <div class="glossary-score-badge">−3</div>
+          <div class="glossary-term-name">Albatross</div>
+          <p class="glossary-term-def">Three strokes under par on a hole. Exceptionally rare — typically a hole-in-one on a par 4 or reaching a par 5 green in one shot and holing the putt. One of the rarest achievements in amateur golf.</p>
+        </div>
+
         <div class="glossary-term glossary-term--score glossary-term--eagle">
           <div class="glossary-score-badge">−2</div>
           <div class="glossary-term-name">Eagle</div>
@@ -172,6 +188,69 @@
             <span class="glossary-term-name">Scratch Golfer</span>
           </div>
           <p class="glossary-term-def">A golfer with a handicap index of 0 — someone expected to shoot around par on most courses. Note: the Strokes Gained benchmark in Magnolia Analytics is the PGA Tour average (from Mark Broadie's research), not scratch play. A SG of 0 means you matched the Tour average for that shot type, not a 0-handicap golfer.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Course Handicap</span>
+          </div>
+          <p class="glossary-term-def">The number of strokes you receive on a specific course, calculated from your Handicap Index adjusted for that course's Slope Rating and Course Rating. Your Course Handicap will differ slightly from course to course — a harder course gives you more strokes.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Playing Handicap</span>
+          </div>
+          <p class="glossary-term-def">Your Course Handicap adjusted for the format of play. In stroke play it typically equals your Course Handicap, but in formats like Stableford it may be adjusted. The number that actually determines how many strokes you receive in a competition.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Net Score</span>
+          </div>
+          <p class="glossary-term-def">Your gross score minus your Course Handicap strokes. Used in most amateur club competitions so players of different abilities compete on equal terms. A gross 82 with a Course Handicap of 10 gives a net 72.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Stableford</span>
+          </div>
+          <p class="glossary-term-def">A popular scoring format in UK amateur golf where points are awarded per hole based on score vs par. Bogey = 1 point, Par = 2, Birdie = 3, Eagle = 4. Higher points = better score. Eliminates the damage of one bad hole since you simply score zero points rather than wrecking your total.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shot Types & Course Management -->
+    <div class="glossary-section">
+      <h2 class="glossary-section-title">Shot Types & Course Management</h2>
+
+      <div class="glossary-grid">
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Lay Up</span>
+          </div>
+          <p class="glossary-term-def">A deliberate shot played short of a hazard or green, trading distance for position. Common on par 5s where going for the green in two carries too much risk. A well-executed lay up leaves a comfortable yardage for the approach.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Understanding Your Magnolia Report -->
+    <div class="glossary-section">
+      <h2 class="glossary-section-title">Understanding Your Magnolia Report</h2>
+
+      <div class="glossary-grid">
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Approach Distance Bands</span>
+          </div>
+          <p class="glossary-term-def">Magnolia breaks approach shots into yardage windows: 0–50 yards, 50–100 yards, 100–150 yards, 150–200 yards, and 200+ yards. Your SG: Approach is analysed within each band to identify which distances are costing you most. Most amateurs have one specific window where performance drops — finding it is one of the highest-leverage improvements you can make.</p>
+        </div>
+
+        <div class="glossary-term">
+          <div class="glossary-term-header">
+            <span class="glossary-term-name">Handicap Equivalent</span>
+          </div>
+          <p class="glossary-term-def">Magnolia estimates a handicap equivalent from your SG data to give context to each category. The formula is SG score × −6. This is an approximation based on the relationship between strokes gained and handicap level — it is not your official WHS handicap but gives a useful benchmark for understanding where each part of your game sits relative to scratch.</p>
         </div>
       </div>
     </div>

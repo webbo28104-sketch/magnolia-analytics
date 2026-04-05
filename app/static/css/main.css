@@ -1744,6 +1744,8 @@ h1, h2, h3, h4 {
   margin-bottom: 8px;
   line-height: 1;
 }
+.glossary-term--albatross .glossary-score-badge { color: var(--gold-light); }
+.glossary-term--albatross { border-color: var(--gold-light); }
 .glossary-term--eagle .glossary-score-badge { color: var(--gold); }
 .glossary-term--eagle { border-color: var(--gold); }
 .glossary-term--birdie .glossary-score-badge { color: var(--green-700); }
