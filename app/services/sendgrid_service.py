@@ -294,6 +294,7 @@ def send_subscription_welcome(user, plan_name: str, plan_price: str, is_founding
     welcome — this one confirms the specific plan and price.
     """
     dashboard_url = url_for('dashboard.index', _external=True)
+    install_url   = url_for('main.index', _external=True) + '#install'
     html = render_template(
         'email/subscription_welcome.html',
         first_name    = user.first_name,
@@ -301,9 +302,9 @@ def send_subscription_welcome(user, plan_name: str, plan_price: str, is_founding
         plan_price    = plan_price,
         is_founding   = is_founding,
         dashboard_url = dashboard_url,
+        install_url   = install_url,
     )
-    subject = f'Welcome to Magnolia Analytics \u2726 {plan_name} confirmed'
-    return _send_email(user.email, subject, html)
+    return _send_email(user.email, 'Welcome to Magnolia Analytics \u2726', html)
 
 
 # ---------------------------------------------------------------------------

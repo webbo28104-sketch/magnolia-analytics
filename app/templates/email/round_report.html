@@ -17,7 +17,7 @@
   <div style="background:#f7f5f0;border:1px solid #e8e4dc;border-radius:6px;padding:22px 28px;margin-bottom:24px;text-align:center;">
     <div style="font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:8px;">Gross Score</div>
     <div style="display:inline-block;">
-      <span style="font-family:Georgia,serif;font-size:52px;font-weight:700;color:#1a3a24;line-height:1;">{{ total_score or '—' }}</span>
+      <span style="font-family:Georgia,serif;font-size:52px;font-weight:700;color:#1B4332;line-height:1;">{{ total_score or '—' }}</span>
       {% if score_vs_par_display != '—' %}
       <span style="font-family:Georgia,serif;font-size:24px;font-weight:600;color:{% if score_vs_par_display.startswith('+') %}#c0635a{% elif score_vs_par_display == 'E' %}#2d6a4f{% else %}#2d6a4f{% endif %};margin-left:10px;vertical-align:middle;">{{ score_vs_par_display }}</span>
       {% endif %}
@@ -30,25 +30,25 @@
       <td style="padding:0 6px 0 0;">
         <div style="background:#f7f5f0;border:1px solid #e8e4dc;border-radius:6px;padding:14px 16px;text-align:center;">
           <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:6px;">FIR%</div>
-          <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1a3a24;">{{ fir_pct ~ '%' if fir_pct is not none else '—' }}</div>
+          <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1B4332;">{{ fir_pct ~ '%' if fir_pct is not none else '—' }}</div>
         </div>
       </td>
       <td style="padding:0 3px;">
         <div style="background:#f7f5f0;border:1px solid #e8e4dc;border-radius:6px;padding:14px 16px;text-align:center;">
           <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:6px;">GIR%</div>
-          <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1a3a24;">{{ gir_pct ~ '%' if gir_pct is not none else '—' }}</div>
+          <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1B4332;">{{ gir_pct ~ '%' if gir_pct is not none else '—' }}</div>
         </div>
       </td>
       <td style="padding:0 3px;">
         <div style="background:#f7f5f0;border:1px solid #e8e4dc;border-radius:6px;padding:14px 16px;text-align:center;">
           <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:6px;">Putts / Hole</div>
-          <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1a3a24;">{{ putts_per_hole or '—' }}</div>
+          <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1B4332;">{{ putts_per_hole or '—' }}</div>
         </div>
       </td>
       <td style="padding:0 0 0 6px;">
         <div style="background:#f7f5f0;border:1px solid #e8e4dc;border-radius:6px;padding:14px 16px;text-align:center;">
           <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:6px;">Scramble%</div>
-          <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1a3a24;">{{ scramble_pct ~ '%' if scramble_pct is not none else '—' }}</div>
+          <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1B4332;">{{ scramble_pct ~ '%' if scramble_pct is not none else '—' }}</div>
         </div>
       </td>
     </tr>
@@ -89,7 +89,7 @@
     <!-- SG Total -->
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <td style="width:130px;padding-right:10px;font-size:11px;font-weight:600;color:#1a3a24;letter-spacing:0.08em;text-align:right;vertical-align:middle;">Total</td>
+        <td style="width:130px;padding-right:10px;font-size:11px;font-weight:600;color:#1B4332;letter-spacing:0.08em;text-align:right;vertical-align:middle;">Total</td>
         <td style="vertical-align:middle;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0" style="height:8px;">
             <tr>
@@ -121,7 +121,7 @@
 
   <!-- CTA -->
   <div style="text-align:center;margin-top:28px;">
-    <a href="{{ report_url }}" style="display:inline-block;background-color:#c9a84c;color:#1a3a24;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:6px;letter-spacing:0.04em;">
+    <a href="{{ report_url }}" style="display:inline-block;background-color:#c9a84c;color:#1B4332;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:6px;letter-spacing:0.04em;">
       View Full Report &rarr;
     </a>
   </div>

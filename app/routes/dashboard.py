@@ -14,7 +14,6 @@ dashboard_bp = Blueprint('dashboard', __name__)
 
 @dashboard_bp.route('/')
 @login_required
-@subscription_required
 def index():
     # One-time welcome flash after Stripe checkout redirect
     if request.args.get('subscribed') == 'true':
@@ -36,7 +35,7 @@ def index():
     # TODO: when founding/standard tiers are introduced, update is_pro() in
     # app/utils/access.py — do not add inline tier checks here.
     user_is_pro = is_pro(current_user)
-    recent_rounds = all_complete if user_is_pro else all_complete[:10]
+    recent_rounds = all_complete
     stats  = _compute_stats(all_complete[:20]) if all_complete else None
     glance = _compute_glance(all_complete) if all_complete else None
 

@@ -1135,6 +1135,8 @@ body::before {
 
   <!-- APPROACH PANEL -->
   <div id="tab-approach" class="tab-panel" role="tabpanel">
+  <div class="{% if not user_is_pro %}pro-gate{% endif %}">
+  <div class="{% if not user_is_pro %}pro-blur{% endif %}">
   <div class="sec-divider"></div>
   <div class="sec-label fu d5">Approach Play</div>
   {% set _best_band  = approach_bds | sort(attribute='gir_pct', reverse=True) | first if approach_bds else none %}
@@ -1297,10 +1299,23 @@ body::before {
   </div>
   {% endif %}
 
+  </div>{# /pro-blur #}
+  {% if not user_is_pro %}
+  <div class="pro-lock-card">
+    <span class="plc-icon">🔒</span>
+    <h3>Unlock your full game picture</h3>
+    <p style="color:rgba(245,240,232,0.7);font-size:13px;margin-bottom:20px;line-height:1.5;">Upgrade to see where you're really losing shots — SG: Approach, distance gap analysis by yardage band, and GIR rates by distance.</p>
+    <a href="{{ url_for('main.pricing') }}" class="plc-btn">Upgrade</a>
+  </div>
+  {% endif %}
+  </div>{# /pro-gate #}
+
   </div><!-- /tab-approach -->
 
   <!-- AROUND THE GREEN PANEL -->
   <div id="tab-atg" class="tab-panel" role="tabpanel">
+  <div class="{% if not user_is_pro %}pro-gate{% endif %}">
+  <div class="{% if not user_is_pro %}pro-blur{% endif %}">
   <div class="sec-divider"></div>
   <div class="sec-label fu d6">Around the Green</div>
 
@@ -1376,10 +1391,23 @@ body::before {
   </div>
   {% endif %}
 
+  </div>{# /pro-blur #}
+  {% if not user_is_pro %}
+  <div class="pro-lock-card">
+    <span class="plc-icon">🔒</span>
+    <h3>Unlock your full game picture</h3>
+    <p style="color:rgba(245,240,232,0.7);font-size:13px;margin-bottom:20px;line-height:1.5;">Upgrade to see SG: Around the Green — scramble rate analysis, hole-by-hole up-and-down detail, and sand save tracking.</p>
+    <a href="{{ url_for('main.pricing') }}" class="plc-btn">Upgrade</a>
+  </div>
+  {% endif %}
+  </div>{# /pro-gate #}
+
   </div><!-- /tab-atg -->
 
   <!-- PUTTING PANEL -->
   <div id="tab-putting" class="tab-panel" role="tabpanel">
+  <div class="{% if not user_is_pro %}pro-gate{% endif %}">
+  <div class="{% if not user_is_pro %}pro-blur{% endif %}">
   <div class="sec-divider"></div>
   <div class="sec-label fu d6">Putting</div>
   {% set _putt_total_holes = holes_data | length %}
@@ -1467,6 +1495,17 @@ body::before {
     <div><strong>Best putting hole — Hole {{ _best_putt.hole_number }} (Par {{ _best_putt.par }})</strong>. Most strokes gained on the greens relative to scratch this round.</div>
   </div>
   {% endif %}
+
+  </div>{# /pro-blur #}
+  {% if not user_is_pro %}
+  <div class="pro-lock-card">
+    <span class="plc-icon">🔒</span>
+    <h3>Unlock your full game picture</h3>
+    <p style="color:rgba(245,240,232,0.7);font-size:13px;margin-bottom:20px;line-height:1.5;">Upgrade to see SG: Putting — first putt distance profile, 3-putt holes, and band-by-band putting analysis.</p>
+    <a href="{{ url_for('main.pricing') }}" class="plc-btn">Upgrade</a>
+  </div>
+  {% endif %}
+  </div>{# /pro-gate #}
 
   </div><!-- /tab-putting -->
 
@@ -1629,8 +1668,9 @@ body::before {
   {% if not user_is_pro %}
   <div class="pro-lock-card">
     <span class="plc-icon">🔒</span>
-    <h3>Unlock your full personalised coaching report — upgrade to Magnolia Pro</h3>
-    <a href="{{ url_for('main.upgrade') }}" class="plc-btn">Upgrade to Pro</a>
+    <h3>Unlock your full game picture</h3>
+    <p style="color:rgba(245,240,232,0.7);font-size:13px;margin-bottom:20px;line-height:1.5;">Your coaching analysis identified a pattern in this round. Subscribe to unlock personalised coaching after every round.</p>
+    <a href="{{ url_for('main.pricing') }}" class="plc-btn">Upgrade</a>
   </div>
   {% endif %}
   </div>{# /pro-gate #}
@@ -2048,10 +2088,17 @@ document.addEventListener('DOMContentLoaded', function () {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         Share Card
       </button>
+      {% if user_is_pro %}
       <button class="sm-social-btn" id="sm-btn-pdf" onclick="closeShareModal();setTimeout(window.print,200)">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Full Report PDF
       </button>
+      {% else %}
+      <a href="{{ url_for('main.pricing') }}" class="sm-social-btn" style="opacity:0.55;text-decoration:none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Full Report PDF — Upgrade
+      </a>
+      {% endif %}
       <p id="sm-fallback-msg" style="display:none;font-size:.75rem;color:#8a9e8a;text-align:center;margin-top:.3rem"></p>
     </div>
   </div>

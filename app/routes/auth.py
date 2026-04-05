@@ -74,6 +74,8 @@ def register():
             user.founding_member_since = datetime.utcnow()
             user.subscription_tier = 'founding_member'
             user.pricing_locked_at = Decimal('9.99')
+        else:
+            user.subscription_tier = 'free'
 
         db.session.add(user)
 

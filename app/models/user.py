@@ -23,7 +23,7 @@ class User(UserMixin, db.Model):
     home_country   = db.Column(db.String(100), default='England')
 
     # Subscription
-    subscription_tier = db.Column(db.String(32), default='standard')
+    subscription_tier = db.Column(db.String(32), default='free')
     subscription_active = db.Column(db.Boolean, default=False)
     square_customer_id = db.Column(db.String(255), nullable=True)
     subscription_expires_at = db.Column(db.DateTime, nullable=True)

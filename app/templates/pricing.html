@@ -27,9 +27,38 @@
 
     <div class="pricing-header">
       <p class="hero-eyebrow">Simple pricing</p>
-      <h1 class="pricing-title">One subscription.<br>No hidden fees.</h1>
-      <p class="pricing-sub">Everything you need to track, understand, and improve your game.</p>
+      <h1 class="pricing-title">Start free.<br>Upgrade when you're ready.</h1>
+      <p class="pricing-sub">Log rounds and track your handicap at no cost. Unlock the full analytics when you want to go deeper.</p>
     </div>
+
+    <!-- ── Free tier ─────────────────────────────────────────────── -->
+    <div class="plan-grid plan-grid--free-row">
+      <div class="plan-card plan-card--free">
+        <div class="plan-tier">Free</div>
+        <div class="plan-price">£0<span>&nbsp;/ forever</span></div>
+        <p class="plan-locked-note" style="color:var(--text-muted);">No card required. Start tracking today.</p>
+        <ul class="plan-features plan-features--free">
+          <li>Unlimited round logging</li>
+          <li>Handicap tracking and trend</li>
+          <li>Scoring breakdown — birdies, pars, bogeys</li>
+          <li>SG: Off the Tee — driving stats and distance</li>
+          <li>Shareable round summary card</li>
+          <li>Full round history, no limits</li>
+          <li class="pf-locked">SG: Approach, Around the Green, Putting</li>
+          <li class="pf-locked">Personalised coaching analysis</li>
+          <li class="pf-locked">Full report email delivery</li>
+          <li class="pf-locked">Performance trends dashboard</li>
+          <li class="pf-locked">Distance gap analysis</li>
+        </ul>
+        {% if current_user.is_authenticated %}
+          <button class="btn btn--current btn--full" disabled>Your current plan</button>
+        {% else %}
+          <a href="{{ url_for('auth.register') }}" class="btn btn--outline btn--full">Start Free</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="pricing-divider"><span>Upgrade for the full picture</span></div>
 
     {% if show_founding %}
     <!-- ── Founding Member plans ──────────────────────────────────── -->
@@ -45,8 +74,14 @@
         <div class="plan-tier">Founding · Monthly</div>
         <div class="plan-price">£9.99<span>/mo</span></div>
         <p class="plan-locked-note">Rate locked for life</p>
+        <p class="plan-everything-in">Everything in Free, plus:</p>
         <ul class="plan-features">
-          <li>Everything in the standard plan</li>
+          <li>SG: Approach, Around the Green and Putting</li>
+          <li>Personalised coaching analysis after every round</li>
+          <li>Full report emailed to your inbox in seconds</li>
+          <li>Performance trends across your last 20 rounds</li>
+          <li>Distance gap analysis by yardage band</li>
+          <li>PDF export and round sharing</li>
           <li>Lifetime price guarantee — never increases</li>
           <li>Founding member badge on your profile</li>
           <li>Early access to new features</li>
@@ -71,8 +106,14 @@
         <div class="plan-tier">Founding · Annual</div>
         <div class="plan-price">£89<span>/yr</span></div>
         <p class="plan-locked-note">Save ~£31 vs monthly · Rate locked for life</p>
+        <p class="plan-everything-in">Everything in Free, plus:</p>
         <ul class="plan-features">
-          <li>Everything in the standard plan</li>
+          <li>SG: Approach, Around the Green and Putting</li>
+          <li>Personalised coaching analysis after every round</li>
+          <li>Full report emailed to your inbox in seconds</li>
+          <li>Performance trends across your last 20 rounds</li>
+          <li>Distance gap analysis by yardage band</li>
+          <li>PDF export and round sharing</li>
           <li>Lifetime price guarantee — never increases</li>
           <li>Founding member badge on your profile</li>
           <li>Early access to new features</li>
@@ -103,14 +144,14 @@
       <div class="plan-card{% if active_price == pid_sm and pid_sm %} plan-card--active{% endif %}">
         <div class="plan-tier">Standard · Monthly</div>
         <div class="plan-price">£12.99<span>/mo</span></div>
+        <p class="plan-everything-in">Everything in Free, plus:</p>
         <ul class="plan-features">
-          <li>Hole-by-hole round logging</li>
-          <li>Personalised performance report in seconds</li>
-          <li>Email delivery after every round</li>
-          <li>Strokes gained — Off the Tee, Approach, Around the Greens, Putting</li>
-          <li>Season analytics dashboard</li>
-          <li>Handicap differential tracking</li>
-          <li>Unlimited rounds</li>
+          <li>SG: Approach, Around the Green and Putting</li>
+          <li>Personalised coaching analysis after every round</li>
+          <li>Full report emailed to your inbox in seconds</li>
+          <li>Performance trends across your last 20 rounds</li>
+          <li>Distance gap analysis by yardage band</li>
+          <li>PDF export and round sharing</li>
         </ul>
         {% if current_user.is_authenticated %}
           {% if active_price and active_price == pid_sm %}
@@ -132,14 +173,14 @@
         <div class="plan-tier">Standard · Annual</div>
         <div class="plan-price">£109<span>/yr</span></div>
         <p class="plan-locked-note">Save ~£47 vs monthly</p>
+        <p class="plan-everything-in">Everything in Free, plus:</p>
         <ul class="plan-features">
-          <li>Hole-by-hole round logging</li>
-          <li>Personalised performance report in seconds</li>
-          <li>Email delivery after every round</li>
-          <li>Strokes gained — Off the Tee, Approach, Around the Greens, Putting</li>
-          <li>Season analytics dashboard</li>
-          <li>Handicap differential tracking</li>
-          <li>Unlimited rounds</li>
+          <li>SG: Approach, Around the Green and Putting</li>
+          <li>Personalised coaching analysis after every round</li>
+          <li>Full report emailed to your inbox in seconds</li>
+          <li>Performance trends across your last 20 rounds</li>
+          <li>Distance gap analysis by yardage band</li>
+          <li>PDF export and round sharing</li>
         </ul>
         {% if current_user.is_authenticated %}
           {% if active_price and active_price == pid_sa %}
@@ -221,6 +262,14 @@
     margin-left: auto;
     margin-right: auto;
   }
+  /* Free card sits alone, narrower, centred */
+  .plan-grid--free-row {
+    grid-template-columns: 1fr;
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 0;
+  }
   @media (max-width: 580px) {
     .plan-grid, .plan-grid--centered { grid-template-columns: 1fr; }
   }
@@ -249,6 +298,11 @@
   }
   .plan-card--founding.plan-card--active {
     outline-color: #a07800;
+  }
+  /* Free card — lighter, no gold border */
+  .plan-card--free {
+    background: var(--cream, #f8f5ef);
+    border-color: var(--border);
   }
 
   /* "Best value" ribbon */
@@ -296,12 +350,20 @@
     margin-bottom: 18px;
     margin-top: 2px;
   }
+  .plan-everything-in {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0 0 4px;
+  }
 
   /* Feature list */
   .plan-features {
     list-style: none;
     padding: 0;
-    margin: 18px 0 24px;
+    margin: 8px 0 24px;
     flex: 1;
   }
   .plan-features li {
@@ -324,6 +386,16 @@
   }
   .plan-card--founding .plan-features li::before { color: #a07800; }
 
+  /* Locked feature items on free card */
+  .plan-features--free li.pf-locked {
+    opacity: 0.45;
+  }
+  .plan-features--free li.pf-locked::before {
+    content: '✕';
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
   /* "Current plan" button state */
   .btn--current {
     display: block;
@@ -340,13 +412,27 @@
     text-align: center;
   }
   .btn--full { width: 100%; text-align: center; }
+  .btn--outline {
+    display: inline-block;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1.5px solid var(--green-700);
+    background: transparent;
+    color: var(--green-700);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    font-family: inherit;
+  }
+  .btn--outline:hover { background: var(--green-700); color: #fff; }
 
   /* Section divider */
   .pricing-divider {
     display: flex;
     align-items: center;
     gap: 16px;
-    margin: 8px 0 28px;
+    margin: 24px 0 28px;
     color: var(--text-muted);
     font-size: 12px;
     font-weight: 600;

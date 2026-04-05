@@ -5,7 +5,7 @@
 
 {% block email_body %}
 
-  <div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:700;color:#1a3a24;margin-bottom:6px;">New waitlist signup</div>
+  <div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:700;color:#1B4332;margin-bottom:6px;">New waitlist signup</div>
   <p style="font-size:14px;color:#8a9a7a;margin:0 0 24px;">Position #{{ position }} &middot; {{ real_count }} real signup{{ 's' if real_count != 1 }}</p>
 
   <!-- Details card -->
@@ -15,13 +15,13 @@
       <tr>
         <td style="padding-bottom:14px;">
           <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:4px;">Name</div>
-          <div style="font-size:15px;color:#1a3a24;font-weight:600;">{{ entry.name }}</div>
+          <div style="font-size:15px;color:#1B4332;font-weight:600;">{{ entry.name }}</div>
         </td>
       </tr>
       <tr>
         <td style="padding-bottom:14px;border-top:1px solid #f0ede7;padding-top:14px;">
           <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:4px;">Email</div>
-          <div style="font-size:15px;color:#1a3a24;">
+          <div style="font-size:15px;color:#1B4332;">
             <a href="mailto:{{ entry.email }}" style="color:#c9a84c;text-decoration:none;">{{ entry.email }}</a>
           </div>
         </td>
@@ -32,11 +32,11 @@
             <tr>
               <td style="width:50%;padding-right:12px;">
                 <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:4px;">Handicap</div>
-                <div style="font-size:15px;color:#1a3a24;">{{ entry.handicap if entry.handicap is not none else '—' }}</div>
+                <div style="font-size:15px;color:#1B4332;">{{ entry.handicap if entry.handicap is not none else '—' }}</div>
               </td>
               <td style="width:50%;">
                 <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:4px;">Rounds / Month</div>
-                <div style="font-size:15px;color:#1a3a24;">{{ entry.rounds_per_month if entry.rounds_per_month is not none else '—' }}</div>
+                <div style="font-size:15px;color:#1B4332;">{{ entry.rounds_per_month if entry.rounds_per_month is not none else '—' }}</div>
               </td>
             </tr>
           </table>

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
-from app.utils.access import subscription_required
+from app.utils.access import is_pro, subscription_required
 from app import db
 from app.models.round import Round
 from app.models.hole import Hole
@@ -96,7 +96,6 @@ def _recalculate_handicap(user):
 
 @rounds_bp.route('/new', methods=['GET', 'POST'])
 @login_required
-@subscription_required
 def new_round():
     """Start a new round — USGA-style course + tee selector."""
     if request.method == 'POST':
@@ -280,29 +279,37 @@ def submit_round(round_id):
             current_app.logger.exception(f"[submit_round] Handicap recalc failed: {e}")
         try:
             report = generate_report(round_)
-            # Don't re-send the email if this round was already emailed (re-edit path)
-            if not (report and report.emailed_at):
-                send_report_email(round_)
-            flash('Your round has been saved and your report is on its way!', 'success')
+            if is_pro(current_user):
+                # Don't re-send the email if this round was already emailed (re-edit path)
+                if not (report and report.emailed_at):
+                    send_report_email(round_)
+                flash('Your round has been saved and your report is on its way!', 'success')
+            else:
+                flash(
+                    'Your round has been logged. '
+                    'Subscribe to receive your full strokes gained report by email after every round.',
+                    'info',
+                )
         except Exception as e:
             current_app.logger.exception(f"[submit_round] Report/email failed: {e}")
             flash('Round saved! Report generation is in the queue.', 'info')
 
-        # Personal best check — runs after the report email so it lands separately
-        try:
-            prev_rounds = (
-                Round.query
-                .filter(Round.user_id == current_user.id,
-                        Round.status == 'complete',
-                        Round.id != round_.id)
-                .order_by(Round.date_played.desc())
-                .all()
-            )
-            pb_banner = check_recent_personal_best(round_, prev_rounds)
-            if pb_banner:
-                send_personal_best(round_, pb_banner)
-        except Exception:
-            current_app.logger.warning('[submit_round] PB email failed for round %s', round_.id)
+        # Personal best check — pro users only; runs after the report email so it lands separately
+        if is_pro(current_user):
+            try:
+                prev_rounds = (
+                    Round.query
+                    .filter(Round.user_id == current_user.id,
+                            Round.status == 'complete',
+                            Round.id != round_.id)
+                    .order_by(Round.date_played.desc())
+                    .all()
+                )
+                pb_banner = check_recent_personal_best(round_, prev_rounds)
+                if pb_banner:
+                    send_personal_best(round_, pb_banner)
+            except Exception:
+                current_app.logger.warning('[submit_round] PB email failed for round %s', round_.id)
 
         return redirect(url_for('reports.view_report', round_id=round_.id))
 

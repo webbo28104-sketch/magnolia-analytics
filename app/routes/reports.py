@@ -552,7 +552,6 @@ def _build_historical_context(round_, prev_rounds: list) -> dict:
 
 @reports_bp.route('/<int:round_id>')
 @login_required
-@subscription_required
 def view_report(round_id):
     """
     Live round report — assembled from DB data, rendered via Jinja2.
@@ -772,7 +771,6 @@ def view_report(round_id):
 
 @reports_bp.route('/<int:round_id>/html')
 @login_required
-@subscription_required
 def view_report_html(round_id):
     """
     Serve the legacy Claude-generated HTML blob (email preview / iframe).

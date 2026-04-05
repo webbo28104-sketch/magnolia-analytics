@@ -177,6 +177,30 @@
 .sg-delta--down { color: #c0635a; background: rgba(192,99,90,.09); }
 .sg-delta--flat { color: var(--text-muted, #888); background: var(--cream-mid, #ede9e1); }
 
+/* ── SG locked row ─────────────────────────────────────────── */
+.sg-row--locked .sg-lbl { color: var(--border, #e2ddd5); }
+.sg-row--locked .sg-val { color: var(--border, #e2ddd5); }
+.sg-row--locked .sg-track { opacity: 0.3; }
+.sg-row--locked .sg-bar { background: var(--border, #e2ddd5) !important; }
+.sg-upgrade-prompt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 10px 14px;
+  background: rgba(201,168,76,0.06);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-muted, #888);
+}
+.sg-upgrade-prompt a {
+  color: var(--color-gold, #c9a84c);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
 /* ── Strokes Gained chart ────────────────────────────────────── */
 .sg-chart {
   display: flex;
@@ -423,6 +447,7 @@
     <p class="stats-note">Average per round (18-hole equivalent) across {{ sg_avgs.rounds_count }} round{{ 's' if sg_avgs.rounds_count != 1 }} &middot; vs tour baseline</p>
     <div class="sg-chart">
       {% for cat in sg_avgs.categories %}
+      {% if user_is_pro or cat.name == 'Off the Tee' %}
       <div class="sg-row">
         <div class="sg-lbl" style="display:flex;align-items:center;justify-content:flex-end;gap:5px;">
           {{ cat.name }}
@@ -450,7 +475,25 @@
           {{ '+' if cat.avg > 0 else '' }}{{ '%.2f'|format(cat.avg) }}
         </div>
       </div>
+      {% else %}
+      <div class="sg-row sg-row--locked">
+        <div class="sg-lbl" style="text-align:right;">{{ cat.name }}</div>
+        <div class="sg-track">
+          <div class="sg-zero" style="left:{{ sg_avgs.zero_pct }}%"></div>
+          <div class="sg-bar" style="left:{{ sg_avgs.zero_pct }}%;width:12%"></div>
+        </div>
+        <div class="sg-val">—</div>
+      </div>
+      {% endif %}
       {% endfor %}
+      {% if not user_is_pro %}
+      <div class="sg-upgrade-prompt">
+        <span>🔒</span>
+        <span>Approach, Around the Green and Putting trends —
+          <a href="{{ url_for('main.pricing') }}">upgrade to unlock</a>
+        </span>
+      </div>
+      {% endif %}
     </div>
   </div>
   {% endif %}
@@ -532,17 +575,6 @@
       </div>
       {% endfor %}
     </div>
-    {# Locked row: shown to free users when older rounds are hidden #}
-    {# TODO: when founding/standard tiers are introduced, update is_pro() in app/utils/access.py #}
-    {% if not user_is_pro and total_complete > 10 %}
-    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;margin-top:8px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:8px;font-size:13px;color:var(--text-muted)">
-      <span style="font-size:15px">🔒</span>
-      <span>
-        {{ total_complete - 10 }} older round{{ 's' if total_complete - 10 != 1 }} hidden
-        — <a href="{{ url_for('main.upgrade') }}" style="color:var(--color-gold,#c9a84c);font-weight:600;text-decoration:none">upgrade to see full history</a>
-      </span>
-    </div>
-    {% endif %}
     {% else %}
     <div class="empty-state">
       <p>No rounds logged yet.</p>
