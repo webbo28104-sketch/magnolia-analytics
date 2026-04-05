@@ -2039,25 +2039,17 @@ document.addEventListener('DOMContentLoaded', function () {
       <span class="sm-title">Share Round</span>
       <button class="sm-close" onclick="closeShareModal()" aria-label="Close">&times;</button>
     </div>
-    <p class="sm-subtitle">Choose a card — your OS share sheet handles the rest</p>
+    <p class="sm-subtitle">Share your round or save the full report</p>
     <div class="sm-social">
-      <button class="sm-social-btn" id="sm-btn-full" onclick="smShareCard('full',this)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-        Full Report Card
-      </button>
       <button class="sm-social-btn" id="sm-btn-summary" onclick="smShareCard('summary',this)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="12" y1="9" x2="12" y2="21"/></svg>
-        Summary Card
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Share Card
+      </button>
+      <button class="sm-social-btn" id="sm-btn-pdf" onclick="closeShareModal();setTimeout(window.print,200)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Full Report PDF
       </button>
       <p id="sm-fallback-msg" style="display:none;font-size:.75rem;color:#8a9e8a;text-align:center;margin-top:.3rem"></p>
-    </div>
-    <div class="sm-divider"></div>
-    <div class="sm-pdf-section">
-      <button class="sm-pdf-btn" onclick="closeShareModal();setTimeout(window.print,200)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Save as PDF
-      </button>
-      <p class="sm-pdf-hint">Full scorecard &amp; stats &mdash; print-quality PDF</p>
     </div>
   </div>
 </div>
@@ -2213,11 +2205,11 @@ function smDrawCard(ctx, d) {
   goldBar(H - 3);
 }
 
-// ── Summary card: clean 1080×1080 score/course/stats card ────────────────
+// ── Summary card: Magnolia green 1080×1080 score card ────────────────────
 function smDrawSummaryCard(ctx, d) {
-  var W = 1080, H = 1080, PAD = 60;
+  var W = 1080, H = 1080, PAD = 64;
 
-  function goldBar(y) {
+  function goldBar(y, h) {
     var g = ctx.createLinearGradient(0, y, W, y);
     g.addColorStop(0,    'rgba(196,160,82,0)');
     g.addColorStop(0.15, '#c4a052');
@@ -2225,81 +2217,82 @@ function smDrawSummaryCard(ctx, d) {
     g.addColorStop(0.85, '#c4a052');
     g.addColorStop(1,    'rgba(196,160,82,0)');
     ctx.fillStyle = g;
-    ctx.fillRect(0, y, W, 3);
+    ctx.fillRect(0, y, W, h || 4);
   }
 
-  ctx.fillStyle = '#0f1a10';
+  // Background — Magnolia green gradient
+  var bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#1f4d3a');
+  bg.addColorStop(1, '#0e2418');
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
-  goldBar(0);
+
+  goldBar(0, 4);
+  goldBar(H - 4, 4);
 
   // Brand
-  ctx.letterSpacing = '4px';
-  ctx.font = '700 15px Inter,system-ui,sans-serif';
-  ctx.fillStyle = 'rgba(196,160,82,0.55)';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('MAGNOLIA ANALYTICS', W/2, 52);
+  ctx.letterSpacing = '5px';
+  ctx.font = '700 16px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(201,168,76,0.65)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('MAGNOLIA ANALYTICS', W / 2, 50);
   ctx.letterSpacing = '0px';
 
-  // Header separator
-  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  // Header rule
+  ctx.strokeStyle = 'rgba(255,255,255,0.09)';
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(PAD, 88); ctx.lineTo(W-PAD, 88); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(PAD, 82); ctx.lineTo(W - PAD, 82); ctx.stroke();
 
-  // Eyebrow
+  // Score eyebrow
   ctx.letterSpacing = '3px';
-  ctx.font = '600 13px Inter,system-ui,sans-serif';
-  ctx.fillStyle = 'rgba(245,240,232,0.32)';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillText('GROSS SCORE', W/2, 160);
+  ctx.font = '600 14px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(245,240,232,0.3)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('GROSS SCORE', W / 2, 116);
   ctx.letterSpacing = '0px';
 
-  // Score
-  ctx.font = '900 200px Inter,system-ui,sans-serif';
+  // Score — dominant number
+  ctx.font = '900 290px Inter,system-ui,sans-serif';
   ctx.fillStyle = '#c9a84c';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(String(d.grossScore), W/2, 380);
+  ctx.fillText(String(d.grossScore), W / 2, 430);
 
-  // Player name
-  ctx.font = '500 21px Inter,system-ui,sans-serif';
-  ctx.fillStyle = 'rgba(245,240,232,0.52)';
-  ctx.textBaseline = 'top';
-  ctx.fillText(d.playerName, W/2, 440);
-
-  // vs-par
-  var vp = d.vspar;
-  var vpColor = vp === 0 ? '#ffffff' : (vp < 0 ? '#34a85a' : '#e05240');
-  var vpStr   = vp === 0 ? 'E' : (vp > 0 ? '+' + vp : '' + vp);
-  ctx.font = '900 80px Inter,system-ui,sans-serif';
+  // vs-par pill — large
+  var vp     = d.vspar;
+  var vpColor = vp === 0 ? '#e0ddd8' : (vp < 0 ? '#7ecf9e' : '#e88a7a');
+  var vpStr   = vp === 0 ? 'Even' : (vp > 0 ? '+' + vp + ' over par' : Math.abs(vp) + ' under par');
+  ctx.font = '600 32px Inter,system-ui,sans-serif';
   ctx.fillStyle = vpColor;
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(vpStr, W/2, 548);
+  ctx.fillText(vpStr, W / 2, 492);
 
-  ctx.font = '400 16px Inter,system-ui,sans-serif';
-  ctx.fillStyle = 'rgba(245,240,232,0.35)';
-  ctx.textBaseline = 'top';
-  ctx.fillText('vs par', W/2, 562);
-
-  // Course
-  var cName = d.courseName.length > 28 ? d.courseName.slice(0, 27) + '\u2026' : d.courseName;
-  ctx.font = '600 28px Inter,system-ui,sans-serif';
+  // Player name + course + date
+  ctx.font = '600 26px Inter,system-ui,sans-serif';
   ctx.fillStyle = 'rgba(245,240,232,0.88)';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(cName, W/2, 650);
+  ctx.fillText(d.playerName, W / 2, 552);
 
-  // Date
-  ctx.font = '400 20px Inter,system-ui,sans-serif';
-  ctx.fillStyle = 'rgba(245,240,232,0.42)';
-  ctx.fillText(d.datePlayed, W/2, 686);
+  var cName = d.courseName.length > 32 ? d.courseName.slice(0, 31) + '\u2026' : d.courseName;
+  ctx.font = '400 22px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(245,240,232,0.48)';
+  ctx.fillText(cName, W / 2, 590);
 
-  // Separator before stats
-  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.font = '400 18px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(245,240,232,0.28)';
+  ctx.fillText(d.datePlayed, W / 2, 624);
+
+  // Divider before stats strip
+  ctx.strokeStyle = 'rgba(255,255,255,0.09)';
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(PAD, 740); ctx.lineTo(W-PAD, 740); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(PAD, 666); ctx.lineTo(W - PAD, 666); ctx.stroke();
 
-  // Stats strip: Putts | GIR | Scramble
+  // Stats strip — three columns, big numbers
   var girStr = d.girCount + '/' + d.holesPlayed;
-  var scrStr = d.scrambleAttempts > 0 ? d.scrambleSaves + '/' + d.scrambleAttempts : '\u2014';
-  var cells  = [
+  var scrStr = d.scrambleAttempts > 0
+    ? d.scrambleSaves + '/' + d.scrambleAttempts
+    : '\u2014';
+  var cells = [
     {v: String(d.totalPutts), l: 'PUTTS'},
     {v: girStr,               l: 'GIR'},
     {v: scrStr,               l: 'SCRAMBLE'},
@@ -2310,20 +2303,21 @@ function smDrawSummaryCard(ctx, d) {
     if (i > 0) {
       ctx.strokeStyle = 'rgba(255,255,255,0.08)';
       ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(PAD + cW * i, 762); ctx.lineTo(PAD + cW * i, 980); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(PAD + cW * i, 686); ctx.lineTo(PAD + cW * i, 1000); ctx.stroke();
     }
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    // Big stat value
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ffffff';
-    ctx.font = '800 44px Inter,system-ui,sans-serif';
-    ctx.fillText(cells[i].v, cx, 856);
-    ctx.fillStyle = 'rgba(245,240,232,0.42)';
-    ctx.letterSpacing = '1px';
+    ctx.font = '800 88px Inter,system-ui,sans-serif';
+    ctx.fillText(cells[i].v, cx, 810);
+    // Label
+    ctx.fillStyle = 'rgba(245,240,232,0.36)';
+    ctx.letterSpacing = '2px';
     ctx.font = '600 14px Inter,system-ui,sans-serif';
-    ctx.fillText(cells[i].l, cx, 922);
+    ctx.fillText(cells[i].l, cx, 900);
     ctx.letterSpacing = '0px';
   }
-
-  goldBar(H - 3);
 }
 
 // ── Share modal logic ─────────────────────────────────────────────────────
