@@ -40,7 +40,6 @@
     margin: 0 auto;
     padding-bottom: 100px; /* space for sticky button */
     font-family: 'Inter', system-ui, sans-serif;
-    overflow-x: hidden;
   }
 
   /* ── Sticky header ─────────────────────────────────────────────────────── */
@@ -400,6 +399,10 @@
     min-height: 0;
     overflow: hidden;
   }
+
+  /* ── Prevent SVG / any child from overflowing on narrow phones ──────────── */
+  .he-form svg { max-width: 100%; }
+  .he-field, .he-reveal, .he-reveal-inner { max-width: 100%; }
 
   /* ── Penalties (de-emphasised) ───────────────────────────────────────────── */
   .he-field--muted .he-label { color: #bbb; }

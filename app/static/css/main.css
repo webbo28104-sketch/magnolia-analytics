@@ -32,7 +32,7 @@
 /* ---- Reset & Base ---- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { font-size: 16px; scroll-behavior: smooth; overflow-x: clip; max-width: 100%; }
+html { font-size: 16px; scroll-behavior: smooth; overflow-x: hidden; max-width: 100%; }
 
 body {
   font-family: var(--font-sans);
@@ -666,6 +666,7 @@ h1, h2, h3, h4 {
   border-bottom: 1px solid rgba(255,255,255,0.08);
   overflow-x: auto;
   scrollbar-width: none;
+  overscroll-behavior-x: contain; /* prevent iOS scroll chaining to page level */
 }
 .mock-tabs::-webkit-scrollbar { display: none; }
 

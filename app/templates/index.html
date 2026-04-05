@@ -358,6 +358,7 @@
 
 .lp-report-mockup {
   position: relative;
+  overflow: hidden;
 }
 .lp-report-mockup-inner {
   background: var(--green-900);
@@ -479,6 +480,7 @@
   padding: 100px 24px;
   position: relative;
   overflow: hidden;
+  transform: translateZ(0); /* force GPU compositing so iOS clips ::before correctly */
 }
 .lp-founding::before {
   content: '';
