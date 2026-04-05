@@ -32,7 +32,7 @@
 /* ---- Reset & Base ---- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { font-size: 16px; scroll-behavior: smooth; overflow-x: hidden; max-width: 100%; }
+html { font-size: 16px; scroll-behavior: smooth; overflow-x: clip; max-width: 100%; }
 
 body {
   font-family: var(--font-sans);
@@ -46,6 +46,7 @@ body {
   flex-direction: column;
   overflow-x: hidden;
   max-width: 100%;
+  position: relative; /* required for overflow-x: hidden to apply on iOS Safari */
 }
 
 a { color: var(--gold); text-decoration: none; }
