@@ -617,17 +617,7 @@
       </div>
     </div>
 
-    <!-- 3. Approach distance (always visible) ────────────────────────── -->
-    <div class="he-field">
-      <label class="he-label">Approach distance (yds)</label>
-      <input type="number" id="approach-dist-exact" class="he-exact"
-             placeholder="yds" min="1" max="600" inputmode="numeric" pattern="[0-9]*"
-             value="{{ existing.approach_distance if existing and existing.approach_distance else '' }}">
-      <input type="hidden" name="approach_distance" id="approach-distance-input"
-             value="{{ existing.approach_distance or '' }}">
-    </div>
-
-    <!-- 4. Second shot distance (par 5 only) ─────────────────────────── -->
+    <!-- 3. Second shot distance (par 5 only) ─────────────────────────── -->
     <div class="he-field he-reveal{% if init_par == 5 %} is-visible{% endif %}" id="second-shot-reveal">
       <div class="he-reveal-inner">
         <label class="he-label">2nd shot distance (yds)</label>
@@ -637,6 +627,16 @@
         <input type="hidden" name="second_shot_distance" id="second-shot-distance-input"
                value="{{ existing.second_shot_distance or '' }}">
       </div>
+    </div>
+
+    <!-- 4. Approach distance (always visible) ────────────────────────── -->
+    <div class="he-field">
+      <label class="he-label">Approach distance (yds)</label>
+      <input type="number" id="approach-dist-exact" class="he-exact"
+             placeholder="yds" min="1" max="600" inputmode="numeric" pattern="[0-9]*"
+             value="{{ existing.approach_distance if existing and existing.approach_distance else '' }}">
+      <input type="hidden" name="approach_distance" id="approach-distance-input"
+             value="{{ existing.approach_distance or '' }}">
     </div>
 
     <!-- 5. GIR? ─────────────────────────────────────────────────────── -->
