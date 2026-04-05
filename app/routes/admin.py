@@ -57,7 +57,7 @@ def _generate_invite_code() -> str:
 @admin_bp.route('/')
 @staff_required
 def index():
-    return redirect(url_for('admin.waitlist'))
+    return redirect(url_for('admin.rounds'))
 
 
 @admin_bp.route('/waitlist')
@@ -200,36 +200,310 @@ def send_invite():
 @staff_required
 def users():
     from app.models.user import User
-    all_users = User.query.order_by(User.created_at.desc()).all()
-    total = len(all_users)
-    active_subs = sum(1 for u in all_users if u.subscription_active)
-    founding_count = sum(1 for u in all_users if u.is_founding_member)
+    from app.models.round import Round
+    from sqlalchemy import func
+
+    page       = request.args.get('page', 1, type=int)
+    tier_filter   = request.args.get('tier', 'all')
+    status_filter = request.args.get('status', 'all')
+    per_page   = 25
+
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+
+    # Base query
+    query = User.query
+
+    # Tier filter
+    if tier_filter == 'founding':
+        query = query.filter(User.subscription_tier == 'founding_member')
+    elif tier_filter == 'standard':
+        query = query.filter(User.subscription_tier.in_(['premium', 'standard']))
+    elif tier_filter == 'free':
+        query = query.filter(User.subscription_tier == 'free')
+
+    # Status filter: active = at least one round in last 30 days
+    if status_filter == 'active':
+        active_user_ids = db.session.query(Round.user_id).filter(
+            Round.status == 'complete',
+            Round.date_played >= thirty_days_ago.date(),
+        ).distinct()
+        query = query.filter(User.id.in_(active_user_ids))
+    elif status_filter == 'inactive':
+        active_user_ids = db.session.query(Round.user_id).filter(
+            Round.status == 'complete',
+            Round.date_played >= thirty_days_ago.date(),
+        ).distinct()
+        query = query.filter(~User.id.in_(active_user_ids))
+
+    query = query.order_by(User.created_at.desc())
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    # Per-user round counts and last active date (bulk query for the current page)
+    user_ids = [u.id for u in pagination.items]
+    round_stats = {}
+    if user_ids:
+        rows = (
+            db.session.query(
+                Round.user_id,
+                func.count(Round.id).label('cnt'),
+                func.max(Round.date_played).label('last_date'),
+            )
+            .filter(Round.user_id.in_(user_ids), Round.status == 'complete')
+            .group_by(Round.user_id)
+            .all()
+        )
+        for row in rows:
+            round_stats[row.user_id] = {'count': row.cnt, 'last_date': row.last_date}
+
+    # Summary stats (always across all users, not filtered)
+    total_users   = User.query.count()
+    active_subs   = User.query.filter_by(subscription_active=True).count()
+    founding_count = User.query.filter_by(is_founding_member=True).count()
+
     return render_template(
         'admin/users.html',
-        active_tab='users',
-        users=all_users,
-        total=total,
-        active_subs=active_subs,
-        founding_count=founding_count,
+        active_tab    = 'users',
+        pagination    = pagination,
+        round_stats   = round_stats,
+        tier_filter   = tier_filter,
+        status_filter = status_filter,
+        total_users   = total_users,
+        active_subs   = active_subs,
+        founding_count = founding_count,
     )
+
+
+@admin_bp.route('/users/<int:user_id>')
+@staff_required
+def user_detail(user_id):
+    from app.models.user import User
+    from app.models.round import Round
+
+    user = User.query.get_or_404(user_id)
+    rounds = (
+        Round.query
+        .filter_by(user_id=user_id, status='complete')
+        .order_by(Round.date_played.desc())
+        .all()
+    )
+    return render_template(
+        'admin/user_detail.html',
+        active_tab = 'users',
+        u          = user,
+        rounds     = rounds,
+    )
+
+
+@admin_bp.route('/users/<int:user_id>/grant-founding', methods=['POST'])
+@staff_required
+def grant_founding(user_id):
+    from app.models.user import User
+    user = User.query.get_or_404(user_id)
+    if not user.is_founding_member:
+        user.is_founding_member    = True
+        user.founding_member_since = datetime.utcnow()
+        try:
+            db.session.commit()
+            current_app.logger.info('[admin] Founding status granted to user_id=%s by %s', user_id, current_user.email)
+            flash(f'Founding member status granted to {user.full_name}.', 'success')
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.error('[admin] grant_founding failed for user_id=%s: %s', user_id, exc)
+            flash('Failed to update — check logs.', 'error')
+    return redirect(url_for('admin.user_detail', user_id=user_id))
+
+
+@admin_bp.route('/users/<int:user_id>/revoke-founding', methods=['POST'])
+@staff_required
+def revoke_founding(user_id):
+    from app.models.user import User
+    user = User.query.get_or_404(user_id)
+    if user.is_founding_member:
+        user.is_founding_member    = False
+        user.founding_member_since = None
+        try:
+            db.session.commit()
+            current_app.logger.info('[admin] Founding status revoked from user_id=%s by %s', user_id, current_user.email)
+            flash(f'Founding member status revoked from {user.full_name}.', 'success')
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.error('[admin] revoke_founding failed for user_id=%s: %s', user_id, exc)
+            flash('Failed to update — check logs.', 'error')
+    return redirect(url_for('admin.user_detail', user_id=user_id))
 
 
 @admin_bp.route('/rounds')
 @staff_required
 def rounds():
-    return render_template('admin/rounds.html', active_tab='rounds')
+    from app.models.round import Round
+    from app.models.user import User
+    from sqlalchemy import func
+    from collections import defaultdict
+    from datetime import date
+
+    now             = datetime.utcnow()
+    thirty_days_ago = now - timedelta(days=30)
+    fourteen_days_ago = now - timedelta(days=14)
+
+    # ── Summary stats ────────────────────────────────────────────────────────
+    total_rounds = Round.query.filter_by(status='complete').count()
+
+    rounds_last_30 = Round.query.filter(
+        Round.status == 'complete',
+        Round.date_played >= thirty_days_ago.date(),
+    ).count()
+
+    active_user_count = (
+        db.session.query(Round.user_id)
+        .filter(Round.status == 'complete', Round.date_played >= thirty_days_ago.date())
+        .distinct()
+        .count()
+    )
+    avg_rounds = round(rounds_last_30 / active_user_count, 1) if active_user_count else 0
+
+    # ── Rounds by month (last 12 months) ─────────────────────────────────────
+    twelve_ago = now - timedelta(days=366)
+    recent_rounds = (
+        Round.query
+        .filter(Round.status == 'complete', Round.date_played >= twelve_ago.date())
+        .with_entities(Round.date_played)
+        .all()
+    )
+    month_counts = defaultdict(int)
+    for (dp,) in recent_rounds:
+        month_counts[dp.strftime('%Y-%m')] += 1
+
+    months_data = []
+    for i in range(11, -1, -1):
+        m = now.month - i
+        y = now.year
+        while m <= 0:
+            m += 12
+            y -= 1
+        key   = f'{y:04d}-{m:02d}'
+        label = date(y, m, 1).strftime('%b %y')
+        months_data.append({'key': key, 'label': label, 'count': month_counts[key]})
+
+    max_bar = max((m['count'] for m in months_data), default=1) or 1
+
+    # ── Top 10 users by total rounds ─────────────────────────────────────────
+    top_users = (
+        db.session.query(User, func.count(Round.id).label('round_count'),
+                         func.max(Round.date_played).label('last_date'))
+        .join(Round, Round.user_id == User.id)
+        .filter(Round.status == 'complete')
+        .group_by(User.id)
+        .order_by(func.count(Round.id).desc())
+        .limit(10)
+        .all()
+    )
+
+    # ── At-risk cohort ────────────────────────────────────────────────────────
+    users_with_rounds = (
+        db.session.query(Round.user_id)
+        .filter(Round.status == 'complete')
+        .distinct()
+    )
+    at_risk = (
+        User.query
+        .filter(User.created_at <= fourteen_days_ago)
+        .filter(~User.id.in_(users_with_rounds))
+        .order_by(User.created_at.asc())
+        .all()
+    )
+
+    return render_template(
+        'admin/rounds.html',
+        active_tab        = 'rounds',
+        total_rounds      = total_rounds,
+        rounds_last_30    = rounds_last_30,
+        avg_rounds        = avg_rounds,
+        months_data       = months_data,
+        max_bar           = max_bar,
+        top_users         = top_users,
+        at_risk           = at_risk,
+        now               = now,
+    )
 
 
 @admin_bp.route('/founding-members')
 @staff_required
 def founding_members():
     from app.models.user import User
-    members = User.query.filter_by(is_founding_member=True).order_by(User.founding_member_since.asc()).all()
+    from decimal import Decimal
+
+    cfg = current_app.config
+    pid_fm = cfg.get('STRIPE_PRICE_FOUNDING_MONTHLY', '')
+    pid_fa = cfg.get('STRIPE_PRICE_FOUNDING_ANNUAL', '')
+    pid_sm = cfg.get('STRIPE_PRICE_STANDARD_MONTHLY', '')
+    pid_sa = cfg.get('STRIPE_PRICE_STANDARD_ANNUAL', '')
+
+    # All users ordered by founding date
+    sort = request.args.get('sort', 'asc')
+    members_q = User.query.filter_by(is_founding_member=True)
+    if sort == 'desc':
+        members_q = members_q.order_by(User.founding_member_since.desc())
+    else:
+        members_q = members_q.order_by(User.founding_member_since.asc())
+    members = members_q.all()
+
+    total_founding  = len(members)
+    active_founding = sum(1 for u in members if u.subscription_active)
+    churned_founding = sum(
+        1 for u in members
+        if u.subscription_tier == 'free' or not u.subscription_active
+    )
+
+    # Conversion rate: paid founding / all registered users
+    total_users = User.query.count()
+    conversion_pct = round(active_founding / total_users * 100, 1) if total_users else 0
+
+    # MRR calculation
+    active_users = User.query.filter_by(subscription_active=True).all()
+    fm_monthly_count = sum(1 for u in active_users if u.stripe_price_id == pid_fm)
+    fm_annual_count  = sum(1 for u in active_users if u.stripe_price_id == pid_fa)
+    sm_monthly_count = sum(1 for u in active_users if u.stripe_price_id == pid_sm)
+    sa_annual_count  = sum(1 for u in active_users if u.stripe_price_id == pid_sa)
+    # Catch-all: active founding members not matched by price ID
+    if pid_fm or pid_fa:
+        fm_other = sum(
+            1 for u in active_users
+            if u.subscription_tier == 'founding_member'
+            and u.stripe_price_id not in (pid_fm, pid_fa)
+        )
+    else:
+        fm_other = sum(1 for u in active_users if u.subscription_tier == 'founding_member')
+
+    founding_mrr = round(
+        fm_monthly_count * 9.99
+        + fm_annual_count * 89 / 12
+        + fm_other * 9.99,
+        2,
+    )
+    standard_mrr = round(
+        sm_monthly_count * 12.99
+        + sa_annual_count * 109 / 12,
+        2,
+    )
+    total_mrr = round(founding_mrr + standard_mrr, 2)
+
+    founding_pct = round(founding_mrr / total_mrr * 100) if total_mrr else 0
+    standard_pct = 100 - founding_pct
+
     return render_template(
         'admin/founding_members.html',
-        active_tab='founding_members',
-        members=members,
-        count=len(members),
+        active_tab       = 'founding_members',
+        members          = members,
+        sort             = sort,
+        total_founding   = total_founding,
+        active_founding  = active_founding,
+        churned_founding = churned_founding,
+        conversion_pct   = conversion_pct,
+        founding_mrr     = founding_mrr,
+        standard_mrr     = standard_mrr,
+        total_mrr        = total_mrr,
+        founding_pct     = founding_pct,
+        standard_pct     = standard_pct,
     )
 
 

@@ -1,21 +1,138 @@
 {% extends 'admin/base.html' %}
 {% block title %}Founding Members{% endblock %}
 
+{% block styles %}
+.mrr-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+@media (max-width: 700px) { .mrr-grid { grid-template-columns: 1fr; } }
+
+.mrr-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+}
+.mrr-card--total {
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.04);
+}
+.mrr-card__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.mrr-card__value {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.mrr-card__split {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+.mrr-card__split em {
+  font-style: normal;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.sort-link {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-decoration: none;
+  margin-left: 4px;
+}
+.sort-link:hover { color: var(--text); text-decoration: none; }
+.sort-link--active { color: var(--gold); font-weight: 600; }
+{% endblock %}
+
 {% block content %}
 <div class="adm-page-header">
   <h1 class="adm-page-header__title">Founding Members</h1>
-  <p class="adm-page-header__sub">Users with lifetime founding member pricing (£9.99/mo, locked).</p>
+  <p class="adm-page-header__sub">Locked-price beta members and MRR breakdown.</p>
 </div>
 
-<div class="adm-stats">
+<!-- Stats row -->
+<div class="adm-stats" style="margin-bottom:24px;">
   <div class="adm-stat">
-    <div class="adm-stat__label">Founding members</div>
-    <div class="adm-stat__value">{{ count }}</div>
-    <div class="adm-stat__sub">beta-period signups</div>
+    <div class="adm-stat__label">Total founding</div>
+    <div class="adm-stat__value">{{ total_founding }}</div>
+    <div class="adm-stat__sub">is_founding_member = true</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat__label">Active subs</div>
+    <div class="adm-stat__value">{{ active_founding }}</div>
+    <div class="adm-stat__sub">founding + subscription active</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat__label">Churned</div>
+    <div class="adm-stat__value">{{ churned_founding }}</div>
+    <div class="adm-stat__sub">founding, no active sub</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat__label">Conversion rate</div>
+    <div class="adm-stat__value">{{ conversion_pct }}%</div>
+    <div class="adm-stat__sub">paying founding / all users</div>
   </div>
 </div>
 
-<div class="adm-card">
+<!-- MRR split -->
+<div class="mrr-grid">
+  <div class="mrr-card">
+    <div class="mrr-card__label">Founding MRR</div>
+    <div class="mrr-card__value">£{{ '%.2f'|format(founding_mrr) }}</div>
+    <div class="mrr-card__split">
+      {% if total_mrr > 0 %}<em>{{ founding_pct }}%</em> of total MRR{% else %}No active subscriptions{% endif %}
+    </div>
+  </div>
+  <div class="mrr-card">
+    <div class="mrr-card__label">Standard MRR</div>
+    <div class="mrr-card__value">£{{ '%.2f'|format(standard_mrr) }}</div>
+    <div class="mrr-card__split">
+      {% if total_mrr > 0 %}<em>{{ standard_pct }}%</em> of total MRR{% else %}No active subscriptions{% endif %}
+    </div>
+  </div>
+  <div class="mrr-card mrr-card--total">
+    <div class="mrr-card__label">Total MRR</div>
+    <div class="mrr-card__value">£{{ '%.2f'|format(total_mrr) }}</div>
+    <div class="mrr-card__split">
+      {% if total_mrr > 0 %}
+        <em>Founding {{ founding_pct }}%</em> · Standard {{ standard_pct }}%
+      {% else %}
+        No active subscriptions yet
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Founding member list -->
+<div class="adm-card" style="padding:0;overflow:hidden;">
+  <div style="padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div>
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-muted);">
+        All founding members
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px;margin-bottom:16px;">
+        Sort by:
+        <a href="{{ url_for('admin.founding_members', sort='asc') }}"
+           class="sort-link {% if sort == 'asc' %}sort-link--active{% endif %}">Oldest first</a>
+        ·
+        <a href="{{ url_for('admin.founding_members', sort='desc') }}"
+           class="sort-link {% if sort == 'desc' %}sort-link--active{% endif %}">Newest first</a>
+      </div>
+    </div>
+  </div>
+
   {% if members %}
   <div class="adm-table-wrap">
     <table class="adm-table">
@@ -23,28 +140,47 @@
         <tr>
           <th>Name</th>
           <th>Email</th>
-          <th>Locked price</th>
           <th>Member since</th>
-          <th>Handicap</th>
+          <th>Tier</th>
+          <th>Locked price</th>
+          <th>Status</th>
         </tr>
       </thead>
       <tbody>
         {% for u in members %}
-        <tr>
-          <td>{{ u.first_name }} {{ u.last_name }}</td>
-          <td style="color:var(--text-muted)">{{ u.email }}</td>
-          <td>
-            {% if u.pricing_locked_at %}
-              £{{ '%.2f'|format(u.pricing_locked_at|float) }}/mo
-            {% else %}
-              <span style="color:var(--text-muted)">—</span>
-            {% endif %}
+        <tr style="cursor:pointer;" onclick="window.location='{{ url_for('admin.user_detail', user_id=u.id) }}'">
+          <td style="font-weight:500;">
+            {{ u.full_name }}
+            {% if u.is_founding_member %}<span class="adm-badge adm-badge--gold" style="margin-left:6px;">✦</span>{% endif %}
           </td>
-          <td style="color:var(--text-muted)">
+          <td style="color:var(--text-muted);">{{ u.email }}</td>
+          <td style="color:var(--text-muted);white-space:nowrap;">
             {% if u.founding_member_since %}{{ u.founding_member_since.strftime('%d %b %Y') }}{% else %}—{% endif %}
           </td>
           <td>
-            {% if u.handicap_index is not none %}{{ '%.1f'|format(u.handicap_index) }}{% else %}—{% endif %}
+            {% if u.subscription_tier == 'founding_member' %}
+              <span class="adm-badge adm-badge--gold">Founding</span>
+            {% elif u.subscription_tier in ('premium', 'standard') %}
+              <span class="adm-badge adm-badge--green">Standard</span>
+            {% else %}
+              <span class="adm-badge adm-badge--muted">Free</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.pricing_locked_at %}
+              <span style="font-weight:500;">£{{ '%.2f'|format(u.pricing_locked_at|float) }}/mo</span>
+            {% else %}
+              <span style="color:var(--text-muted);">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.subscription_active %}
+              <span style="color:#2d6a4f;font-weight:600;">Active</span>
+            {% elif u.stripe_customer_id %}
+              <span style="color:#c0392b;">Cancelled</span>
+            {% else %}
+              <span style="color:var(--text-muted);">Free</span>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -52,10 +188,10 @@
     </table>
   </div>
   {% else %}
-  <div class="adm-placeholder">
+  <div class="adm-placeholder" style="padding:64px 40px;">
     <p class="adm-placeholder__title">No founding members yet</p>
     <p class="adm-placeholder__body">
-      Users who sign up while BETA_MODE is enabled will appear here with their locked pricing.
+      Users who sign up while BETA_MODE is enabled, or are granted founding status manually, will appear here.
     </p>
   </div>
   {% endif %}

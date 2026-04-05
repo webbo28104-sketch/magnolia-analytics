@@ -1,88 +1,195 @@
 {% extends 'admin/base.html' %}
 {% block title %}Users{% endblock %}
 
+{% block styles %}
+.adm-filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.adm-filter-select {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+.adm-filter-select:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+.adm-filter-label { font-size: 13px; color: var(--text-muted); }
+
+.adm-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.adm-pagination__links { display: flex; gap: 6px; }
+.adm-pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--white);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.adm-pagination__btn:hover { background: var(--cream); text-decoration: none; }
+.adm-pagination__btn--active {
+  background: var(--green-800);
+  color: #fff;
+  border-color: var(--green-800);
+}
+.adm-pagination__btn--disabled { color: var(--text-muted); pointer-events: none; opacity: 0.5; }
+
+.user-row-link { color: inherit; text-decoration: none; }
+.user-row-link:hover { text-decoration: none; }
+
+.sub-active   { color: #2d6a4f; font-weight: 600; }
+.sub-cancelled { color: #c0392b; }
+.sub-free     { color: var(--text-muted); }
+{% endblock %}
+
 {% block content %}
 <div class="adm-page-header">
   <h1 class="adm-page-header__title">Users</h1>
-  <p class="adm-page-header__sub">All registered accounts.</p>
+  <p class="adm-page-header__sub">All registered accounts — {{ total_users }} total.</p>
 </div>
 
 <div class="adm-stats">
   <div class="adm-stat">
     <div class="adm-stat__label">Total users</div>
-    <div class="adm-stat__value">{{ total }}</div>
+    <div class="adm-stat__value">{{ total_users }}</div>
     <div class="adm-stat__sub">registered accounts</div>
   </div>
   <div class="adm-stat">
     <div class="adm-stat__label">Active subs</div>
     <div class="adm-stat__value">{{ active_subs }}</div>
-    <div class="adm-stat__sub">subscription_active = true</div>
+    <div class="adm-stat__sub">subscription active</div>
   </div>
   <div class="adm-stat">
     <div class="adm-stat__label">Founding members</div>
     <div class="adm-stat__value">{{ founding_count }}</div>
-    <div class="adm-stat__sub">beta-period signups</div>
+    <div class="adm-stat__sub">is_founding_member = true</div>
   </div>
 </div>
 
-<div class="adm-card">
-  {% if users %}
+<!-- Filters -->
+<form method="get" action="{{ url_for('admin.users') }}" id="filter-form">
+  <div class="adm-filters">
+    <span class="adm-filter-label">Filter:</span>
+    <select name="tier" class="adm-filter-select" onchange="document.getElementById('filter-form').submit()">
+      <option value="all"      {% if tier_filter == 'all' %}selected{% endif %}>All tiers</option>
+      <option value="founding" {% if tier_filter == 'founding' %}selected{% endif %}>Founding Member</option>
+      <option value="standard" {% if tier_filter == 'standard' %}selected{% endif %}>Standard</option>
+      <option value="free"     {% if tier_filter == 'free' %}selected{% endif %}>Free</option>
+    </select>
+    <select name="status" class="adm-filter-select" onchange="document.getElementById('filter-form').submit()">
+      <option value="all"      {% if status_filter == 'all' %}selected{% endif %}>All activity</option>
+      <option value="active"   {% if status_filter == 'active' %}selected{% endif %}>Active (round ≤ 30 days)</option>
+      <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+    </select>
+  </div>
+</form>
+
+<div class="adm-card" style="padding:0;overflow:hidden;">
+  {% if pagination.items %}
   <div class="adm-table-wrap">
     <table class="adm-table">
       <thead>
         <tr>
           <th>Name</th>
           <th>Email</th>
+          <th>Signup</th>
           <th>Tier</th>
-          <th>Founding</th>
-          <th>Staff</th>
-          <th>Joined</th>
-          <th>Handicap</th>
+          <th>Rounds</th>
+          <th>Last active</th>
+          <th>Status</th>
         </tr>
       </thead>
       <tbody>
-        {% for u in users %}
-        <tr>
-          <td>{{ u.first_name }} {{ u.last_name }}</td>
+        {% for u in pagination.items %}
+        {% set rs = round_stats.get(u.id, {}) %}
+        {% set round_count = rs.get('count', 0) %}
+        {% set last_date   = rs.get('last_date', None) %}
+        <tr style="cursor:pointer;" onclick="window.location='{{ url_for('admin.user_detail', user_id=u.id) }}'">
+          <td style="font-weight:500;">{{ u.first_name }} {{ u.last_name }}</td>
           <td style="color:var(--text-muted)">{{ u.email }}</td>
-          <td>
-            {% if u.subscription_tier == 'founding_member' %}
-              <span class="adm-badge adm-badge--gold">Founding</span>
-            {% elif u.subscription_tier == 'premium' %}
-              <span class="adm-badge adm-badge--green">Premium</span>
-            {% else %}
-              <span class="adm-badge adm-badge--muted">{{ u.subscription_tier or 'standard' }}</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if u.is_founding_member %}
-              <span class="adm-badge adm-badge--gold">Yes</span>
-            {% else %}
-              <span style="color:var(--text-muted);font-size:12px">—</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if u.is_staff %}
-              <span class="adm-badge adm-badge--green">Staff</span>
-            {% else %}
-              <span style="color:var(--text-muted);font-size:12px">—</span>
-            {% endif %}
-          </td>
-          <td style="color:var(--text-muted)">
+          <td style="color:var(--text-muted);white-space:nowrap;">
             {% if u.created_at %}{{ u.created_at.strftime('%d %b %Y') }}{% else %}—{% endif %}
           </td>
           <td>
-            {% if u.handicap_index is not none %}{{ '%.1f'|format(u.handicap_index) }}{% else %}—{% endif %}
+            {% if u.subscription_tier == 'founding_member' %}
+              <span class="adm-badge adm-badge--gold">Founding</span>
+            {% elif u.subscription_tier in ('premium', 'standard') %}
+              <span class="adm-badge adm-badge--green">Standard</span>
+            {% else %}
+              <span class="adm-badge adm-badge--muted">Free</span>
+            {% endif %}
+          </td>
+          <td style="font-variant-numeric:tabular-nums;">{{ round_count }}</td>
+          <td style="color:var(--text-muted);white-space:nowrap;">
+            {% if last_date %}{{ last_date.strftime('%d %b %Y') }}{% else %}<em>Never</em>{% endif %}
+          </td>
+          <td>
+            {% if u.subscription_active %}
+              <span class="sub-active">Active</span>
+            {% elif u.stripe_customer_id %}
+              <span class="sub-cancelled">Cancelled</span>
+            {% else %}
+              <span class="sub-free">Free</span>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  <!-- Pagination -->
+  <div style="padding:16px 24px;border-top:1px solid var(--border);">
+    <div class="adm-pagination">
+      <span>Showing {{ ((pagination.page - 1) * 25) + 1 }}–{{ [pagination.page * 25, pagination.total]|min }} of {{ pagination.total }}</span>
+      <div class="adm-pagination__links">
+        {% if pagination.has_prev %}
+          <a href="{{ url_for('admin.users', page=pagination.prev_num, tier=tier_filter, status=status_filter) }}" class="adm-pagination__btn">← Prev</a>
+        {% else %}
+          <span class="adm-pagination__btn adm-pagination__btn--disabled">← Prev</span>
+        {% endif %}
+
+        {% for p in pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+          {% if p %}
+            <a href="{{ url_for('admin.users', page=p, tier=tier_filter, status=status_filter) }}"
+               class="adm-pagination__btn {% if p == pagination.page %}adm-pagination__btn--active{% endif %}">{{ p }}</a>
+          {% else %}
+            <span class="adm-pagination__btn adm-pagination__btn--disabled">…</span>
+          {% endif %}
+        {% endfor %}
+
+        {% if pagination.has_next %}
+          <a href="{{ url_for('admin.users', page=pagination.next_num, tier=tier_filter, status=status_filter) }}" class="adm-pagination__btn">Next →</a>
+        {% else %}
+          <span class="adm-pagination__btn adm-pagination__btn--disabled">Next →</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   {% else %}
   <div class="adm-placeholder">
-    <p class="adm-placeholder__title">No users yet</p>
-    <p class="adm-placeholder__body">Registered accounts will appear here.</p>
+    <p class="adm-placeholder__title">No users match these filters</p>
+    <p class="adm-placeholder__body"><a href="{{ url_for('admin.users') }}">Clear filters</a></p>
   </div>
   {% endif %}
 </div>

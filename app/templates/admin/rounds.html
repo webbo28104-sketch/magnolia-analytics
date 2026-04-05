@@ -1,38 +1,285 @@
 {% extends 'admin/base.html' %}
-{% block title %}Rounds{% endblock %}
+{% block title %}Rounds & Engagement{% endblock %}
+
+{% block styles %}
+/* ── Bar chart ──────────────────────────────────────── */
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 180px;
+  padding: 0 4px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.bar-fill {
+  width: 100%;
+  background: var(--gold);
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  transition: opacity 0.15s;
+  position: relative;
+}
+.bar-fill:hover { opacity: 0.8; }
+.bar-count {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.bar-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+}
+.bar-labels {
+  display: flex;
+  gap: 6px;
+  padding: 0 4px;
+}
+.bar-labels .bar-col {
+  height: auto;
+  justify-content: flex-start;
+}
+
+/* ── At-risk table ──────────────────────────────────── */
+.at-risk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.copy-emails-btn {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.copy-emails-btn:hover { border-color: var(--gold); color: #a07800; }
+.copy-emails-btn.copied { color: #2d6a4f; border-color: #2d6a4f; }
+{% endblock %}
 
 {% block content %}
 <div class="adm-page-header">
-  <h1 class="adm-page-header__title">Rounds</h1>
-  <p class="adm-page-header__sub">All logged rounds across all users.</p>
+  <h1 class="adm-page-header__title">Rounds & Engagement</h1>
+  <p class="adm-page-header__sub">Activity across all users — logged rounds, trends, and at-risk cohorts.</p>
 </div>
 
+<!-- Summary stats -->
 <div class="adm-stats">
   <div class="adm-stat">
     <div class="adm-stat__label">Total rounds</div>
-    <div class="adm-stat__value">—</div>
-    <div class="adm-stat__sub">complete rounds</div>
+    <div class="adm-stat__value">{{ total_rounds }}</div>
+    <div class="adm-stat__sub">all time</div>
   </div>
   <div class="adm-stat">
     <div class="adm-stat__label">Last 30 days</div>
-    <div class="adm-stat__value">—</div>
+    <div class="adm-stat__value">{{ rounds_last_30 }}</div>
     <div class="adm-stat__sub">rounds logged</div>
   </div>
   <div class="adm-stat">
-    <div class="adm-stat__label">Reports generated</div>
-    <div class="adm-stat__value">—</div>
-    <div class="adm-stat__sub">Claude reports</div>
+    <div class="adm-stat__label">Avg per active user</div>
+    <div class="adm-stat__value">{{ avg_rounds }}</div>
+    <div class="adm-stat__sub">last 30 days</div>
   </div>
 </div>
 
-<div class="adm-card">
-  <div class="adm-placeholder">
-    <p class="adm-placeholder__session">Session 3</p>
-    <p class="adm-placeholder__title">Rounds log</p>
-    <p class="adm-placeholder__body">
-      Full rounds table with user, course, date, score, and strokes-gained
-      breakdown will be built in session 3.
-    </p>
+<!-- Rounds by month chart -->
+<div class="adm-card" style="margin-bottom:24px;">
+  <div class="ud-section-title" style="font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:20px;">
+    Rounds per month — last 12 months
   </div>
+  {% if max_bar == 0 %}
+  <div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">No rounds recorded yet.</div>
+  {% else %}
+  <div class="bar-chart">
+    {% for m in months_data %}
+    <div class="bar-col">
+      {% if m.count > 0 %}
+        <span class="bar-count">{{ m.count }}</span>
+        <div class="bar-fill" style="height:{{ (m.count / max_bar * 100)|round|int }}%;"></div>
+      {% else %}
+        <div class="bar-fill" style="height:2px;background:rgba(0,0,0,0.06);"></div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <div class="bar-labels">
+    {% for m in months_data %}
+    <div class="bar-col">
+      <span class="bar-label">{{ m.label }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 </div>
+
+<!-- Top 10 users (brand advocates) -->
+<div class="adm-card" style="margin-bottom:24px;padding:0;overflow:hidden;">
+  <div style="padding:20px 24px 0;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-muted);">
+      Top users — brand advocates
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;margin-bottom:16px;">Top 10 by total rounds logged</div>
+  </div>
+  {% if top_users %}
+  <div class="adm-table-wrap">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Tier</th>
+          <th>Rounds</th>
+          <th>Last active</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user, round_count, last_date in top_users %}
+        <tr style="cursor:pointer;" onclick="window.location='{{ url_for('admin.user_detail', user_id=user.id) }}'">
+          <td style="color:var(--text-muted);font-size:12px;">{{ loop.index }}</td>
+          <td style="font-weight:500;">{{ user.full_name }}</td>
+          <td style="color:var(--text-muted);">{{ user.email }}</td>
+          <td>
+            {% if user.subscription_tier == 'founding_member' %}
+              <span class="adm-badge adm-badge--gold">Founding</span>
+            {% elif user.subscription_tier in ('premium', 'standard') %}
+              <span class="adm-badge adm-badge--green">Standard</span>
+            {% else %}
+              <span class="adm-badge adm-badge--muted">Free</span>
+            {% endif %}
+          </td>
+          <td style="font-weight:600;">{{ round_count }}</td>
+          <td style="color:var(--text-muted);white-space:nowrap;">
+            {% if last_date %}{{ last_date.strftime('%d %b %Y') }}{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="adm-placeholder" style="padding:40px;">
+    <p class="adm-placeholder__title" style="font-size:15px;">No rounds yet</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- At-risk cohort -->
+<div class="adm-card" style="padding:0;overflow:hidden;">
+  <div style="padding:20px 24px 0;">
+    <div class="at-risk-header">
+      <div>
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-muted);">At-risk cohort</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Signed up 14+ days ago — zero rounds logged. Sorted by longest inactive first.</div>
+      </div>
+      {% if at_risk %}
+      <button class="copy-emails-btn" id="copyEmailsBtn" onclick="copyAtRiskEmails()">Copy emails</button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Hidden email list for copy -->
+  <span id="at-risk-emails" style="display:none;">{% for u in at_risk %}{{ u.email }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+
+  {% if at_risk %}
+  <div class="adm-table-wrap">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Signup date</th>
+          <th>Tier</th>
+          <th>Days since signup</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in at_risk %}
+        {% set days = ((now - u.created_at).days) %}
+        <tr style="cursor:pointer;" onclick="window.location='{{ url_for('admin.user_detail', user_id=u.id) }}'">
+          <td style="font-weight:500;">{{ u.full_name }}</td>
+          <td style="color:var(--text-muted);">{{ u.email }}</td>
+          <td style="color:var(--text-muted);white-space:nowrap;">
+            {% if u.created_at %}{{ u.created_at.strftime('%d %b %Y') }}{% else %}—{% endif %}
+          </td>
+          <td>
+            {% if u.subscription_tier == 'founding_member' %}
+              <span class="adm-badge adm-badge--gold">Founding</span>
+            {% elif u.subscription_tier in ('premium', 'standard') %}
+              <span class="adm-badge adm-badge--green">Standard</span>
+            {% else %}
+              <span class="adm-badge adm-badge--muted">Free</span>
+            {% endif %}
+          </td>
+          <td style="font-variant-numeric:tabular-nums;{% if days > 60 %}color:#c0392b;font-weight:600;{% endif %}">
+            {{ days }}d
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="adm-placeholder" style="padding:40px;">
+    <p class="adm-placeholder__title" style="font-size:15px;">No at-risk users</p>
+    <p class="adm-placeholder__body">All users who signed up 14+ days ago have logged at least one round.</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function copyAtRiskEmails() {
+  var emails = document.getElementById('at-risk-emails').textContent.trim();
+  var btn = document.getElementById('copyEmailsBtn');
+  if (!emails) return;
+  navigator.clipboard.writeText(emails).then(function () {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function () {
+      btn.textContent = 'Copy emails';
+      btn.classList.remove('copied');
+    }, 2000);
+  }).catch(function () {
+    // Fallback for older browsers
+    var ta = document.createElement('textarea');
+    ta.value = emails;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function () {
+      btn.textContent = 'Copy emails';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+</script>
 {% endblock %}
