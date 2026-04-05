@@ -391,18 +391,21 @@
     grid-template-rows: 0fr;
     transition: grid-template-rows .25s ease;
     overflow: hidden;
+    min-width: 0; /* prevent flex item expanding to grid content's intrinsic width */
   }
   .he-reveal.is-visible {
     grid-template-rows: 1fr;
   }
   .he-reveal > .he-reveal-inner {
     min-height: 0;
+    min-width: 0; /* prevent grid item expanding beyond track width */
     overflow: hidden;
   }
 
-  /* ── Prevent SVG / any child from overflowing on narrow phones ──────────── */
-  .he-form svg { max-width: 100%; }
-  .he-field, .he-reveal, .he-reveal-inner { max-width: 100%; }
+  /* ── Overflow guard: no child can be wider than the form ────────────────── */
+  .he-form { width: 100%; }
+  .he-field { min-width: 0; }
+  .he-form svg { display: block; max-width: 100%; }
 
   /* ── Penalties (de-emphasised) ───────────────────────────────────────────── */
   .he-field--muted .he-label { color: #bbb; }
@@ -600,7 +603,7 @@
       <div class="he-reveal-inner">
         <label class="he-label">Tee shot</label>
         <svg id="tee-shot-svg" viewBox="0 0 300 80" xmlns="http://www.w3.org/2000/svg"
-             style="width:100%;max-width:300px;display:block;margin:8px auto 0;border-radius:8px;overflow:hidden;cursor:pointer">
+             style="width:100%;max-width:min(300px,100%);display:block;margin:8px auto 0;border-radius:8px;overflow:hidden;cursor:pointer">
           <!-- Left rough -->
           <rect id="ts-left"    x="0"   y="0" width="90"  height="80" fill="#c4a35a"/>
           <!-- Fairway -->
