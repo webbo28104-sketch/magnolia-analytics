@@ -199,7 +199,19 @@ def send_invite():
 @admin_bp.route('/users')
 @staff_required
 def users():
-    return render_template('admin/users.html', active_tab='users')
+    from app.models.user import User
+    all_users = User.query.order_by(User.created_at.desc()).all()
+    total = len(all_users)
+    active_subs = sum(1 for u in all_users if u.subscription_active)
+    founding_count = sum(1 for u in all_users if u.is_founding_member)
+    return render_template(
+        'admin/users.html',
+        active_tab='users',
+        users=all_users,
+        total=total,
+        active_subs=active_subs,
+        founding_count=founding_count,
+    )
 
 
 @admin_bp.route('/rounds')
@@ -211,7 +223,14 @@ def rounds():
 @admin_bp.route('/founding-members')
 @staff_required
 def founding_members():
-    return render_template('admin/founding_members.html', active_tab='founding_members')
+    from app.models.user import User
+    members = User.query.filter_by(is_founding_member=True).order_by(User.founding_member_since.asc()).all()
+    return render_template(
+        'admin/founding_members.html',
+        active_tab='founding_members',
+        members=members,
+        count=len(members),
+    )
 
 
 @admin_bp.route('/kpis')

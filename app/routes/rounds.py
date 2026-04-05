@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
+from app.utils.access import subscription_required
 from app import db
 from app.models.round import Round
 from app.models.hole import Hole
@@ -95,6 +96,7 @@ def _recalculate_handicap(user):
 
 @rounds_bp.route('/new', methods=['GET', 'POST'])
 @login_required
+@subscription_required
 def new_round():
     """Start a new round — USGA-style course + tee selector."""
     if request.method == 'POST':

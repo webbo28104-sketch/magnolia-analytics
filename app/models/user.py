@@ -23,10 +23,20 @@ class User(UserMixin, db.Model):
     home_country   = db.Column(db.String(100), default='England')
 
     # Subscription
-    subscription_tier = db.Column(db.String(20), default='standard')
+    subscription_tier = db.Column(db.String(32), default='standard')
     subscription_active = db.Column(db.Boolean, default=False)
     square_customer_id = db.Column(db.String(255), nullable=True)
     subscription_expires_at = db.Column(db.DateTime, nullable=True)
+
+    # Stripe
+    stripe_customer_id     = db.Column(db.String(255), nullable=True)
+    stripe_subscription_id = db.Column(db.String(255), nullable=True)
+    stripe_price_id        = db.Column(db.String(255), nullable=True)
+
+    # Founding member
+    is_founding_member = db.Column(db.Boolean, default=False)
+    founding_member_since = db.Column(db.DateTime, nullable=True)
+    pricing_locked_at = db.Column(db.Numeric(6, 2), nullable=True)
 
     # Access
     invite_code = db.Column(db.String(50), nullable=True)

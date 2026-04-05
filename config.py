@@ -26,6 +26,20 @@ class Config:
     # Access control — set to True to require an invite code at registration
     INVITE_ONLY = True
 
+    # Founding member period — set False at public launch
+    BETA_MODE = True
+
+    # Stripe
+    STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
+    STRIPE_SECRET_KEY      = os.environ.get('STRIPE_SECRET_KEY', '')
+    STRIPE_WEBHOOK_SECRET  = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+
+    # Stripe Price IDs (filled in .env — never hardcode)
+    STRIPE_PRICE_FOUNDING_MONTHLY = os.environ.get('STRIPE_PRICE_FOUNDING_MONTHLY', '')
+    STRIPE_PRICE_FOUNDING_ANNUAL  = os.environ.get('STRIPE_PRICE_FOUNDING_ANNUAL', '')
+    STRIPE_PRICE_STANDARD_MONTHLY = os.environ.get('STRIPE_PRICE_STANDARD_MONTHLY', '')
+    STRIPE_PRICE_STANDARD_ANNUAL  = os.environ.get('STRIPE_PRICE_STANDARD_ANNUAL', '')
+
 
 class DevelopmentConfig(Config):
     DEBUG = True

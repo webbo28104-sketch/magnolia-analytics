@@ -2,6 +2,26 @@
 {% block title %}Pricing — Magnolia Analytics{% endblock %}
 
 {% block content %}
+
+{#
+  show_founding — true when BETA_MODE is on AND the visitor has a validated
+  invite session or is already a founding member.
+#}
+{% set show_founding = config.get('BETA_MODE') and (
+    session.get('access_granted') or
+    session.get('access_code') or
+    (current_user.is_authenticated and current_user.is_founding_member)
+) %}
+
+{# The price ID the user is currently subscribed to (empty string if none). #}
+{% set active_price = current_user.stripe_price_id if current_user.is_authenticated else '' %}
+
+{# Price IDs from config — empty string when not yet configured. #}
+{% set pid_fm  = config.get('STRIPE_PRICE_FOUNDING_MONTHLY', '')  %}
+{% set pid_fa  = config.get('STRIPE_PRICE_FOUNDING_ANNUAL', '')   %}
+{% set pid_sm  = config.get('STRIPE_PRICE_STANDARD_MONTHLY', '')  %}
+{% set pid_sa  = config.get('STRIPE_PRICE_STANDARD_ANNUAL', '')   %}
+
 <section class="pricing-page">
   <div class="pricing-page-inner">
 
@@ -11,19 +31,130 @@
       <p class="pricing-sub">Everything you need to track, understand, and improve your game.</p>
     </div>
 
-    <div class="plan-card plan-card--solo">
-      <div class="plan-tier">Premium</div>
-      <div class="plan-price">£7.99<span>/mo</span></div>
-      <ul class="plan-features">
-        <li>Hole-by-hole round logging</li>
-        <li>Personalised performance report delivered in 30 seconds</li>
-        <li>Report emailed directly after every round</li>
-        <li>Strokes gained — Off the Tee, Approach, Around the Greens, Putting</li>
-        <li>Season analytics dashboard</li>
-        <li>Handicap differential tracking</li>
-        <li>Unlimited rounds</li>
-      </ul>
-      <a href="{{ url_for('auth.register') }}" class="btn btn--gold btn--full">Start Tracking</a>
+    {% if show_founding %}
+    <!-- ── Founding Member plans ──────────────────────────────────── -->
+    <div class="pricing-badge-row">
+      <span class="pricing-founding-badge">Founding Member</span>
+      <span class="pricing-founding-note">Locked for life — only available during beta</span>
+    </div>
+
+    <div class="plan-grid">
+
+      <!-- Founding Monthly -->
+      <div class="plan-card plan-card--founding{% if active_price == pid_fm and pid_fm %} plan-card--active{% endif %}">
+        <div class="plan-tier">Founding · Monthly</div>
+        <div class="plan-price">£9.99<span>/mo</span></div>
+        <p class="plan-locked-note">Rate locked for life</p>
+        <ul class="plan-features">
+          <li>Everything in the standard plan</li>
+          <li>Lifetime price guarantee — never increases</li>
+          <li>Founding member badge on your profile</li>
+          <li>Early access to new features</li>
+        </ul>
+        {% if current_user.is_authenticated %}
+          {% if active_price and active_price == pid_fm %}
+            <button class="btn btn--current btn--full" disabled>Current plan</button>
+          {% elif pid_fm %}
+            <a href="{{ url_for('payments.checkout', price_id=pid_fm) }}"
+               class="btn btn--gold btn--full">Subscribe — £9.99/mo</a>
+          {% else %}
+            <button class="btn btn--gold btn--full" disabled>Coming soon</button>
+          {% endif %}
+        {% else %}
+          <a href="{{ url_for('auth.register') }}" class="btn btn--gold btn--full">Get Access</a>
+        {% endif %}
+      </div>
+
+      <!-- Founding Annual -->
+      <div class="plan-card plan-card--founding plan-card--featured{% if active_price == pid_fa and pid_fa %} plan-card--active{% endif %}">
+        <div class="plan-badge">Best value</div>
+        <div class="plan-tier">Founding · Annual</div>
+        <div class="plan-price">£89<span>/yr</span></div>
+        <p class="plan-locked-note">Save ~£31 vs monthly · Rate locked for life</p>
+        <ul class="plan-features">
+          <li>Everything in the standard plan</li>
+          <li>Lifetime price guarantee — never increases</li>
+          <li>Founding member badge on your profile</li>
+          <li>Early access to new features</li>
+        </ul>
+        {% if current_user.is_authenticated %}
+          {% if active_price and active_price == pid_fa %}
+            <button class="btn btn--current btn--full" disabled>Current plan</button>
+          {% elif pid_fa %}
+            <a href="{{ url_for('payments.checkout', price_id=pid_fa) }}"
+               class="btn btn--gold btn--full">Subscribe — £89/yr</a>
+          {% else %}
+            <button class="btn btn--gold btn--full" disabled>Coming soon</button>
+          {% endif %}
+        {% else %}
+          <a href="{{ url_for('auth.register') }}" class="btn btn--gold btn--full">Get Access</a>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <div class="pricing-divider"><span>Standard plans</span></div>
+    {% endif %}
+
+    <!-- ── Standard plans ───────────────────────────────────────── -->
+    <div class="plan-grid{% if not show_founding %} plan-grid--centered{% endif %}">
+
+      <!-- Standard Monthly -->
+      <div class="plan-card{% if active_price == pid_sm and pid_sm %} plan-card--active{% endif %}">
+        <div class="plan-tier">Standard · Monthly</div>
+        <div class="plan-price">£12.99<span>/mo</span></div>
+        <ul class="plan-features">
+          <li>Hole-by-hole round logging</li>
+          <li>Personalised performance report in seconds</li>
+          <li>Email delivery after every round</li>
+          <li>Strokes gained — Off the Tee, Approach, Around the Greens, Putting</li>
+          <li>Season analytics dashboard</li>
+          <li>Handicap differential tracking</li>
+          <li>Unlimited rounds</li>
+        </ul>
+        {% if current_user.is_authenticated %}
+          {% if active_price and active_price == pid_sm %}
+            <button class="btn btn--current btn--full" disabled>Current plan</button>
+          {% elif pid_sm %}
+            <a href="{{ url_for('payments.checkout', price_id=pid_sm) }}"
+               class="btn btn--gold btn--full">Subscribe — £12.99/mo</a>
+          {% else %}
+            <button class="btn btn--gold btn--full" disabled>Coming soon</button>
+          {% endif %}
+        {% else %}
+          <a href="{{ url_for('auth.register') }}" class="btn btn--gold btn--full">Get Started</a>
+        {% endif %}
+      </div>
+
+      <!-- Standard Annual -->
+      <div class="plan-card plan-card--featured{% if active_price == pid_sa and pid_sa %} plan-card--active{% endif %}">
+        <div class="plan-badge">Best value</div>
+        <div class="plan-tier">Standard · Annual</div>
+        <div class="plan-price">£109<span>/yr</span></div>
+        <p class="plan-locked-note">Save ~£47 vs monthly</p>
+        <ul class="plan-features">
+          <li>Hole-by-hole round logging</li>
+          <li>Personalised performance report in seconds</li>
+          <li>Email delivery after every round</li>
+          <li>Strokes gained — Off the Tee, Approach, Around the Greens, Putting</li>
+          <li>Season analytics dashboard</li>
+          <li>Handicap differential tracking</li>
+          <li>Unlimited rounds</li>
+        </ul>
+        {% if current_user.is_authenticated %}
+          {% if active_price and active_price == pid_sa %}
+            <button class="btn btn--current btn--full" disabled>Current plan</button>
+          {% elif pid_sa %}
+            <a href="{{ url_for('payments.checkout', price_id=pid_sa) }}"
+               class="btn btn--gold btn--full">Subscribe — £109/yr</a>
+          {% else %}
+            <button class="btn btn--gold btn--full" disabled>Coming soon</button>
+          {% endif %}
+        {% else %}
+          <a href="{{ url_for('auth.register') }}" class="btn btn--gold btn--full">Get Started</a>
+        {% endif %}
+      </div>
+
     </div>
 
     <div class="pricing-v2-note">
@@ -35,14 +166,18 @@
 </section>
 
 <style>
-  .pricing-page { padding: 80px 24px; }
-  .pricing-page-inner { max-width: 540px; margin: 0 auto; }
-  .pricing-header { text-align: center; margin-bottom: 48px; }
+  .pricing-page { padding: 80px 24px 120px; }
+  .pricing-page-inner { max-width: 840px; margin: 0 auto; }
+
+  /* Header */
+  .pricing-header { text-align: center; margin-bottom: 52px; }
   .pricing-title {
-    font-size: clamp(2rem, 4vw, 3rem);
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    font-weight: 800;
     color: var(--green-800);
     margin-top: 12px;
-    line-height: 1.2;
+    line-height: 1.18;
+    letter-spacing: -0.03em;
   }
   .pricing-sub {
     margin-top: 16px;
@@ -50,8 +185,184 @@
     font-size: 1rem;
     line-height: 1.6;
   }
+
+  /* Founding badge row */
+  .pricing-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .pricing-founding-badge {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: rgba(201,168,76,0.15);
+    color: #a07800;
+    border: 1px solid rgba(201,168,76,0.35);
+    border-radius: 4px;
+    padding: 3px 10px;
+  }
+  .pricing-founding-note {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* Grids */
+  .plan-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+  .plan-grid--centered {
+    max-width: 660px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  @media (max-width: 580px) {
+    .plan-grid, .plan-grid--centered { grid-template-columns: 1fr; }
+  }
+
+  /* Cards */
+  .plan-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px 24px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .plan-card--founding {
+    border-color: rgba(201,168,76,0.45);
+    background: #fdfcf8;
+  }
+  .plan-card--featured {
+    border-color: var(--green-700);
+    box-shadow: 0 0 0 1px var(--green-700);
+  }
+  .plan-card--active {
+    outline: 2px solid var(--green-700);
+    outline-offset: 2px;
+  }
+  .plan-card--founding.plan-card--active {
+    outline-color: #a07800;
+  }
+
+  /* "Best value" ribbon */
+  .plan-badge {
+    position: absolute;
+    top: -1px;
+    right: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--green-700);
+    color: #fff;
+    border-radius: 0 0 6px 6px;
+    padding: 3px 10px;
+  }
+  .plan-card--founding .plan-badge { background: #a07800; }
+
+  /* Typography inside cards */
+  .plan-tier {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .plan-price {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    color: var(--green-800);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .plan-price span {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+  .plan-locked-note {
+    font-size: 12px;
+    color: #a07800;
+    font-weight: 500;
+    margin-bottom: 18px;
+    margin-top: 2px;
+  }
+
+  /* Feature list */
+  .plan-features {
+    list-style: none;
+    padding: 0;
+    margin: 18px 0 24px;
+    flex: 1;
+  }
+  .plan-features li {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    padding: 6px 0 6px 20px;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+  }
+  .plan-features li:last-child { border-bottom: none; }
+  .plan-features li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--green-700);
+    font-weight: 700;
+    font-size: 12px;
+    top: 7px;
+  }
+  .plan-card--founding .plan-features li::before { color: #a07800; }
+
+  /* "Current plan" button state */
+  .btn--current {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--cream, #f8f5ef);
+    color: var(--text-muted);
+    cursor: default;
+    text-align: center;
+  }
+  .btn--full { width: 100%; text-align: center; }
+
+  /* Section divider */
+  .pricing-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 8px 0 28px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+  .pricing-divider::before, .pricing-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Footer note */
   .pricing-v2-note {
-    margin-top: 32px;
+    margin-top: 40px;
     text-align: center;
     font-size: 0.875rem;
     color: var(--text-muted);

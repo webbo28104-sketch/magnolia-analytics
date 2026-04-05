@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, url_for
+from flask import Blueprint, render_template, url_for, request, flash
 from flask_login import login_required, current_user
 import math
 import logging
@@ -8,13 +8,21 @@ from datetime import date, timedelta
 from app.models.round import Round
 from app.models.hole import Hole
 from app.utils.personal_bests import check_recent_personal_best
-from app.utils.access import is_pro
+from app.utils.access import is_pro, subscription_required
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
 @dashboard_bp.route('/')
 @login_required
+@subscription_required
 def index():
+    # One-time welcome flash after Stripe checkout redirect
+    if request.args.get('subscribed') == 'true':
+        if current_user.is_founding_member:
+            flash('Welcome, Founding Member — your rate is locked for life.', 'success')
+        else:
+            flash("Welcome to Magnolia — you're all set.", 'success')
+
     # Single query for all complete rounds — used for stats, glance, and recent list
     all_complete = (
         Round.query

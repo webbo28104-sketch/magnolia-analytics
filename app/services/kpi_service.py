@@ -27,14 +27,11 @@ from app.models.waitlist import WaitingList
 # ---------------------------------------------------------------------------
 # Pricing constants — update when pricing changes.
 # ---------------------------------------------------------------------------
-FOUNDING_PRICE_GBP = 4.99
-STANDARD_PRICE_GBP = 7.99
+FOUNDING_PRICE_GBP = 9.99
+STANDARD_PRICE_GBP = 12.99
 
 # Subscription tier strings as stored in User.subscription_tier.
-# NOTE: 'founding' tier does not yet exist in the DB — it will read 0 until
-# founding member tiers are assigned. Standard paid users are stored as
-# subscription_tier='premium' with subscription_active=True.
-TIER_FOUNDING = 'founding'
+TIER_FOUNDING = 'founding_member'
 TIER_PAID     = 'premium'
 
 

@@ -4,25 +4,60 @@
 {% block content %}
 <div class="adm-page-header">
   <h1 class="adm-page-header__title">Founding Members</h1>
-  <p class="adm-page-header__sub">Users with founding member status.</p>
+  <p class="adm-page-header__sub">Users with lifetime founding member pricing (£9.99/mo, locked).</p>
 </div>
 
 <div class="adm-stats">
   <div class="adm-stat">
     <div class="adm-stat__label">Founding members</div>
-    <div class="adm-stat__value">—</div>
-    <div class="adm-stat__sub">active status</div>
+    <div class="adm-stat__value">{{ count }}</div>
+    <div class="adm-stat__sub">beta-period signups</div>
   </div>
 </div>
 
 <div class="adm-card">
+  {% if members %}
+  <div class="adm-table-wrap">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Locked price</th>
+          <th>Member since</th>
+          <th>Handicap</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in members %}
+        <tr>
+          <td>{{ u.first_name }} {{ u.last_name }}</td>
+          <td style="color:var(--text-muted)">{{ u.email }}</td>
+          <td>
+            {% if u.pricing_locked_at %}
+              £{{ '%.2f'|format(u.pricing_locked_at|float) }}/mo
+            {% else %}
+              <span style="color:var(--text-muted)">—</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--text-muted)">
+            {% if u.founding_member_since %}{{ u.founding_member_since.strftime('%d %b %Y') }}{% else %}—{% endif %}
+          </td>
+          <td>
+            {% if u.handicap_index is not none %}{{ '%.1f'|format(u.handicap_index) }}{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
   <div class="adm-placeholder">
-    <p class="adm-placeholder__session">Session 4</p>
-    <p class="adm-placeholder__title">Founding member management</p>
+    <p class="adm-placeholder__title">No founding members yet</p>
     <p class="adm-placeholder__body">
-      Grant and revoke founding member status per user.
-      This is the only write action in this section.
+      Users who sign up while BETA_MODE is enabled will appear here with their locked pricing.
     </p>
   </div>
+  {% endif %}
 </div>
 {% endblock %}

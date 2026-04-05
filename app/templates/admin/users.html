@@ -10,29 +10,80 @@
 <div class="adm-stats">
   <div class="adm-stat">
     <div class="adm-stat__label">Total users</div>
-    <div class="adm-stat__value">—</div>
+    <div class="adm-stat__value">{{ total }}</div>
     <div class="adm-stat__sub">registered accounts</div>
   </div>
   <div class="adm-stat">
     <div class="adm-stat__label">Active subs</div>
-    <div class="adm-stat__value">—</div>
+    <div class="adm-stat__value">{{ active_subs }}</div>
     <div class="adm-stat__sub">subscription_active = true</div>
   </div>
   <div class="adm-stat">
-    <div class="adm-stat__label">Avg handicap</div>
-    <div class="adm-stat__value">—</div>
-    <div class="adm-stat__sub">across all users</div>
+    <div class="adm-stat__label">Founding members</div>
+    <div class="adm-stat__value">{{ founding_count }}</div>
+    <div class="adm-stat__sub">beta-period signups</div>
   </div>
 </div>
 
 <div class="adm-card">
-  <div class="adm-placeholder">
-    <p class="adm-placeholder__session">Session 3</p>
-    <p class="adm-placeholder__title">User table</p>
-    <p class="adm-placeholder__body">
-      Searchable user list with account details, subscription status,
-      and activity will be built in session 3.
-    </p>
+  {% if users %}
+  <div class="adm-table-wrap">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Tier</th>
+          <th>Founding</th>
+          <th>Staff</th>
+          <th>Joined</th>
+          <th>Handicap</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.first_name }} {{ u.last_name }}</td>
+          <td style="color:var(--text-muted)">{{ u.email }}</td>
+          <td>
+            {% if u.subscription_tier == 'founding_member' %}
+              <span class="adm-badge adm-badge--gold">Founding</span>
+            {% elif u.subscription_tier == 'premium' %}
+              <span class="adm-badge adm-badge--green">Premium</span>
+            {% else %}
+              <span class="adm-badge adm-badge--muted">{{ u.subscription_tier or 'standard' }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.is_founding_member %}
+              <span class="adm-badge adm-badge--gold">Yes</span>
+            {% else %}
+              <span style="color:var(--text-muted);font-size:12px">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.is_staff %}
+              <span class="adm-badge adm-badge--green">Staff</span>
+            {% else %}
+              <span style="color:var(--text-muted);font-size:12px">—</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--text-muted)">
+            {% if u.created_at %}{{ u.created_at.strftime('%d %b %Y') }}{% else %}—{% endif %}
+          </td>
+          <td>
+            {% if u.handicap_index is not none %}{{ '%.1f'|format(u.handicap_index) }}{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+  {% else %}
+  <div class="adm-placeholder">
+    <p class="adm-placeholder__title">No users yet</p>
+    <p class="adm-placeholder__body">Registered accounts will appear here.</p>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

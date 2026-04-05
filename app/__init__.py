@@ -31,6 +31,7 @@ def create_app(config_name='default'):
     from app.routes.profile import profile_bp
     from app.routes.waitlist import waitlist_bp
     from app.routes.admin import admin_bp
+    from app.routes.payments import payments_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -41,6 +42,7 @@ def create_app(config_name='default'):
     app.register_blueprint(courses_bp)
     app.register_blueprint(profile_bp, url_prefix='/profile')
     app.register_blueprint(waitlist_bp)
+    app.register_blueprint(payments_bp)
 
     # Recompute stale stats for the user on every login (covers login + register)
     user_logged_in.connect(_recompute_stale_on_login, app)
@@ -55,6 +57,9 @@ def create_app(config_name='default'):
             return None
         # Always allow the waitlist page itself
         if request.endpoint in ('waitlist.index',):
+            return None
+        # Always allow the Stripe webhook (Stripe cannot send a session cookie)
+        if request.endpoint == 'payments.webhook_handler':
             return None
         # Always allow login, validate-code, and the password-reset flow
         if request.endpoint in (
@@ -139,6 +144,12 @@ def _run_column_migrations():
         ('rounds',    'starting_hole',            'INTEGER DEFAULT 1'),
         ('rounds',    'is_partial',               'BOOLEAN DEFAULT FALSE'),
         ('holes',     'lie_type',                 'VARCHAR(100)'),
+        ('users',     'is_founding_member',        'BOOLEAN DEFAULT FALSE'),
+        ('users',     'founding_member_since',     'TIMESTAMP'),
+        ('users',     'pricing_locked_at',         'REAL'),
+        ('users',     'stripe_customer_id',        'VARCHAR(255)'),
+        ('users',     'stripe_subscription_id',    'VARCHAR(255)'),
+        ('users',     'stripe_price_id',           'VARCHAR(255)'),
     ]
     for table, column, col_type in migrations:
         try:

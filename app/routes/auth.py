@@ -67,6 +67,14 @@ def register():
         user = User(first_name=first_name, last_name=last_name, email=email)
         user.set_password(password)
         user.invite_code = code_str
+
+        if current_app.config.get('BETA_MODE'):
+            from decimal import Decimal
+            user.is_founding_member = True
+            user.founding_member_since = datetime.utcnow()
+            user.subscription_tier = 'founding_member'
+            user.pricing_locked_at = Decimal('9.99')
+
         db.session.add(user)
 
         # Consume the code

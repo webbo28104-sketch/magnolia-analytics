@@ -1,0 +1,222 @@
+"""
+Stripe payment routes.
+
+  /subscribe/<price_id>   — create Checkout Session and redirect
+  /stripe/webhook/        — receive and verify Stripe webhook events
+"""
+from datetime import datetime
+from decimal import Decimal
+from functools import wraps
+
+import stripe
+from flask import (
+    Blueprint, current_app, redirect, request, url_for, abort,
+)
+from flask_login import current_user, login_required
+
+from app import db
+
+payments_bp = Blueprint('payments', __name__)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _stripe():
+    """Return the stripe module configured with the app's secret key."""
+    stripe.api_key = current_app.config['STRIPE_SECRET_KEY']
+    return stripe
+
+
+def _get_or_create_customer(user):
+    """
+    Return the Stripe Customer ID for this user, creating one if needed.
+    Persists stripe_customer_id to the DB immediately so re-runs are safe.
+    """
+    s = _stripe()
+    if user.stripe_customer_id:
+        return user.stripe_customer_id
+
+    customer = s.Customer.create(
+        email=user.email,
+        name=user.full_name,
+        metadata={'user_id': str(user.id)},
+    )
+    user.stripe_customer_id = customer['id']
+    db.session.commit()
+    return customer['id']
+
+
+def _price_to_tier(price_id):
+    """Map a Stripe Price ID to a subscription_tier string."""
+    cfg = current_app.config
+    founding_ids = {
+        cfg.get('STRIPE_PRICE_FOUNDING_MONTHLY', ''),
+        cfg.get('STRIPE_PRICE_FOUNDING_ANNUAL', ''),
+    }
+    founding_ids.discard('')
+
+    if price_id in founding_ids:
+        return 'founding_member'
+    return 'premium'
+
+
+def _price_to_locked_amount(price_id):
+    """Return the Decimal amount to lock for founding members, or None."""
+    cfg = current_app.config
+    if price_id == cfg.get('STRIPE_PRICE_FOUNDING_MONTHLY', ''):
+        return Decimal('9.99')
+    if price_id == cfg.get('STRIPE_PRICE_FOUNDING_ANNUAL', ''):
+        return Decimal('89.00')
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Checkout
+# ---------------------------------------------------------------------------
+
+@payments_bp.route('/subscribe/<price_id>')
+@login_required
+def checkout(price_id):
+    """
+    Create a Stripe Checkout Session for the given Price ID and redirect.
+    Accepts only price IDs that are configured in the app — anything else 404s.
+    """
+    cfg = current_app.config
+    known_prices = {
+        cfg.get('STRIPE_PRICE_FOUNDING_MONTHLY', ''),
+        cfg.get('STRIPE_PRICE_FOUNDING_ANNUAL', ''),
+        cfg.get('STRIPE_PRICE_STANDARD_MONTHLY', ''),
+        cfg.get('STRIPE_PRICE_STANDARD_ANNUAL', ''),
+    }
+    known_prices.discard('')
+
+    if price_id not in known_prices:
+        abort(404)
+
+    customer_id = _get_or_create_customer(current_user)
+
+    s = _stripe()
+    session = s.checkout.Session.create(
+        customer=customer_id,
+        mode='subscription',
+        line_items=[{'price': price_id, 'quantity': 1}],
+        metadata={'price_id': price_id, 'user_id': str(current_user.id)},
+        success_url=url_for('dashboard.index', subscribed='true', _external=True),
+        cancel_url=url_for('main.pricing', _external=True),
+    )
+    return redirect(session['url'], 303)
+
+
+# ---------------------------------------------------------------------------
+# Webhook
+# ---------------------------------------------------------------------------
+
+@payments_bp.route('/stripe/webhook/', methods=['POST'])
+def webhook_handler():
+    """
+    Receive and verify Stripe webhook events.
+
+    Security: payload is verified via HMAC signature before any processing.
+    Authentication: exempt from the session-based access gate — Stripe sends
+    no cookies.  The signature check is the sole auth mechanism.
+    """
+    payload    = request.get_data()
+    sig_header = request.headers.get('Stripe-Signature', '')
+    secret     = current_app.config.get('STRIPE_WEBHOOK_SECRET', '')
+
+    s = _stripe()
+    try:
+        event = s.Webhook.construct_event(payload, sig_header, secret)
+    except (ValueError, stripe.error.SignatureVerificationError):
+        # Bad payload or invalid signature — reject silently
+        abort(400)
+
+    event_type = event['type']
+    data       = event['data']['object']
+
+    if event_type == 'checkout.session.completed':
+        _handle_checkout_completed(data)
+    elif event_type == 'customer.subscription.deleted':
+        _handle_subscription_deleted(data)
+
+    return '', 200
+
+
+def _handle_checkout_completed(session_obj):
+    """
+    Activate a subscription after successful Stripe Checkout.
+
+    Reads the price_id from the session metadata (set when creating the
+    Checkout Session) to determine tier without a second API call.
+    """
+    from app.models.user import User
+
+    customer_id      = session_obj.get('customer')
+    subscription_id  = session_obj.get('subscription')
+    price_id         = (session_obj.get('metadata') or {}).get('price_id', '')
+
+    user = User.query.filter_by(stripe_customer_id=customer_id).first()
+    if not user:
+        current_app.logger.warning(
+            '[stripe] checkout.session.completed: no user for customer %s', customer_id
+        )
+        return
+
+    tier   = _price_to_tier(price_id)
+    locked = _price_to_locked_amount(price_id)
+
+    user.stripe_subscription_id = subscription_id
+    user.stripe_price_id        = price_id
+    user.subscription_tier      = tier
+    user.subscription_active    = True
+
+    if tier == 'founding_member':
+        user.is_founding_member = True
+        if not user.founding_member_since:
+            user.founding_member_since = datetime.utcnow()
+        if locked is not None:
+            user.pricing_locked_at = locked
+
+    try:
+        db.session.commit()
+        current_app.logger.info(
+            '[stripe] Activated %s → tier=%s (user_id=%s)', subscription_id, tier, user.id
+        )
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error('[stripe] DB commit failed after checkout: %s', exc)
+
+
+def _handle_subscription_deleted(subscription_obj):
+    """
+    Downgrade a user when their Stripe subscription is cancelled / expires.
+
+    Founding member status (is_founding_member, founding_member_since,
+    pricing_locked_at) is intentionally preserved — it represents a
+    historical fact about when they joined and what they were offered.
+    """
+    from app.models.user import User
+
+    subscription_id = subscription_obj.get('id')
+    user = User.query.filter_by(stripe_subscription_id=subscription_id).first()
+    if not user:
+        current_app.logger.warning(
+            '[stripe] subscription.deleted: no user for subscription %s', subscription_id
+        )
+        return
+
+    user.subscription_tier      = 'free'
+    user.subscription_active    = False
+    user.stripe_subscription_id = None
+    user.stripe_price_id        = None
+
+    try:
+        db.session.commit()
+        current_app.logger.info(
+            '[stripe] Deactivated subscription for user_id=%s', user.id
+        )
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error('[stripe] DB commit failed after deletion: %s', exc)
