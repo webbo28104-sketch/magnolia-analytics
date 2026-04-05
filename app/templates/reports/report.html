@@ -321,8 +321,9 @@ body::before {
   /* Layout — @page margin is 0 so give .page internal breathing room instead */
   .page { margin: 0 !important; padding: 12mm 14mm 14mm; max-width: 100%; width: 100%; }
   .hero { break-inside: avoid; }
-  h2, h3 { break-after: avoid; }
+  h2, h3, h4 { break-after: avoid; }
   .sec-divider { break-after: avoid; }
+  .sec-label   { break-after: avoid; }
   .section { break-inside: avoid; margin-bottom: 1.5rem; }
   .sum-grid, .sc-wrap, .sg-cards, .sg-bars,
   .a-card, .sum-card, .split-card { break-inside: avoid; }
@@ -337,11 +338,30 @@ body::before {
   /* Each panel after Overview starts on a new page */
   .tab-panel + .tab-panel { break-before: page; page-break-before: always; }
 
+  /* Coaching always starts on its own page regardless of sibling order */
+  #tab-coaching { break-before: page !important; page-break-before: always !important; }
+
   /* Leading dividers show in print since panels are sequential */
   .tab-panel > .sec-divider:first-child { display: block !important; }
 
   /* Prevent key blocks from splitting mid-page */
   .ai-block, .pri-item, .two-col { break-inside: avoid; }
+
+  /* Tile grids and individual tiles — each tile must stay whole */
+  .rp-tile, .pt-card { break-inside: avoid; }
+  .rp-tiles, .par-type-grid { break-inside: avoid; }
+
+  /* Hole score badge row — all circles must stay on one page */
+  .sb-row { break-inside: avoid; }
+
+  /* Drive distance table and GIR chart wrappers */
+  .drive-tbl { break-inside: avoid; }
+
+  /* Personal best banner */
+  .pb-banner { break-inside: avoid; }
+
+  /* SG bar rows and individual SG cards in the coaching grid */
+  .sg-row, .sg-card { break-inside: avoid; }
 }
 
 /* ---- Share modal ---- */
@@ -2360,57 +2380,69 @@ function smDrawSummaryCard(ctx, d) {
     var canvas = document.createElement('canvas');
     canvas.width = 1080; canvas.height = 1080;
     var ctx = canvas.getContext('2d');
+    if (!ctx) { btn.innerHTML = origHTML; btn.disabled = false; return; }
 
-    document.fonts.ready.then(function() {
-      if (type === 'full') {
-        smDrawCard(ctx, _sd);
-      } else {
-        smDrawSummaryCard(ctx, _sd);
+    var filename = 'magnolia-round-{{ round.id }}.png';
+
+    // Guard so the 500ms timer and fonts.ready don't both fire
+    var fired = false;
+    function generate() {
+      if (fired) return;
+      fired = true;
+
+      if (type === 'full') { smDrawCard(ctx, _sd); } else { smDrawSummaryCard(ctx, _sd); }
+
+      // Synchronous capture via toDataURL — avoids the extra async hop that
+      // canvas.toBlob() introduces. On iOS Safari that second async hop causes
+      // the user-gesture context to expire, producing empty / "no_name" files
+      // when navigator.share() is called from inside the toBlob callback.
+      var dataURL = canvas.toDataURL('image/png');
+      var raw = atob(dataURL.split(',')[1]);
+      var bytes = new Uint8Array(raw.length);
+      for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      var blob = new Blob([bytes], {type: 'image/png'});
+
+      if (!blob.size) { btn.innerHTML = origHTML; btn.disabled = false; return; }
+
+      function doDownload() {
+        var a = document.createElement('a');
+        a.download = filename;
+        a.href = URL.createObjectURL(blob);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+        if (fallbackMsg) {
+          fallbackMsg.textContent = 'Image saved to downloads \u2014 share from there';
+          fallbackMsg.style.display = '';
+        }
+        btn.innerHTML = origHTML;
+        btn.disabled = false;
       }
 
-      canvas.toBlob(function(blob) {
-        if (!blob) {
-          btn.innerHTML = origHTML; btn.disabled = false; return;
-        }
-
-        var filename = 'magnolia-round-{{ round.id }}.png';
-
-        function doDownload() {
-          var a = document.createElement('a');
-          a.download = filename;
-          a.href = URL.createObjectURL(blob);
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(a.href);
-          if (fallbackMsg) {
-            fallbackMsg.textContent = 'Image saved to downloads \u2014 share from there';
-            fallbackMsg.style.display = '';
-          }
-          btn.innerHTML = origHTML;
-          btn.disabled = false;
-        }
-
-        var file = new File([blob], filename, {type: 'image/png'});
-        if (navigator.canShare && navigator.canShare({files: [file]})) {
-          navigator.share({
-            files: [file],
-            title: 'My Round \u2014 Magnolia Analytics',
-            text: _buildShareText(_sd)
-          }).then(function() {
+      var file = new File([blob], filename, {type: 'image/png'});
+      if (navigator.canShare && navigator.canShare({files: [file]})) {
+        navigator.share({
+          files: [file],
+          title: 'My Round \u2014 Magnolia Analytics',
+          text: _buildShareText(_sd)
+        }).then(function() {
+          btn.innerHTML = origHTML; btn.disabled = false;
+        }).catch(function(err) {
+          if (err && err.name !== 'AbortError') {
+            doDownload();
+          } else {
             btn.innerHTML = origHTML; btn.disabled = false;
-          }).catch(function(err) {
-            if (err && err.name !== 'AbortError') {
-              doDownload();
-            } else {
-              btn.innerHTML = origHTML; btn.disabled = false;
-            }
-          });
-        } else {
-          doDownload();
-        }
-      }, 'image/png');
-    });
+          }
+        });
+      } else {
+        doDownload();
+      }
+    }
+
+    // Wait for fonts, fall back after 500 ms in case fonts.ready is delayed
+    document.fonts.ready.then(generate);
+    setTimeout(generate, 500);
   };
 
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeShareModal(); });
