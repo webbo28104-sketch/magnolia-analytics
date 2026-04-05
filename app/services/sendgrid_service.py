@@ -284,7 +284,30 @@ def send_password_changed(user) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# 8. Admin waitlist notification
+# 8. Subscription welcome (post-Stripe checkout)
+# ---------------------------------------------------------------------------
+
+def send_subscription_welcome(user, plan_name: str, plan_price: str, is_founding: bool) -> bool:
+    """
+    Send a subscription confirmation and getting-started email immediately
+    after a successful Stripe Checkout.  Distinct from the registration
+    welcome — this one confirms the specific plan and price.
+    """
+    dashboard_url = url_for('dashboard.index', _external=True)
+    html = render_template(
+        'email/subscription_welcome.html',
+        first_name    = user.first_name,
+        plan_name     = plan_name,
+        plan_price    = plan_price,
+        is_founding   = is_founding,
+        dashboard_url = dashboard_url,
+    )
+    subject = f'Welcome to Magnolia Analytics \u2726 {plan_name} confirmed'
+    return _send_email(user.email, subject, html)
+
+
+# ---------------------------------------------------------------------------
+# 9. Admin waitlist notification
 # ---------------------------------------------------------------------------
 
 def send_admin_waitlist_notification(entry, position: int, real_count: int) -> bool:

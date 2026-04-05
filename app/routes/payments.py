@@ -72,6 +72,22 @@ def _price_to_locked_amount(price_id):
     return None
 
 
+def _price_to_plan_display(price_id):
+    """
+    Return (plan_name, plan_price) strings for the subscription welcome email.
+    Falls back to generic strings if the price ID isn't in config.
+    """
+    cfg = current_app.config
+    mapping = {
+        cfg.get('STRIPE_PRICE_FOUNDING_MONTHLY', ''): ('Founding Member Monthly', '£9.99/month'),
+        cfg.get('STRIPE_PRICE_FOUNDING_ANNUAL',  ''): ('Founding Member Annual',  '£89/year'),
+        cfg.get('STRIPE_PRICE_STANDARD_MONTHLY', ''): ('Standard Monthly',         '£12.99/month'),
+        cfg.get('STRIPE_PRICE_STANDARD_ANNUAL',  ''): ('Standard Annual',           '£109/year'),
+    }
+    mapping.pop('', None)  # remove any unconfigured entries keyed on ''
+    return mapping.get(price_id, ('Magnolia Analytics', ''))
+
+
 # ---------------------------------------------------------------------------
 # Checkout
 # ---------------------------------------------------------------------------
@@ -150,17 +166,30 @@ def _handle_checkout_completed(session_obj):
 
     Reads the price_id from the session metadata (set when creating the
     Checkout Session) to determine tier without a second API call.
+
+    Duplicate-delivery guard: Stripe can re-deliver the same webhook event.
+    We detect this by checking whether the subscription ID is already stored
+    and active on the user — if so, we skip both the DB write and the email.
     """
     from app.models.user import User
 
-    customer_id      = session_obj.get('customer')
-    subscription_id  = session_obj.get('subscription')
-    price_id         = (session_obj.get('metadata') or {}).get('price_id', '')
+    customer_id     = session_obj.get('customer')
+    subscription_id = session_obj.get('subscription')
+    price_id        = (session_obj.get('metadata') or {}).get('price_id', '')
 
     user = User.query.filter_by(stripe_customer_id=customer_id).first()
     if not user:
         current_app.logger.warning(
             '[stripe] checkout.session.completed: no user for customer %s', customer_id
+        )
+        return
+
+    # Idempotency: if this subscription is already active on the user, a
+    # duplicate webhook arrived — acknowledge it but do nothing.
+    if user.stripe_subscription_id == subscription_id and user.subscription_active:
+        current_app.logger.info(
+            '[stripe] Duplicate checkout.session.completed ignored for sub %s (user_id=%s)',
+            subscription_id, user.id,
         )
         return
 
@@ -187,6 +216,23 @@ def _handle_checkout_completed(session_obj):
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error('[stripe] DB commit failed after checkout: %s', exc)
+        return
+
+    # Confirmation email — fires once, after a successful commit
+    try:
+        from app.services.sendgrid_service import send_subscription_welcome
+        plan_name, plan_price = _price_to_plan_display(price_id)
+        send_subscription_welcome(
+            user        = user,
+            plan_name   = plan_name,
+            plan_price  = plan_price,
+            is_founding = (tier == 'founding_member'),
+        )
+    except Exception as exc:
+        # Email failure must never roll back a successful subscription activation
+        current_app.logger.error(
+            '[stripe] Subscription welcome email failed for user_id=%s: %s', user.id, exc
+        )
 
 
 def _handle_subscription_deleted(subscription_obj):
