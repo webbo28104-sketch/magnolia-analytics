@@ -54,7 +54,7 @@ def _hole_score_class(diff: int) -> str:
     return 'double'   # double or worse
 
 
-def _drive_dist_src(h) -> str | None:
+def _drive_dist_src(h):
     """Return which field was used for drive distance estimation, for logging."""
     if h.par not in (4, 5):
         return None
@@ -65,7 +65,7 @@ def _drive_dist_src(h) -> str | None:
     return None
 
 
-def _est_drive_distance(ch, h) -> int | None:
+def _est_drive_distance(ch, h):
     """
     Estimate tee-shot distance as hole_yardage minus the distance from which
     the second shot was played.
