@@ -366,6 +366,8 @@
   box-shadow: 0 24px 64px rgba(13,34,24,0.35), 0 4px 16px rgba(0,0,0,0.25), 0 0 0 1px rgba(201,168,76,0.1);
   transform: perspective(1200px) rotateY(-4deg) rotateX(2deg);
   transition: transform 0.4s ease;
+  pointer-events: none;
+  user-select: none;
 }
 .lp-report-mockup-inner:hover {
   transform: perspective(1200px) rotateY(-1deg) rotateX(1deg);
@@ -906,234 +908,125 @@
       {% endif %}
     </div>
 
-    <!-- Mockup side -->
+    <!-- Mockup side — uses exact same class names as the real report so styling is inherited automatically -->
     <div class="lp-report-mockup">
       <div class="lp-report-mockup-inner">
+        <div class="rpt-page">
 
-        <!-- Masthead -->
-        <div class="mock-masthead">
-          <span class="mock-brand-line">Magnolia Analytics</span>
-          <span class="mock-brand-line" style="opacity:0.4;">Round Report</span>
-        </div>
-
-        <!-- Hero: course + large score -->
-        <div class="mock-hero">
-          <div class="mock-hero-left">
-            <div class="mock-hero-eyebrow">Round summary</div>
-            <div class="mock-hero-course">
-              Wentworth Club<em>West Course</em>
-            </div>
-            <div class="mock-hero-meta">15 March 2025 &nbsp;·&nbsp; 18 holes &nbsp;·&nbsp; Par 72</div>
+          <!-- Masthead -->
+          <div class="masthead">
+            <span class="brand-line">Magnolia Analytics · Round Report</span>
+            <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(245,240,232,0.25);">Overview</span>
           </div>
-          <div class="mock-hero-right">
-            <div class="mock-gross">78</div>
-            <div class="mock-vspar">+6</div>
-            <div class="mock-gross-label">Gross score</div>
-          </div>
-        </div>
 
-        <!-- Tabs -->
-        <div class="mock-tabs" role="tablist">
-          <button class="mock-tab mock-tab--active" role="tab" data-tab="overview">Overview</button>
-          <button class="mock-tab" role="tab" data-tab="ott">Off the Tee</button>
-          <button class="mock-tab" role="tab" data-tab="approach">Approach</button>
-          <button class="mock-tab" role="tab" data-tab="atg">Around Green</button>
-          <button class="mock-tab" role="tab" data-tab="putting">Putting</button>
-        </div>
-
-        <!-- Overview panel -->
-        <div class="mock-panel mock-panel--active" data-panel="overview">
-          <!-- Stat cards -->
-          <div class="mock-sum-grid">
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Fairways Hit</div>
-              <div class="mock-sum-val">9/14</div>
-              <div class="mock-sum-sub">64%</div>
-            </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Greens in Reg</div>
-              <div class="mock-sum-val">11/18</div>
-              <div class="mock-sum-sub">61%</div>
-            </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Total Putts</div>
-              <div class="mock-sum-val">31</div>
-              <div class="mock-sum-sub">1.72 per hole</div>
-            </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Penalties</div>
-              <div class="mock-sum-val">2</div>
-              <div class="mock-sum-sub">strokes lost</div>
-            </div>
-          </div>
-          <!-- SG bars (centre-point dual-bar) -->
-          <div class="mock-sg-bars">
-            <div class="mock-sg-heading">Strokes Gained vs Scratch</div>
-            <div class="mock-sg-br">
-              <div class="mock-sg-bc">Off the Tee</div>
-              <div class="mock-sg-bt">
-                <div class="mock-sg-bz"></div>
-                <div class="mock-sg-bf p" style="width:27%;"></div>
+          <!-- Hero -->
+          <div class="hero">
+            <div>
+              <div class="hero-eyebrow">Round Report · 15 March 2025</div>
+              <div class="hero-title">
+                Round at<br>
+                <em>Wentworth — West Course</em>
               </div>
-              <div class="mock-sg-bn p">+0.8</div>
-            </div>
-            <div class="mock-sg-br">
-              <div class="mock-sg-bc">Approach</div>
-              <div class="mock-sg-bt">
-                <div class="mock-sg-bz"></div>
-                <div class="mock-sg-bf n" style="width:42%;"></div>
+              <div class="hero-meta">
+                <div><div class="hm-val">15 Mar 2025</div><div class="hm-label">Date Played</div></div>
+                <div><div class="hm-val">Par 72</div><div class="hm-label">Course Par</div></div>
+                <div><div class="hm-val">18 Holes</div><div class="hm-label">Format</div></div>
               </div>
-              <div class="mock-sg-bn n">−2.1</div>
             </div>
-            <div class="mock-sg-br">
-              <div class="mock-sg-bc">Around Green</div>
-              <div class="mock-sg-bt">
-                <div class="mock-sg-bz"></div>
-                <div class="mock-sg-bf n" style="width:22%;"></div>
+            <div class="hero-right">
+              <div class="hero-gross">78</div>
+              <div class="hero-gross-label">Gross Score</div>
+              <div class="hero-vspar">+6 to par</div>
+            </div>
+          </div>
+
+          <!-- Tab nav (static — no JS, Overview always visible) -->
+          <nav class="tab-nav" role="tablist">
+            <button class="tab-btn active">Overview</button>
+            <button class="tab-btn">Off the Tee</button>
+            <button class="tab-btn">Approach</button>
+            <button class="tab-btn">Around the Green</button>
+            <button class="tab-btn">Putting</button>
+            <button class="tab-btn">Coaching</button>
+          </nav>
+
+          <!-- Overview panel -->
+          <div class="tab-panel active">
+
+            <div class="sec-label">Round Summary</div>
+            <div class="sum-grid">
+              <div class="sum-card">
+                <div class="sum-card-lbl">Fairways Hit</div>
+                <div class="sum-card-val c-grn">9/14</div>
+                <div class="sum-card-sub">64% of available</div>
               </div>
-              <div class="mock-sg-bn n">−0.9</div>
-            </div>
-            <div class="mock-sg-br">
-              <div class="mock-sg-bc">Putting</div>
-              <div class="mock-sg-bt">
-                <div class="mock-sg-bz"></div>
-                <div class="mock-sg-bf n" style="width:34%;"></div>
+              <div class="sum-card">
+                <div class="sum-card-lbl">Greens in Reg</div>
+                <div class="sum-card-val c-grn">11/18</div>
+                <div class="sum-card-sub">61%</div>
               </div>
-              <div class="mock-sg-bn n">−1.4</div>
+              <div class="sum-card">
+                <div class="sum-card-lbl">Total Putts</div>
+                <div class="sum-card-val">31</div>
+                <div class="sum-card-sub">1.72 avg · 2 three-putts</div>
+              </div>
+              <div class="sum-card">
+                <div class="sum-card-lbl">Penalties</div>
+                <div class="sum-card-val c-red">2</div>
+                <div class="sum-card-sub">strokes lost</div>
+              </div>
             </div>
-          </div>
-          <!-- Coaching block -->
-          <div class="mock-ai-block">
-            <div class="mock-ai-eyebrow">Coaching Analysis</div>
-            <div class="mock-ai-body">Your driving is the standout strength (+0.8 SG). Approach play is the clear priority — −2.1 SG is by far the biggest leak. One more club from 130–160 yards would convert those bogeys into pars.</div>
-          </div>
-        </div>
 
-        <!-- Off the Tee panel -->
-        <div class="mock-panel" data-panel="ott">
-          <div class="mock-sg-hero">
-            <div class="mock-sg-hero-value mock-sg-hero-value--pos">+0.8</div>
-            <div class="mock-sg-hero-label">SG: Off the Tee</div>
-          </div>
-          <div class="mock-sum-grid">
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Fairways Hit</div>
-              <div class="mock-sum-val">9/14</div>
+            <div class="sec-label">Strokes Gained vs Scratch</div>
+            <div class="sg-bars">
+              <div class="sg-br">
+                <div class="sg-bc">Off the Tee</div>
+                <div class="sg-bt">
+                  <div class="sg-bz"></div>
+                  <div class="sg-bf p" style="width:13%;"></div>
+                </div>
+                <div class="sg-bn p">+0.8</div>
+              </div>
+              <div class="sg-br">
+                <div class="sg-bc">Approach</div>
+                <div class="sg-bt">
+                  <div class="sg-bz"></div>
+                  <div class="sg-bf n" style="width:35%;"></div>
+                </div>
+                <div class="sg-bn n">−2.1</div>
+              </div>
+              <div class="sg-br">
+                <div class="sg-bc">Around Green</div>
+                <div class="sg-bt">
+                  <div class="sg-bz"></div>
+                  <div class="sg-bf n" style="width:15%;"></div>
+                </div>
+                <div class="sg-bn n">−0.9</div>
+              </div>
+              <div class="sg-br">
+                <div class="sg-bc">Putting</div>
+                <div class="sg-bt">
+                  <div class="sg-bz"></div>
+                  <div class="sg-bf n" style="width:23%;"></div>
+                </div>
+                <div class="sg-bn n">−1.4</div>
+              </div>
             </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Fairway Rate</div>
-              <div class="mock-sum-val">64%</div>
-            </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Miss Left</div>
-              <div class="mock-sum-val">3</div>
-            </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Miss Right</div>
-              <div class="mock-sum-val">2</div>
-            </div>
-          </div>
-          <div class="mock-ai-block">
-            <div class="mock-ai-eyebrow">Coaching Analysis</div>
-            <div class="mock-ai-body">Off the tee is your strongest category. 64% fairways is solid. Three missed fairways went left — a consistent pattern worth tracking across future rounds.</div>
-          </div>
-        </div>
 
-        <!-- Approach panel -->
-        <div class="mock-panel" data-panel="approach">
-          <div class="mock-sg-hero">
-            <div class="mock-sg-hero-value mock-sg-hero-value--neg">−2.1</div>
-            <div class="mock-sg-hero-label">SG: Approach</div>
-          </div>
-          <div class="mock-sum-grid">
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">GIR</div>
-              <div class="mock-sum-val">11/18</div>
+            <div class="sec-label">Coaching Analysis</div>
+            <div class="ai-block">
+              <div class="ai-eyebrow">Key Takeaway</div>
+              <div class="ai-body">
+                <p>Your driving is the standout strength (+0.8 SG). Approach play is the clear priority — −2.1 SG is by far the biggest leak this round.</p>
+                <p>One more club from 130–160 yards would convert those bogeys into pars and is the single highest-leverage practice target available to you right now.</p>
+              </div>
             </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">GIR Rate</div>
-              <div class="mock-sum-val">61%</div>
-            </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Avg Distance</div>
-              <div class="mock-sum-val">145</div>
-              <div class="mock-sum-sub">yards</div>
-            </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Short of Green</div>
-              <div class="mock-sum-val">5</div>
-            </div>
-          </div>
-          <div class="mock-ai-block">
-            <div class="mock-ai-eyebrow">Coaching Analysis</div>
-            <div class="mock-ai-body">−2.1 SG is the biggest leak this round. Five approach shots came up short. Taking one more club from 130–160 yards is the single biggest improvement available to you right now.</div>
-          </div>
-        </div>
 
-        <!-- Around the Green panel -->
-        <div class="mock-panel" data-panel="atg">
-          <div class="mock-sg-hero">
-            <div class="mock-sg-hero-value mock-sg-hero-value--neg">−0.9</div>
-            <div class="mock-sg-hero-label">SG: Around the Green</div>
-          </div>
-          <div class="mock-sum-grid">
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Scrambles</div>
-              <div class="mock-sum-val">4/7</div>
-            </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Scramble %</div>
-              <div class="mock-sum-val">57%</div>
-            </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Sand Saves</div>
-              <div class="mock-sum-val">1/2</div>
-            </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Avg to Pin</div>
-              <div class="mock-sum-val">18</div>
-              <div class="mock-sum-sub">feet</div>
-            </div>
-          </div>
-          <div class="mock-ai-block">
-            <div class="mock-ai-eyebrow">Coaching Analysis</div>
-            <div class="mock-ai-body">57% scrambling is below the scratch benchmark. Chips are finishing too far from the hole. Focus on landing spot selection to get the ball running rather than carrying it to the cup.</div>
-          </div>
-        </div>
+          </div><!-- /tab-panel -->
 
-        <!-- Putting panel -->
-        <div class="mock-panel" data-panel="putting">
-          <div class="mock-sg-hero">
-            <div class="mock-sg-hero-value mock-sg-hero-value--neg">−1.4</div>
-            <div class="mock-sg-hero-label">SG: Putting</div>
-          </div>
-          <div class="mock-sum-grid">
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Total Putts</div>
-              <div class="mock-sum-val">31</div>
-            </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">3-Putts</div>
-              <div class="mock-sum-val">2</div>
-            </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">Avg 1st Putt</div>
-              <div class="mock-sum-val">22</div>
-              <div class="mock-sum-sub">feet</div>
-            </div>
-            <div class="mock-sum-card">
-              <div class="mock-sum-lbl">1-Putts</div>
-              <div class="mock-sum-val">1</div>
-            </div>
-          </div>
-          <div class="mock-ai-block">
-            <div class="mock-ai-eyebrow">Coaching Analysis</div>
-            <div class="mock-ai-body">Mid-range putts (5–15 ft) are the biggest leak. Approach putts are consistently left short, creating difficult second putts. Speed control from 10–20 feet should be the priority.</div>
-          </div>
-        </div>
-
-      </div>
-    </div>
+        </div><!-- /rpt-page -->
+      </div><!-- /lp-report-mockup-inner -->
+    </div><!-- /lp-report-mockup -->
 
   </div>
 </section>
@@ -1315,20 +1208,6 @@
 <script>
 (function () {
   'use strict';
-
-  /* ── Report mockup tab switching ─────────────────────────── */
-  var tabs   = document.querySelectorAll('.mock-tab');
-  var panels = document.querySelectorAll('.mock-panel');
-  tabs.forEach(function (tab) {
-    tab.addEventListener('click', function () {
-      var target = tab.getAttribute('data-tab');
-      tabs.forEach(function (t) { t.classList.remove('mock-tab--active'); });
-      panels.forEach(function (p) { p.classList.remove('mock-panel--active'); });
-      tab.classList.add('mock-tab--active');
-      var panel = document.querySelector('.mock-panel[data-panel="' + target + '"]');
-      if (panel) panel.classList.add('mock-panel--active');
-    });
-  });
 
   /* ── Smooth scroll for anchor CTAs ──────────────────────── */
   document.querySelectorAll('a[href^="#"]').forEach(function (a) {
