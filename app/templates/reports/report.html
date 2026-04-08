@@ -1615,7 +1615,7 @@ body::before {
     </span>
   </div>
   {% macro hcplabel(sg, ok=True) -%}
-    {%- if ok -%}
+    {%- if ok and sg is not none -%}
       {%- if sg > 0 -%}
         <div class="sg-hcp">Tour level</div>
       {%- else -%}
@@ -1673,10 +1673,10 @@ body::before {
   </div>
   <div class="sg-bars fu d7">
     {% set sg_rows = [] %}
-    {% if sg_ott_ok  %}{% set sg_rows = sg_rows + [('Off Tee',      sg_data.sg_off_tee)] %}{% endif %}
-    {% if sg_app_ok  %}{% set sg_rows = sg_rows + [('Approach',     sg_data.sg_approach)] %}{% endif %}
-    {% if sg_atg_ok  %}{% set sg_rows = sg_rows + [('Around Green', sg_data.sg_atg)] %}{% endif %}
-    {% if sg_putt_ok %}{% set sg_rows = sg_rows + [('Putting',      sg_data.sg_putting.total)] %}{% endif %}
+    {% if sg_ott_ok  and sg_data.sg_off_tee is not none  %}{% set sg_rows = sg_rows + [('Off Tee',      sg_data.sg_off_tee)] %}{% endif %}
+    {% if sg_app_ok  and sg_data.sg_approach is not none  %}{% set sg_rows = sg_rows + [('Approach',     sg_data.sg_approach)] %}{% endif %}
+    {% if sg_atg_ok  and sg_data.sg_atg is not none  %}{% set sg_rows = sg_rows + [('Around Green', sg_data.sg_atg)] %}{% endif %}
+    {% if sg_putt_ok and sg_data.sg_putting.total is not none %}{% set sg_rows = sg_rows + [('Putting',      sg_data.sg_putting.total)] %}{% endif %}
     {% for label, val in sg_rows %}
     {% set w = [[((val | abs) / 8 * 50) | round | int, 0] | max, 50] | min %}
     {% set cls = 'p' if val >= 0 else 'n' %}
