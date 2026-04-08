@@ -1216,6 +1216,7 @@ body::before {
         {% for h in holes_data if h.gir and h.first_putt_distance %}{d:{{ h.first_putt_distance }}, p:{{ h.putts if h.putts else 2 }}},{% endfor %}
       ];
       </script>
+      {% if approach_bds %}
       <div style="display:flex;align-items:flex-start;gap:12px;">
         <div style="flex:1;min-width:0;">
           <canvas id="app-chart" style="width:100%;height:300px;display:block"></canvas>
@@ -1239,6 +1240,7 @@ body::before {
             <span style="font-size:10px;line-height:1.45;color:rgba(245,240,232,0.42);">Dist rings<br><span style="font-size:8.5px;opacity:.8;">5ft intervals</span></span>
           </div>
         </div>
+      </div>
       {% else %}
         <div style="color:var(--cream-faint); font-size:10px;">No approach distance data recorded for this round.</div>
       {% endif %}
