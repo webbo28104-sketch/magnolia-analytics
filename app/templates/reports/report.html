@@ -1619,7 +1619,7 @@ body::before {
       {%- if sg > 0 -%}
         <div class="sg-hcp">Tour level</div>
       {%- else -%}
-        {%- set hcp = ((sg + 1) * -6 + 6) | round | int -%}
+        {%- set hcp = ((sg + 1) * -4 + 4) | round | int -%}
         {%- if hcp < 0 -%}
           <div class="sg-hcp c-grn">Plays to +{{ hcp | abs }}</div>
         {%- else -%}
