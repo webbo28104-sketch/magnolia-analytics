@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, send_from_directory, current_app
+from flask_login import current_user
 
 main_bp = Blueprint('main', __name__)
 
@@ -8,15 +9,33 @@ def index():
 
 @main_bp.route('/pricing')
 def pricing():
-    return render_template('pricing.html')
+    is_founding = (
+        current_user.is_authenticated and
+        getattr(current_user, 'is_founding_member', False)
+    )
+    return render_template('pricing.html', is_founding_member=is_founding)
+
 
 @main_bp.route('/glossary')
 def glossary():
     return render_template('glossary.html')
 
+
 @main_bp.route('/upgrade')
 def upgrade():
-    return render_template('upgrade.html')
+    is_founding = (
+        current_user.is_authenticated and
+        getattr(current_user, 'is_founding_member', False)
+    )
+    pid_fm = current_app.config.get('STRIPE_PRICE_FOUNDING_MONTHLY', '')
+    pid_sm = current_app.config.get('STRIPE_PRICE_STANDARD_MONTHLY', '')
+    return render_template(
+        'upgrade.html',
+        is_founding_member=is_founding,
+        pid_fm=pid_fm,
+        pid_sm=pid_sm,
+    )
+
 
 @main_bp.route('/sw.js')
 def service_worker():

@@ -111,6 +111,16 @@ def checkout(price_id):
     if price_id not in known_prices:
         abort(404)
 
+    # Founding prices are only accessible to founding members.
+    # Blocks URL manipulation by non-founding users.
+    founding_ids = {
+        cfg.get('STRIPE_PRICE_FOUNDING_MONTHLY', ''),
+        cfg.get('STRIPE_PRICE_FOUNDING_ANNUAL', ''),
+    }
+    founding_ids.discard('')
+    if price_id in founding_ids and not current_user.is_founding_member:
+        abort(403)
+
     customer_id = _get_or_create_customer(current_user)
 
     s = _stripe()

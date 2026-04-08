@@ -4,14 +4,10 @@
 {% block content %}
 
 {#
-  show_founding — true when BETA_MODE is on AND the visitor has a validated
-  invite session or is already a founding member.
+  show_founding — true for authenticated founding members only.
+  is_founding_member is passed explicitly from the pricing route.
 #}
-{% set show_founding = config.get('BETA_MODE') and (
-    session.get('access_granted') or
-    session.get('access_code') or
-    (current_user.is_authenticated and current_user.is_founding_member)
-) %}
+{% set show_founding = is_founding_member %}
 
 {# The price ID the user is currently subscribed to (empty string if none). #}
 {% set active_price = current_user.stripe_price_id if current_user.is_authenticated else '' %}
@@ -141,7 +137,7 @@
     <div class="plan-grid{% if not show_founding %} plan-grid--centered{% endif %}">
 
       <!-- Standard Monthly -->
-      <div class="plan-card{% if active_price == pid_sm and pid_sm %} plan-card--active{% endif %}">
+      <div class="plan-card{% if active_price == pid_sm and pid_sm %} plan-card--active{% endif %}{% if is_founding_member %} plan-card--unavailable{% endif %}">
         <div class="plan-tier">Standard · Monthly</div>
         <div class="plan-price">£12.99<span>/mo</span></div>
         <p class="plan-everything-in">Everything in Free, plus:</p>
@@ -153,7 +149,9 @@
           <li>Distance gap analysis by yardage band</li>
           <li>PDF export and round sharing</li>
         </ul>
-        {% if current_user.is_authenticated %}
+        {% if is_founding_member %}
+          <button class="btn btn--current btn--full" disabled style="font-size:12px">Not available — you have the founding rate</button>
+        {% elif current_user.is_authenticated %}
           {% if active_price and active_price == pid_sm %}
             <button class="btn btn--current btn--full" disabled>Current plan</button>
           {% elif pid_sm %}
@@ -168,7 +166,7 @@
       </div>
 
       <!-- Standard Annual -->
-      <div class="plan-card plan-card--featured{% if active_price == pid_sa and pid_sa %} plan-card--active{% endif %}">
+      <div class="plan-card plan-card--featured{% if active_price == pid_sa and pid_sa %} plan-card--active{% endif %}{% if is_founding_member %} plan-card--unavailable{% endif %}">
         <div class="plan-badge">Best value</div>
         <div class="plan-tier">Standard · Annual</div>
         <div class="plan-price">£109<span>/yr</span></div>
@@ -182,7 +180,9 @@
           <li>Distance gap analysis by yardage band</li>
           <li>PDF export and round sharing</li>
         </ul>
-        {% if current_user.is_authenticated %}
+        {% if is_founding_member %}
+          <button class="btn btn--current btn--full" disabled style="font-size:12px">Not available — you have the founding rate</button>
+        {% elif current_user.is_authenticated %}
           {% if active_price and active_price == pid_sa %}
             <button class="btn btn--current btn--full" disabled>Current plan</button>
           {% elif pid_sa %}
@@ -395,6 +395,14 @@
     color: var(--text-muted);
     font-weight: 400;
   }
+
+  /* Unavailable plan — shown greyed to founding members for standard plans */
+  .plan-card--unavailable {
+    opacity: 0.5;
+    filter: grayscale(0.4);
+    pointer-events: none;
+  }
+  .plan-card--unavailable .plan-badge { background: #aaa; }
 
   /* "Current plan" button state */
   .btn--current {

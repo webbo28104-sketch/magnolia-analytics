@@ -10,12 +10,27 @@
       <p class="auth-subtitle">Full coaching reports, strokes gained analysis, and complete round history.</p>
     </div>
 
+    {% if is_founding_member %}
+    {# ── Founding member — show their locked rate ── #}
+    <div style="background:rgba(201,168,76,0.09);border:1px solid rgba(201,168,76,0.4);border-radius:8px;padding:24px;margin-bottom:8px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#a07800;margin-bottom:8px">Founding Member Rate</div>
+      <div style="font-size:2.2rem;font-weight:700;letter-spacing:-0.03em;color:var(--text)">
+        £9.99<span style="font-size:1rem;font-weight:500;color:var(--text-muted)">/month</span>
+      </div>
+      <div style="font-size:13px;color:#a07800;margin-top:4px;font-weight:500">Your rate — locked for life · Cancel any time</div>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin:0 0 20px;text-align:center">
+      As a founding member you joined during the beta and this price is guaranteed to never increase for you.
+    </p>
+    {% else %}
+    {# ── Standard rate ── #}
     <div style="background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.3);border-radius:8px;padding:24px;margin-bottom:24px">
       <div style="font-size:2.2rem;font-weight:700;letter-spacing:-0.03em;color:var(--text)">
         £12.99<span style="font-size:1rem;font-weight:500;color:var(--text-muted)">/month</span>
       </div>
       <div style="font-size:13px;color:var(--text-muted);margin-top:2px">Cancel any time</div>
     </div>
+    {% endif %}
 
     <ul style="list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:28px">
       {% for feature in [
@@ -32,12 +47,28 @@
       {% endfor %}
     </ul>
 
-    <a href="{{ url_for('main.pricing') }}"
-       style="display:block;width:100%;padding:14px;text-align:center;font-size:15px;font-weight:700;
-              font-family:inherit;border-radius:6px;background:var(--green-700,#2d6a4f);
-              color:#fff;text-decoration:none;box-sizing:border-box">
-      See plans &amp; pricing →
-    </a>
+    {% if is_founding_member and pid_fm %}
+      <a href="{{ url_for('payments.checkout', price_id=pid_fm) }}"
+         style="display:block;width:100%;padding:14px;text-align:center;font-size:15px;font-weight:700;
+                font-family:inherit;border-radius:6px;background:#a07800;
+                color:#fff;text-decoration:none;box-sizing:border-box">
+        Subscribe — £9.99/month →
+      </a>
+    {% elif not is_founding_member and pid_sm %}
+      <a href="{{ url_for('payments.checkout', price_id=pid_sm) }}"
+         style="display:block;width:100%;padding:14px;text-align:center;font-size:15px;font-weight:700;
+                font-family:inherit;border-radius:6px;background:var(--green-700,#2d6a4f);
+                color:#fff;text-decoration:none;box-sizing:border-box">
+        Subscribe — £12.99/month →
+      </a>
+    {% else %}
+      <a href="{{ url_for('main.pricing') }}"
+         style="display:block;width:100%;padding:14px;text-align:center;font-size:15px;font-weight:700;
+                font-family:inherit;border-radius:6px;background:var(--green-700,#2d6a4f);
+                color:#fff;text-decoration:none;box-sizing:border-box">
+        See plans &amp; pricing →
+      </a>
+    {% endif %}
 
     {% if current_user.is_authenticated %}
     <p class="auth-footer" style="margin-top:20px">
