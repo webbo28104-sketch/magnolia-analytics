@@ -203,23 +203,34 @@ def users():
     from app.models.round import Round
     from sqlalchemy import func
 
-    page       = request.args.get('page', 1, type=int)
+    q             = request.args.get('q', '').strip()
+    page          = request.args.get('page', 1, type=int)
     tier_filter   = request.args.get('tier', 'all')
     status_filter = request.args.get('status', 'all')
-    per_page   = 25
+    per_page      = 25
 
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
 
     # Base query
     query = User.query
+    if q:
+        query = query.filter(
+            db.or_(
+                User.email.ilike(f'%{q}%'),
+                User.first_name.ilike(f'%{q}%'),
+                User.last_name.ilike(f'%{q}%'),
+            )
+        )
 
     # Tier filter
     if tier_filter == 'founding':
         query = query.filter(User.subscription_tier == 'founding_member')
     elif tier_filter == 'standard':
         query = query.filter(User.subscription_tier.in_(['premium', 'standard']))
+    elif tier_filter == 'pro':
+        query = query.filter_by(subscription_active=True)
     elif tier_filter == 'free':
-        query = query.filter(User.subscription_tier == 'free')
+        query = query.filter_by(subscription_active=False)
 
     # Status filter: active = at least one round in last 30 days
     if status_filter == 'active':
@@ -256,19 +267,20 @@ def users():
             round_stats[row.user_id] = {'count': row.cnt, 'last_date': row.last_date}
 
     # Summary stats (always across all users, not filtered)
-    total_users   = User.query.count()
-    active_subs   = User.query.filter_by(subscription_active=True).count()
+    total_users    = User.query.count()
+    active_subs    = User.query.filter_by(subscription_active=True).count()
     founding_count = User.query.filter_by(is_founding_member=True).count()
 
     return render_template(
         'admin/users.html',
-        active_tab    = 'users',
-        pagination    = pagination,
-        round_stats   = round_stats,
-        tier_filter   = tier_filter,
-        status_filter = status_filter,
-        total_users   = total_users,
-        active_subs   = active_subs,
+        active_tab     = 'users',
+        pagination     = pagination,
+        round_stats    = round_stats,
+        q              = q,
+        tier_filter    = tier_filter,
+        status_filter  = status_filter,
+        total_users    = total_users,
+        active_subs    = active_subs,
         founding_count = founding_count,
     )
 
@@ -330,6 +342,34 @@ def revoke_founding(user_id):
             current_app.logger.error('[admin] revoke_founding failed for user_id=%s: %s', user_id, exc)
             flash('Failed to update — check logs.', 'error')
     return redirect(url_for('admin.user_detail', user_id=user_id))
+
+
+@admin_bp.route('/users/<int:user_id>/set-tier', methods=['POST'])
+@staff_required
+def set_user_tier(user_id):
+    """Manually override a user's subscription tier and active status."""
+    from app.models.user import User
+
+    user = User.query.get_or_404(user_id)
+
+    new_active = request.form.get('subscription_active') == '1'
+    new_tier   = request.form.get('subscription_tier', 'standard')
+    if new_tier not in ('standard', 'premium', 'founding', 'founding_member'):
+        new_tier = 'standard'
+
+    user.subscription_active = new_active
+    user.subscription_tier   = new_tier
+
+    try:
+        db.session.commit()
+        status = 'Pro' if new_active else 'Free'
+        flash(f'{user.full_name} updated — {status} ({new_tier}).', 'success')
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error('[admin.set_user_tier] Failed for user %s: %s', user_id, exc)
+        flash('Failed to update user — check logs.', 'error')
+
+    return redirect(url_for('admin.users', q=request.args.get('q', ''), tier=request.args.get('tier', 'all')))
 
 
 @admin_bp.route('/rounds')

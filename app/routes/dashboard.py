@@ -35,6 +35,8 @@ def index():
     # TODO: when founding/standard tiers are introduced, update is_pro() in
     # app/utils/access.py — do not add inline tier checks here.
     user_is_pro = is_pro(current_user)
+    # Free users get their full round history; paid feature is the performance
+    # trends/stats dashboard (last 20 rounds), not the history list itself.
     recent_rounds = all_complete
     stats  = _compute_stats(all_complete[:20]) if all_complete else None
     glance = _compute_glance(all_complete) if all_complete else None

@@ -625,26 +625,42 @@
       </div>
     </div>
 
-    <!-- 3. Second shot distance (par 5 only) ─────────────────────────── -->
+    <!-- 3. Approach distance (always visible) ────────────────────────── -->
+    <div class="he-field">
+      <label class="he-label">Approach distance to hole (yds) <span class="he-label-hint">how far you were from the hole before this shot</span></label>
+      <div class="he-pills he-pills--wrap" id="approach-dist-pills">
+        {% for val, label in [(75,'50–100'), (112,'100–125'), (137,'125–150'), (162,'150–175'), (187,'175–200'), (212,'200–225'), (237,'225–250'), (999,'250+')] %}
+        <button type="button"
+                class="he-pill{% if existing and existing.approach_distance == val %} is-active{% endif %}"
+                data-field="approach_dist_bucket" data-value="{{ val }}"
+                data-target="approach-distance-input">{{ label }}</button>
+        {% endfor %}
+      </div>
+      <input type="number" id="approach-dist-exact" class="he-exact"
+             placeholder="or exact yds…" min="1" max="600"
+             value="{{ existing.approach_distance if existing and existing.approach_distance else '' }}">
+      <input type="hidden" name="approach_distance" id="approach-distance-input"
+             value="{{ existing.approach_distance or '' }}">
+    </div>
+
+    <!-- 4. Second shot distance (par 5 only) ─────────────────────────── -->
     <div class="he-field he-reveal{% if init_par == 5 %} is-visible{% endif %}" id="second-shot-reveal">
       <div class="he-reveal-inner">
-        <label class="he-label">2nd shot distance (yds)</label>
+        <label class="he-label">2nd shot distance to hole (yds) <span class="he-label-hint">how far you were from the hole before this shot, not how far the ball travelled</span></label>
+        <div class="he-pills he-pills--wrap" id="second-shot-pills">
+          {% for val, label in [(100,'&lt;100'), (125,'100–125'), (150,'125–150'), (175,'150–175'), (200,'175–200'), (225,'200–225'), (250,'225–250'), (999,'250+')] %}
+          <button type="button"
+                  class="he-pill{% if existing and existing.second_shot_distance == val %} is-active{% endif %}"
+                  data-field="second_shot_bucket" data-value="{{ val }}"
+                  data-target="second-shot-distance-input">{{ label }}</button>
+          {% endfor %}
+        </div>
         <input type="number" id="second-shot-exact" class="he-exact"
                placeholder="yds" min="1" max="600" inputmode="numeric" pattern="[0-9]*"
                value="{{ existing.second_shot_distance if existing and existing.second_shot_distance else '' }}">
         <input type="hidden" name="second_shot_distance" id="second-shot-distance-input"
                value="{{ existing.second_shot_distance or '' }}">
       </div>
-    </div>
-
-    <!-- 4. Approach distance (always visible) ────────────────────────── -->
-    <div class="he-field">
-      <label class="he-label">Approach distance (yds)</label>
-      <input type="number" id="approach-dist-exact" class="he-exact"
-             placeholder="yds" min="1" max="600" inputmode="numeric" pattern="[0-9]*"
-             value="{{ existing.approach_distance if existing and existing.approach_distance else '' }}">
-      <input type="hidden" name="approach_distance" id="approach-distance-input"
-             value="{{ existing.approach_distance or '' }}">
     </div>
 
     <!-- 5. GIR? ─────────────────────────────────────────────────────── -->

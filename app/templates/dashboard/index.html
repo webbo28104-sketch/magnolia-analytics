@@ -397,8 +397,8 @@
   </div>
   {% endif %}
 
-  <!-- Performance stats -->
-  {% if stats %}
+  <!-- Performance stats — paid tier only -->
+  {% if stats and user_is_pro %}
   <div class="section">
     <h2 class="section-title">Performance</h2>
     <p class="stats-note">Last 20 rounds &middot; {{ stats.rounds_played }} round{{ 's' if stats.rounds_played != 1 }} logged</p>
@@ -440,8 +440,21 @@
   </div>
   {% endif %}
 
-  <!-- Strokes Gained averages -->
-  {% if sg_avgs %}
+  <!-- Performance upgrade prompt for free users -->
+  {% if stats and not user_is_pro %}
+  <div class="section">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:8px;font-size:13px;color:var(--text-muted)">
+      <span style="font-size:16px">📊</span>
+      <span>
+        <strong style="color:var(--text)">Performance trends &amp; Strokes Gained averages</strong> are available with Magnolia Pro.
+        <a href="{{ url_for('main.upgrade') }}" style="color:var(--color-gold,#c9a84c);font-weight:600;text-decoration:none;margin-left:4px">Upgrade →</a>
+      </span>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Strokes Gained averages — paid tier only -->
+  {% if sg_avgs and user_is_pro %}
   <div class="section">
     <h2 class="section-title">Strokes Gained</h2>
     <p class="stats-note">Average per round (18-hole equivalent) across {{ sg_avgs.rounds_count }} round{{ 's' if sg_avgs.rounds_count != 1 }} &middot; vs tour baseline</p>

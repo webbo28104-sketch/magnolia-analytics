@@ -237,7 +237,11 @@ def _build_narrative_prompt(round_, sg_data: dict, historical_ctx: dict) -> str:
     user = round_.golfer
     course_name = round_.course.name if round_.course else 'Unknown Course'
 
-    # Hole-by-hole — include miss direction, lie type, and 2nd-shot distance
+    # Hole summary
+    # IMPORTANT: All distance values (ApprDist, 2ndShotDist) represent the
+    # distance the player was FROM THE HOLE at the start of that shot —
+    # NOT how far the ball travelled. Example: holing out from 180 yards means
+    # ApprDist=180 (starting distance to hole), not the shot carry distance.
     hole_lines = []
     for h in holes:
         svp = h.score - h.par
@@ -247,9 +251,9 @@ def _build_narrative_prompt(round_, sg_data: dict, historical_ctx: dict) -> str:
             f"  H{h.hole_number:02d} Par{h.par}: {h.score} ({label}) | "
             f"Tee:{h.tee_shot or '–'} GIR:{'Y' if h.gir else 'N'} "
             f"Putts:{h.putts} FPD:{h.first_putt_distance or '?'}ft "
-            f"Appr:{h.approach_distance or '?'}yds "
+            f"ApprDist:{h.approach_distance or '?'}yds(dist-to-hole) "
             f"Miss:{h.approach_miss or '–'} Lie:{h.lie_type or '–'} "
-            f"2nd:{h.second_shot_distance or '–'}yds Pen:{h.penalties}"
+            f"2ndDist:{h.second_shot_distance or '–'}yds(dist-to-hole) Pen:{h.penalties}"
         )
 
     # SG values — sg_putting is a dict with 'total' key
@@ -336,11 +340,11 @@ SG Around Green: {sg_atg:+.2f}
 SG Putting:      {sg_put_total:+.2f}
 SG Total:        {sg_total:+.2f}
 
-HOLE-BY-HOLE DATA
------------------
+HOLE-BY-HOLE (all distances = distance FROM THE HOLE at start of shot, not ball travel distance)
+-------------------------------------------------------------------------------------------------
 Key: Tee=tee shot | GIR=green in regulation | FPD=first putt distance |
-Appr=approach distance | Miss=approach miss direction(s) | Lie=lie type at miss |
-2nd=2nd shot distance (par 5s) | Pen=penalty strokes
+ApprDist=approach dist-to-hole | Miss=approach miss direction(s) | Lie=lie type at miss |
+2ndDist=2nd shot dist-to-hole (par 5s) | Pen=penalty strokes
 {chr(10).join(hole_lines)}
 {historical_section}
 {sample_guidance}

@@ -643,6 +643,26 @@ body::before {
 {# colour class for total putts #}
 {% macro pt_cls(putts) %}{% if putts <= 30 %}c-grn{% elif putts <= 33 %}c-gold{% else %}c-red{% endif %}{% endmacro %}
 
+{# ── Rank-based SG colour — relative to valid categories in this round ──────
+   Best (highest) → green · Worst (lowest) → red
+   Positive middles → light green/mint · Negative middles → light red/salmon
+   Defined here (before all tab panels) so it is usable in every tab.        #}
+{% set _sg_valid = [] %}
+{% if sg_ott_ok  %}{% set _sg_valid = _sg_valid + [sg_data.sg_off_tee] %}{% endif %}
+{% if sg_app_ok  %}{% set _sg_valid = _sg_valid + [sg_data.sg_approach] %}{% endif %}
+{% if sg_atg_ok  %}{% set _sg_valid = _sg_valid + [sg_data.sg_atg] %}{% endif %}
+{% if sg_putt_ok %}{% set _sg_valid = _sg_valid + [sg_data.sg_putting.total] %}{% endif %}
+{% set _sg_sorted = _sg_valid | sort %}
+{% macro rankclr(val, ok=True) -%}
+  {%- if not ok or not _sg_sorted -%}var(--cream-dim)
+  {%- elif val == _sg_sorted | last -%}var(--green-soft)
+  {%- elif val == _sg_sorted | first and _sg_sorted | length > 1 -%}var(--red-soft)
+  {%- elif val > 0 -%}#a8d4b8
+  {%- elif val < 0 -%}#e8b0a0
+  {%- else -%}var(--cream-faint)
+  {%- endif -%}
+{%- endmacro %}
+
 <div class="page">
 
   <!-- MASTHEAD -->
@@ -1118,6 +1138,41 @@ body::before {
         {% endif %}
       </div>
     </div>
+    <div class="a-card">
+      <div class="a-card-title">Driving Impact on Scoring</div>
+      <div class="mini-pair" style="margin-top:0; margin-bottom:14px;">
+        {% set gir_from_fir = tee_gir.get('fairway', {}) %}
+        {% set rough_girs = (tee_gir.get('left',{}).get('girs',0) + tee_gir.get('right',{}).get('girs',0)) %}
+        {% set rough_att  = (tee_gir.get('left',{}).get('attempts',0) + tee_gir.get('right',{}).get('attempts',0)) %}
+        <div class="mini-c">
+          <div class="mini-lbl">GIR from FIR</div>
+          <div class="mini-val c-grn">{{ gir_from_fir.get('girs',0) }}/{{ gir_from_fir.get('attempts',0) }}</div>
+          <div class="mini-sub">{{ gir_from_fir.get('gir_pct',0) }}%</div>
+        </div>
+        <div class="mini-c">
+          <div class="mini-lbl">GIR from Rough</div>
+          <div class="mini-val c-gold" style="color:var(--gold-light);">{{ rough_girs }}/{{ rough_att }}</div>
+          <div class="mini-sub">{{ (rough_girs / rough_att * 100) | round | int if rough_att else 0 }}%</div>
+        </div>
+        {% set bogeys_from_rough = holes_data | selectattr('tee_shot', 'in', ['left','right']) | selectattr('score_vs_par','gt',0) | list | length %}
+        <div class="mini-c">
+          <div class="mini-lbl">Bogeys from Rough</div>
+          <div class="mini-val c-red">{{ bogeys_from_rough }}</div>
+          <div class="mini-sub">{{ (bogeys_from_rough / rough_att * 100) | round | int if rough_att else 0 }}%</div>
+        </div>
+      </div>
+      {% set par3_holes = holes_data | selectattr('par','equalto',3) | list %}
+      {% set par3_gir   = par3_holes | selectattr('gir') | list | length %}
+      <div class="stat-row"><span class="sk">Par 3 performance</span><span class="sv">{{ par3_gir }}/{{ par3_holes | length }} GIR</span></div>
+      {% set penalty_holes = holes_data | selectattr('penalties','gt',0) | map(attribute='hole_number') | list %}
+      {% if penalty_holes %}
+      <div class="stat-row"><span class="sk">Penalty holes</span><span class="sv">H{{ penalty_holes | join(', H') }}</span></div>
+      {% endif %}
+      <div class="stat-row">
+        <span class="sk">SG Off the Tee</span>
+        <span class="sv" style="color:{{ rankclr(sg_data.sg_off_tee, sg_ott_ok) }}">{{ sgfmt(sg_data.sg_off_tee) if sg_ott_ok else '—' }}</span>
+      </div>
+    </div>
   </div>
   {% endif %}
 
@@ -1135,8 +1190,11 @@ body::before {
 
   <!-- APPROACH PANEL -->
   <div id="tab-approach" class="tab-panel" role="tabpanel">
+
+  {# Pro gate #}
   <div class="{% if not user_is_pro %}pro-gate{% endif %}">
   <div class="{% if not user_is_pro %}pro-blur{% endif %}">
+
   <div class="sec-divider"></div>
   <div class="sec-label fu d5">Approach Play</div>
   {% set _best_band  = approach_bds | sort(attribute='gir_pct', reverse=True) | first if approach_bds else none %}
@@ -1181,6 +1239,16 @@ body::before {
             <span style="font-size:10px;line-height:1.45;color:rgba(245,240,232,0.42);">Dist rings<br><span style="font-size:8.5px;opacity:.8;">5ft intervals</span></span>
           </div>
         </div>
+      {% else %}
+        <div style="color:var(--cream-faint); font-size:10px;">No approach distance data recorded for this round.</div>
+      {% endif %}
+      <div class="stat-row" style="margin-top:12px;">
+        <span class="sk">
+          <span class="mg-tip">SG Approach<span class="mg-tip-icon">ⓘ</span>
+            <span class="mg-pop">Strokes Gained: Approach — measures how many strokes your approach shots gain or lose compared to the PGA Tour average, based on distance to the hole.</span>
+          </span>
+        </span>
+        <span class="sv" style="color:{{ rankclr(sg_data.sg_approach, sg_app_ok) }}">{{ sgfmt(sg_data.sg_approach) if sg_app_ok else '—' }}</span>
       </div>
     </div>
   </div>
@@ -1310,46 +1378,65 @@ body::before {
   {% endif %}
   </div>{# /pro-gate #}
 
+  </div>{# /pro-blur #}
+  {% if not user_is_pro %}
+  <div class="pro-lock-card">
+    <span class="plc-icon">🔒</span>
+    <h3>Unlock advanced shot analysis — upgrade to Magnolia Pro</h3>
+    <a href="{{ url_for('main.upgrade') }}" class="plc-btn">Upgrade to Pro</a>
+  </div>
+  {% endif %}
+  </div>{# /pro-gate #}
+
   </div><!-- /tab-approach -->
 
   <!-- AROUND THE GREEN PANEL -->
   <div id="tab-atg" class="tab-panel" role="tabpanel">
+
+  {# Pro gate #}
   <div class="{% if not user_is_pro %}pro-gate{% endif %}">
   <div class="{% if not user_is_pro %}pro-blur{% endif %}">
+
   <div class="sec-divider"></div>
   <div class="sec-label fu d6">Around the Green</div>
-
-  {# Hero SG ATG #}
-  <div style="display:flex;align-items:baseline;gap:10px;margin:4px 0 22px" class="fu d6">
-    <div style="font-size:64px;font-weight:900;line-height:1;letter-spacing:-.04em;{{ 'color:var(--green-soft)' if sg_atg_ok and sg_data.sg_atg >= 0 else 'color:var(--red-soft)' if sg_atg_ok else 'color:var(--cream-faint)' }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</div>
-    <div style="font-size:13px;color:var(--cream-faint);font-weight:400">SG Around the Green</div>
-  </div>
-
-  {# 4-tile grid #}
-  {% set sand_attempt_holes = holes_data | selectattr('sand_save_attempt') | list %}
-  {% set sand_saves = sand_attempt_holes | selectattr('sand_save_made') | list | length %}
-  {% set gir_miss_holes = holes_data | selectattr('gir','equalto',false) | list %}
-  {% set avg_putts_miss = (gir_miss_holes | map(attribute='putts') | sum / gir_miss_holes | length) | round(2) if gir_miss_holes else none %}
-  <div class="rp-tiles rp-tiles-4 fu d6">
-    <div class="rp-tile">
-      <div class="rp-tile-lbl">Up &amp; Downs</div>
-      <div class="rp-tile-val {{ 'c-grn' if scramble.save_pct and scramble.save_pct >= 50 else 'c-red' if scramble.save_pct and scramble.save_pct < 30 else '' }}">{{ scramble.saves }}/{{ scramble.attempts }}</div>
-      <div class="rp-tile-sub">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% conversion</div>
-    </div>
-    <div class="rp-tile">
-      <div class="rp-tile-lbl">Scramble %</div>
-      <div class="rp-tile-val {{ 'c-grn' if scramble.save_pct and scramble.save_pct >= 50 else 'c-red' if scramble.save_pct and scramble.save_pct < 30 else '' }}">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}%</div>
-      <div class="rp-tile-sub">scratch avg ~55%</div>
-    </div>
-    <div class="rp-tile">
-      <div class="rp-tile-lbl">Avg Putts (Miss)</div>
-      <div class="rp-tile-val">{{ avg_putts_miss if avg_putts_miss is not none else '—' }}</div>
-      <div class="rp-tile-sub">after GIR miss</div>
-    </div>
-    <div class="rp-tile">
-      <div class="rp-tile-lbl">Sand Saves</div>
-      <div class="rp-tile-val">{{ sand_saves }}/{{ sand_attempt_holes | length }}</div>
-      <div class="rp-tile-sub">{{ 'no bunker holes' if not sand_attempt_holes else '' }}</div>
+  <div class="two-col fu d6">
+    <div class="a-card">
+      <div class="a-card-title">Scramble · {{ scramble.attempts }} Missed Greens</div>
+      {% set sand_attempt_holes = holes_data | selectattr('sand_save_attempt') | list %}
+      {% set sand_saves = sand_attempt_holes | selectattr('sand_save_made') | list | length %}
+      <div class="stat-row"><span class="sk">Up-and-downs made</span>
+        <span class="sv {{ 'c-grn' if scramble.save_pct and scramble.save_pct >= 50 else 'c-red' if scramble.save_pct and scramble.save_pct < 30 }}">
+          {{ scramble.saves }}/{{ scramble.attempts }}{% if scramble.save_pct is not none %} ({{ scramble.save_pct }}%){% endif %}
+        </span>
+      </div>
+      {% if sand_attempt_holes %}
+      <div class="stat-row"><span class="sk">Sand saves</span>
+        <span class="sv {{ 'c-grn' if sand_saves > 0 else 'c-red' }}">{{ sand_saves }}/{{ sand_attempt_holes | length }}</span>
+      </div>
+      {% else %}
+      <div class="stat-row"><span class="sk">Sand save attempts</span><span class="sv">0</span></div>
+      {% endif %}
+      {% set double_plus = holes_data | selectattr('gir','equalto',false) | selectattr('score_vs_par','ge',2) | map(attribute='hole_number') | list %}
+      {% if double_plus %}
+      <div class="stat-row"><span class="sk">Doubles+ from GIR miss</span><span class="sv c-red">H{{ double_plus | join(', H') }}</span></div>
+      {% endif %}
+      <div class="stat-row">
+        <span class="sk">
+          <span class="mg-tip">SG Around Green<span class="mg-tip-icon">ⓘ</span>
+            <span class="mg-pop">Strokes Gained: Around the Green — measures performance on shots within ~30 yards of the green (chips, pitches, bunker shots) versus the PGA Tour average.</span>
+          </span>
+        </span>
+        <span class="sv" style="color:{{ rankclr(sg_data.sg_atg, sg_atg_ok) }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</span>
+      </div>
+      {% if scramble.save_pct is not none %}
+      <div class="insight">
+        {% if scramble.save_pct >= 50 %}
+        <strong>Good scrambling</strong> — {{ scramble.save_pct }}% conversion rate (PGA Tour average ~55%).
+        {% else %}
+        Scramble rate at {{ scramble.save_pct }}%. With {{ scramble.attempts }} opportunities, converting one more per round would be worth roughly one stroke.
+        {% endif %}
+      </div>
+      {% endif %}
     </div>
   </div>
 
@@ -1372,16 +1459,6 @@ body::before {
     {% endfor %}
   </div>
 
-  {# Insight #}
-  {% set best_scramble = holes_data | selectattr('gir','equalto',false) | selectattr('score_vs_par','equalto',0) | map(attribute='hole_number') | list %}
-  <div class="rp-insight fu d6">
-    {% if scramble.save_pct is not none and scramble.save_pct >= 50 %}
-    <strong>Good scrambling</strong> — {{ scramble.save_pct }}% conversion rate above the scratch average of ~55%. {% if best_scramble %}Par saves on H{{ best_scramble | join(', H') }} directly prevented additional bogeys.{% endif %}
-    {% else %}
-    Scramble rate at {{ scramble.save_pct if scramble.save_pct is not none else '—' }}% from {{ scramble.attempts }} opportunities. Converting one more per round is worth roughly one stroke.
-    {% endif %}
-  </div>
-
   {# ── Best ATG Shot ── #}
   {% set _best_atg = best_sg_by_cat.get('sg_atg') %}
   {% if _best_atg %}
@@ -1397,7 +1474,7 @@ body::before {
     <span class="plc-icon">🔒</span>
     <h3>Unlock your full game picture</h3>
     <p style="color:rgba(245,240,232,0.7);font-size:13px;margin-bottom:20px;line-height:1.5;">Upgrade to see SG: Around the Green — scramble rate analysis, hole-by-hole up-and-down detail, and sand save tracking.</p>
-    <a href="{{ url_for('main.pricing') }}" class="plc-btn">Upgrade</a>
+    <a href="{{ url_for('main.upgrade') }}" class="plc-btn">Upgrade</a>
   </div>
   {% endif %}
   </div>{# /pro-gate #}
@@ -1406,20 +1483,41 @@ body::before {
 
   <!-- PUTTING PANEL -->
   <div id="tab-putting" class="tab-panel" role="tabpanel">
+
+  {# Pro gate #}
   <div class="{% if not user_is_pro %}pro-gate{% endif %}">
   <div class="{% if not user_is_pro %}pro-blur{% endif %}">
+
   <div class="sec-divider"></div>
   <div class="sec-label fu d6">Putting</div>
   {% set _putt_total_holes = holes_data | length %}
   {% set _1putt_pct = (putt_dist[1] / _putt_total_holes * 100) | round | int if _putt_total_holes else 0 %}
   {% set _3putt_pct = (putt_dist[3] / _putt_total_holes * 100) | round | int if _putt_total_holes else 0 %}
-  <div style="display:flex;gap:20px;align-items:center;margin-bottom:20px;" class="fu d6">
-    <div style="width:180px;flex-shrink:0;">
-      <div class="a-card" style="text-align:center;padding:20px 14px;">
-        <div class="a-card-title" style="margin-bottom:10px;">SG: Putting</div>
-        <div style="font-family:'Inter',system-ui,sans-serif;font-size:clamp(30px,4vw,46px);font-weight:700;line-height:1;" class="{{ sgcol(sg_data.sg_putting.total) if sg_putt_ok else 'sg-neutral' }}">{{ sgfmt(sg_data.sg_putting.total) if sg_putt_ok else '—' }}</div>
-        <div style="font-size:9px;color:var(--cream-faint);margin-top:8px;letter-spacing:.1em;text-transform:uppercase;">vs scratch</div>
-        <div style="font-size:10px;color:var(--cream-faint);margin-top:6px;">{{ round.total_putts if round.total_putts is not none else '—' }} total · {{ putts_ph }}/hole</div>
+  <div class="two-col fu d6">
+    <div class="a-card">
+      <div class="a-card-title">Putt Distribution</div>
+      <div class="stat-row"><span class="sk">1-Putts</span>
+        <span class="sv c-grn">{{ putt_dist[1] }}{% if one_putt_holes %} (H{{ one_putt_holes | join(', H') }}){% endif %}</span>
+      </div>
+      <div class="stat-row"><span class="sk">2-Putts</span><span class="sv">{{ putt_dist[2] }}</span></div>
+      <div class="stat-row"><span class="sk">3-Putts</span>
+        <span class="sv {{ 'c-red' if putt_dist[3] > 0 }}">
+          {{ putt_dist[3] }}{% if three_putt_holes %} (H{{ three_putt_holes | join(', H') }}){% endif %}
+        </span>
+      </div>
+      {% if putt_dist['4+'] > 0 %}
+      <div class="stat-row"><span class="sk">4+ Putts</span><span class="sv c-red">{{ putt_dist['4+'] }}</span></div>
+      {% endif %}
+      <div class="stat-row"><span class="sk">Total Putts</span><span class="sv">{{ round.total_putts }}</span></div>
+      <div class="stat-row"><span class="sk">Avg per hole</span><span class="sv">{{ putts_ph }}</span></div>
+      <div class="stat-row"><span class="sk">Avg 1st putt distance</span><span class="sv">{{ avg_fpd ~ 'ft' if avg_fpd is not none else '—' }}</span></div>
+      <div class="stat-row">
+        <span class="sk">
+          <span class="mg-tip">SG Putting<span class="mg-tip-icon">ⓘ</span>
+            <span class="mg-pop">Strokes Gained: Putting — how many strokes your putting gained or lost versus the PGA Tour average, calculated from first-putt distances. Positive = fewer putts than tour average.</span>
+          </span>
+        </span>
+        <span class="sv" style="color:{{ rankclr(sg_data.sg_putting.total, sg_putt_ok) }}">{{ sgfmt(sg_data.sg_putting.total) if sg_putt_ok else '—' }}</span>
       </div>
     </div>
     <div style="flex:1;min-width:0;">
@@ -1502,7 +1600,7 @@ body::before {
     <span class="plc-icon">🔒</span>
     <h3>Unlock your full game picture</h3>
     <p style="color:rgba(245,240,232,0.7);font-size:13px;margin-bottom:20px;line-height:1.5;">Upgrade to see SG: Putting — first putt distance profile, 3-putt holes, and band-by-band putting analysis.</p>
-    <a href="{{ url_for('main.pricing') }}" class="plc-btn">Upgrade</a>
+    <a href="{{ url_for('main.upgrade') }}" class="plc-btn">Upgrade</a>
   </div>
   {% endif %}
   </div>{# /pro-gate #}
@@ -1524,24 +1622,79 @@ body::before {
       <span class="mg-pop">Strokes Gained (SG) measures performance in each area relative to a scratch handicap baseline, following Mark Broadie's methodology. Positive = gained strokes vs scratch; negative = lost strokes. Values are estimates derived from your shot data.</span>
     </span>
   </div>
-  <div class="rp-tiles rp-tiles-4 fu d7">
-    {% set _sg_cat_tiles = [
-      (sg_ott_ok,  'Off the Tee',     sg_data.sg_off_tee),
-      (sg_app_ok,  'Approach',        sg_data.sg_approach),
-      (sg_atg_ok,  'Around Green',    sg_data.sg_atg),
-      (sg_putt_ok, 'Putting',         sg_data.sg_putting.total),
-    ] %}
-    {% for tile_ok, tile_lbl, tile_val in _sg_cat_tiles %}
-    <div class="rp-tile">
-      <div class="rp-tile-lbl">{{ tile_lbl }}</div>
-      {% if tile_ok %}
-      <div class="rp-tile-val {{ 'c-grn' if tile_val >= 0 else 'c-red' if tile_val < -1 else '' }}">{{ sgfmt(tile_val) }}</div>
-      {% set _hcp_equiv = (tile_val * -6) | round | int %}
-      <div class="rp-tile-sub">{% if tile_val > 0 %}gaining on scratch average{% elif _hcp_equiv <= 0 %}scratch hcp{% else %}{{ [_hcp_equiv, 54] | min }} hcp equiv{% endif %}</div>
-      {% else %}
-      <div class="rp-tile-val" style="color:var(--cream-faint);">—</div>
-      <div class="rp-tile-sub">not enough data</div>
-      {% endif %}
+  {% macro hcplabel(sg, ok=True) -%}
+    {%- if ok -%}
+      {%- if sg > 0 -%}
+        <div class="sg-hcp">Tour level</div>
+      {%- else -%}
+        {%- set hcp = ((sg + 1) * -6 + 6) | round | int -%}
+        {%- if hcp < 0 -%}
+          <div class="sg-hcp c-grn">Plays to +{{ hcp | abs }}</div>
+        {%- else -%}
+          <div class="sg-hcp">Plays to {{ hcp }} hcp</div>
+        {%- endif -%}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endmacro %}
+
+  <div class="sg-cards fu d7">
+    <div class="sg-card">
+      <div class="sg-cat">
+        <span class="mg-tip">SG: Off the Tee<span class="mg-tip-icon">ⓘ</span>
+          <span class="mg-pop">Measures tee-shot performance on par-4s and par-5s. Based on fairway/rough/penalty outcome vs. the PGA Tour average, using Broadie's SG model.</span>
+        </span>
+      </div>
+      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_off_tee, sg_ott_ok) }}">{{ sgfmt(sg_data.sg_off_tee) if sg_ott_ok else '—' }}</div>
+      <div class="sg-sub">{{ fw_pct }}% fairways</div>
+      {{ hcplabel(sg_data.sg_off_tee, sg_ott_ok) }}
+    </div>
+    <div class="sg-card">
+      <div class="sg-cat">
+        <span class="mg-tip">SG: Approach<span class="mg-tip-icon">ⓘ</span>
+          <span class="mg-pop">Measures approach shot performance. Based on GIR rate and approach distance versus expected strokes to hole out from that distance.</span>
+        </span>
+      </div>
+      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_approach, sg_app_ok) }}">{{ sgfmt(sg_data.sg_approach) if sg_app_ok else '—' }}</div>
+      <div class="sg-sub">{{ gir_pct }}% GIR</div>
+      {{ hcplabel(sg_data.sg_approach, sg_app_ok) }}
+    </div>
+    <div class="sg-card">
+      <div class="sg-cat">
+        <span class="mg-tip">SG: Around Green<span class="mg-tip-icon">ⓘ</span>
+          <span class="mg-pop">Measures short-game performance on chips, pitches, and bunker shots (within ~30 yards of the green). Based on scramble rate and sand-save percentage.</span>
+        </span>
+      </div>
+      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_atg, sg_atg_ok) }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</div>
+      <div class="sg-sub">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% scramble</div>
+      {{ hcplabel(sg_data.sg_atg, sg_atg_ok) }}
+    </div>
+    <div class="sg-card">
+      <div class="sg-cat">
+        <span class="mg-tip">SG: Putting<span class="mg-tip-icon">ⓘ</span>
+          <span class="mg-pop">Measures putting performance from first-putt distances versus expected putts to hole out from those distances, compared to the PGA Tour average.</span>
+        </span>
+      </div>
+      <div class="sg-val" style="color:{{ rankclr(sg_data.sg_putting.total, sg_putt_ok) }}">{{ sgfmt(sg_data.sg_putting.total) if sg_putt_ok else '—' }}</div>
+      <div class="sg-sub">{{ round.total_putts }} total putts</div>
+      {{ hcplabel(sg_data.sg_putting.total, sg_putt_ok) }}
+    </div>
+  </div>
+  <div class="sg-bars fu d7">
+    {% set sg_rows = [] %}
+    {% if sg_ott_ok  %}{% set sg_rows = sg_rows + [('Off Tee',      sg_data.sg_off_tee)] %}{% endif %}
+    {% if sg_app_ok  %}{% set sg_rows = sg_rows + [('Approach',     sg_data.sg_approach)] %}{% endif %}
+    {% if sg_atg_ok  %}{% set sg_rows = sg_rows + [('Around Green', sg_data.sg_atg)] %}{% endif %}
+    {% if sg_putt_ok %}{% set sg_rows = sg_rows + [('Putting',      sg_data.sg_putting.total)] %}{% endif %}
+    {% for label, val in sg_rows %}
+    {% set w = [[((val | abs) / 8 * 50) | round | int, 0] | max, 50] | min %}
+    {% set cls = 'p' if val >= 0 else 'n' %}
+    <div class="sg-br">
+      <span class="sg-bc">{{ label }}</span>
+      <div class="sg-bt">
+        <div class="sg-bz"></div>
+        <div class="sg-bf {{ cls }}" style="width:{{ w }}%; background:{{ rankclr(val) }};"></div>
+      </div>
+      <span class="sg-bn" style="color:{{ rankclr(val) }}">{{ sgfmt(val) }}</span>
     </div>
     {% endfor %}
   </div>
@@ -2101,6 +2254,24 @@ document.addEventListener('DOMContentLoaded', function () {
       {% endif %}
       <p id="sm-fallback-msg" style="display:none;font-size:.75rem;color:#8a9e8a;text-align:center;margin-top:.3rem"></p>
     </div>
+    <div class="sm-divider"></div>
+    {% if user_is_pro %}
+    <div class="sm-pdf-section">
+      <button class="sm-pdf-btn" onclick="closeShareModal();setTimeout(window.print,200)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Save as PDF
+      </button>
+      <p class="sm-pdf-hint">Full scorecard &amp; stats &mdash; print-quality PDF</p>
+    </div>
+    {% else %}
+    <div class="sm-pdf-section">
+      <a href="{{ url_for('main.upgrade') }}" class="sm-pdf-btn" style="opacity:.55;pointer-events:auto;text-decoration:none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Save as PDF
+      </a>
+      <p class="sm-pdf-hint">PDF export is available with Magnolia Pro</p>
+    </div>
+    {% endif %}
   </div>
 </div>
 <script>

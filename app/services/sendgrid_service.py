@@ -11,6 +11,7 @@ from datetime import datetime
 from flask import current_app, render_template, url_for
 
 from app import db
+from app.utils.access import is_pro
 
 ADMIN_EMAIL = 'team@magnoliaanalytics.golf'
 
@@ -76,8 +77,14 @@ def _fmt_sg(val) -> str:
 # 1. Round report
 # ---------------------------------------------------------------------------
 
-def send_report_email(round_) -> bool:
-    """Send the post-submission round performance report to the golfer."""
+def send_report_email(round_, force_free: bool = False) -> bool:
+    """Send the post-submission round performance report to the golfer.
+
+    Pro users receive the full report (all SG categories + coaching narrative).
+    Free users receive a trimmed version showing their free-tier data, with paid
+    sections teased to encourage upgrade.  Pass force_free=True to always render
+    the free variant regardless of subscription status (used in admin previews).
+    """
     user        = round_.golfer
     course_name = round_.course.name if round_.course else 'Unknown Course'
     round_type  = 'Casual' if round_.counts_for_official_hc is False else 'Official'
@@ -139,17 +146,21 @@ def send_report_email(round_) -> bool:
     sg_total_display = _fmt_sg(round_.sg_total)
     sg_total_positive = round_.sg_total is not None and round_.sg_total >= 0
 
-    # First paragraph of coaching narrative only (if already generated)
+    user_is_pro = (not force_free) and is_pro(user)
+
+    # First paragraph of coaching narrative only (if already generated, pro only)
     narrative = None
-    if round_.report and round_.report.narrative_text:
+    if user_is_pro and round_.report and round_.report.narrative_text:
         paras = [p.strip() for p in round_.report.narrative_text.split('\n\n') if p.strip()]
         narrative = paras[0] if paras else round_.report.narrative_text
 
-    report_url = url_for('reports.view_report', round_id=round_.id, _external=True)
+    report_url   = url_for('reports.view_report', round_id=round_.id, _external=True)
+    upgrade_url  = url_for('main.upgrade', _external=True)
 
     html = render_template(
         'email/round_report.html',
         user               = user,
+        user_is_pro        = user_is_pro,
         course_name        = course_name,
         date_played        = round_.date_played.strftime('%d %B %Y'),
         round_type         = round_type,
@@ -166,6 +177,7 @@ def send_report_email(round_) -> bool:
         sg_total_positive  = sg_total_positive,
         narrative          = narrative,
         report_url         = report_url,
+        upgrade_url        = upgrade_url,
     )
 
     subject = f'Your round at {course_name} — {round_.date_played.strftime("%d %b")}'

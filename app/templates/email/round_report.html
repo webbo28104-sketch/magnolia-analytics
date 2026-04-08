@@ -24,7 +24,7 @@
     </div>
   </div>
 
-  <!-- Stats grid -->
+  <!-- Stats grid — free for all tiers -->
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
     <tr>
       <td style="padding:0 6px 0 0;">
@@ -59,11 +59,14 @@
     <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:16px;">Strokes Gained</div>
 
     {% for cat in sg_cats %}
+    {% set is_free_cat = (cat.label == 'Off the Tee') %}
+    {% set show_value  = user_is_pro or is_free_cat %}
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:11px;">
       <tr>
-        <td style="width:130px;padding-right:10px;font-size:11px;color:#8a9a7a;letter-spacing:0.08em;text-align:right;vertical-align:middle;">{{ cat.label }}</td>
+        <td style="width:130px;padding-right:10px;font-size:11px;color:{% if not show_value %}#bbb{% else %}#8a9a7a{% endif %};letter-spacing:0.08em;text-align:right;vertical-align:middle;">{{ cat.label }}</td>
         <td style="vertical-align:middle;">
-          <!-- Track -->
+          {% if show_value %}
+          <!-- Full bar for visible categories -->
           <table width="100%" cellpadding="0" cellspacing="0" border="0" style="height:7px;">
             <tr>
               {% if cat.positive %}
@@ -77,8 +80,20 @@
               {% endif %}
             </tr>
           </table>
+          {% else %}
+          <!-- Blurred/greyed bar for locked categories -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="height:7px;">
+            <tr>
+              <td style="height:7px;background:#e8e4dc;border-radius:4px;"></td>
+              <td style="width:{{ cat.bar_pct // 2 }}%;height:7px;background:#d0c8b8;border-radius:4px;"></td>
+              <td style="width:50%;height:7px;background:#e8e4dc;border-radius:4px;"></td>
+            </tr>
+          </table>
+          {% endif %}
         </td>
-        <td style="width:46px;padding-left:10px;font-size:12px;font-weight:600;color:{{ cat.color }};font-family:'Courier New',monospace;text-align:right;vertical-align:middle;">{{ cat.display }}</td>
+        <td style="width:46px;padding-left:10px;font-size:12px;font-weight:600;color:{% if show_value %}{{ cat.color }}{% else %}#c8c0b0{% endif %};font-family:'Courier New',monospace;text-align:right;vertical-align:middle;">
+          {% if show_value %}{{ cat.display }}{% else %}🔒{% endif %}
+        </td>
       </tr>
     </table>
     {% endfor %}
@@ -86,7 +101,8 @@
     <!-- Divider -->
     <div style="border-top:1px solid #e8e4dc;margin:10px 0;"></div>
 
-    <!-- SG Total -->
+    <!-- SG Total — shown to pro users only -->
+    {% if user_is_pro %}
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
         <td style="width:130px;padding-right:10px;font-size:11px;font-weight:600;color:#1B4332;letter-spacing:0.08em;text-align:right;vertical-align:middle;">Total</td>
@@ -108,10 +124,21 @@
         <td style="width:46px;padding-left:10px;font-size:13px;font-weight:700;color:{{ sg_total_color }};font-family:'Courier New',monospace;text-align:right;vertical-align:middle;">{{ sg_total_display }}</td>
       </tr>
     </table>
+    {% else %}
+    <!-- Teaser row for free users -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td style="width:130px;padding-right:10px;font-size:11px;font-weight:600;color:#c8c0b0;letter-spacing:0.08em;text-align:right;vertical-align:middle;">Total</td>
+        <td style="height:8px;background:#ede9e1;border-radius:4px;"></td>
+        <td style="width:46px;padding-left:10px;font-size:13px;font-weight:700;color:#c8c0b0;font-family:'Courier New',monospace;text-align:right;vertical-align:middle;">🔒</td>
+      </tr>
+    </table>
+    {% endif %}
 
   </div>
 
-  <!-- Coaching insight -->
+  {% if user_is_pro %}
+  <!-- Coaching insight — pro only -->
   {% if narrative %}
   <div style="border-left:3px solid #c9a84c;padding:14px 18px;margin-bottom:24px;background:#fdfcfa;">
     <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:8px;">Performance Analysis</div>
@@ -119,9 +146,23 @@
   </div>
   {% endif %}
 
+  {% else %}
+  <!-- Upgrade teaser block for free users -->
+  <div style="border:1px solid #d8c890;border-radius:6px;padding:22px 24px;margin-bottom:24px;background:#fdfaf2;text-align:center;">
+    <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#a07800;margin-bottom:10px;">Upgrade to Magnolia Pro</div>
+    <p style="font-size:14px;color:#6b7a6b;line-height:1.65;margin:0 0 16px;">
+      Unlock <strong style="color:#1a3a24;">SG: Approach, Around the Green &amp; Putting</strong>,
+      a personalised coaching analysis, practice priorities, and PDF export — all delivered to your inbox after every round.
+    </p>
+    <a href="{{ upgrade_url }}" style="display:inline-block;background-color:#c9a84c;color:#1a3a24;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;text-decoration:none;padding:12px 28px;border-radius:6px;letter-spacing:0.04em;">
+      Unlock Full Reports &rarr;
+    </a>
+  </div>
+  {% endif %}
+
   <!-- CTA -->
   <div style="text-align:center;margin-top:28px;">
-    <a href="{{ report_url }}" style="display:inline-block;background-color:#c9a84c;color:#1B4332;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:6px;letter-spacing:0.04em;">
+    <a href="{{ report_url }}" style="display:inline-block;background-color:{% if user_is_pro %}#c9a84c{% else %}#2d6a4f{% endif %};color:{% if user_is_pro %}#1a3a24{% else %}#ffffff{% endif %};font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:6px;letter-spacing:0.04em;">
       View Full Report &rarr;
     </a>
   </div>

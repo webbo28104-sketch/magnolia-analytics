@@ -22,6 +22,27 @@
 .adm-filter-select:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
 .adm-filter-label { font-size: 13px; color: var(--text-muted); }
 
+.adm-search-bar {
+  display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap;
+}
+.adm-search-input {
+  flex:1; min-width:200px; max-width:360px;
+  padding:8px 12px; font-size:13px;
+  border:1px solid var(--border); border-radius:6px;
+  font-family:inherit; background:#fff;
+}
+.adm-filter-btn {
+  padding:7px 14px; font-size:12px; font-weight:500;
+  border:1px solid var(--border); border-radius:6px;
+  background:#fff; color:var(--text-muted); cursor:pointer;
+  text-decoration:none; transition:border-color .15s, color .15s;
+  white-space:nowrap;
+}
+.adm-filter-btn:hover, .adm-filter-btn.active {
+  border-color:var(--green-700); color:var(--green-700);
+}
+.adm-filter-btn.active { background:rgba(45,106,79,.07); font-weight:600; }
+
 .adm-pagination {
   display: flex;
   align-items: center;
@@ -53,18 +74,29 @@
 }
 .adm-pagination__btn--disabled { color: var(--text-muted); pointer-events: none; opacity: 0.5; }
 
-.user-row-link { color: inherit; text-decoration: none; }
-.user-row-link:hover { text-decoration: none; }
-
 .sub-active   { color: #2d6a4f; font-weight: 600; }
 .sub-cancelled { color: #c0392b; }
 .sub-free     { color: var(--text-muted); }
+
+.tier-form { display:inline; }
+.tier-select {
+  font-size:12px; padding:3px 6px; border:1px solid var(--border);
+  border-radius:4px; background:#fff; color:var(--text);
+  cursor:pointer;
+}
+.tier-btn {
+  font-size:11px; font-weight:600; padding:3px 10px;
+  border:1px solid var(--green-700); border-radius:4px;
+  background:var(--green-700); color:#fff; cursor:pointer;
+  transition:opacity .15s;
+}
+.tier-btn:hover { opacity:.85; }
 {% endblock %}
 
 {% block content %}
 <div class="adm-page-header">
   <h1 class="adm-page-header__title">Users</h1>
-  <p class="adm-page-header__sub">All registered accounts — {{ total_users }} total.</p>
+  <p class="adm-page-header__sub">Manage accounts and subscription tiers.</p>
 </div>
 
 <div class="adm-stats">
@@ -85,23 +117,36 @@
   </div>
 </div>
 
-<!-- Filters -->
-<form method="get" action="{{ url_for('admin.users') }}" id="filter-form">
-  <div class="adm-filters">
-    <span class="adm-filter-label">Filter:</span>
-    <select name="tier" class="adm-filter-select" onchange="document.getElementById('filter-form').submit()">
-      <option value="all"      {% if tier_filter == 'all' %}selected{% endif %}>All tiers</option>
-      <option value="founding" {% if tier_filter == 'founding' %}selected{% endif %}>Founding Member</option>
-      <option value="standard" {% if tier_filter == 'standard' %}selected{% endif %}>Standard</option>
-      <option value="free"     {% if tier_filter == 'free' %}selected{% endif %}>Free</option>
-    </select>
-    <select name="status" class="adm-filter-select" onchange="document.getElementById('filter-form').submit()">
-      <option value="all"      {% if status_filter == 'all' %}selected{% endif %}>All activity</option>
-      <option value="active"   {% if status_filter == 'active' %}selected{% endif %}>Active (round ≤ 30 days)</option>
-      <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
-    </select>
-  </div>
+<!-- Search + filter -->
+<form method="GET" action="{{ url_for('admin.users') }}" class="adm-search-bar">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search by name or email…" class="adm-search-input">
+  <input type="hidden" name="tier" value="{{ tier_filter }}">
+  <input type="hidden" name="status" value="{{ status_filter }}">
+  <button type="submit" class="adm-filter-btn">Search</button>
 </form>
+
+<!-- Tier filter buttons -->
+<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+  <a href="{{ url_for('admin.users', q=q, tier='all', status=status_filter) }}"
+     class="adm-filter-btn{% if tier_filter == 'all' %} active{% endif %}">All tiers</a>
+  <a href="{{ url_for('admin.users', q=q, tier='pro', status=status_filter) }}"
+     class="adm-filter-btn{% if tier_filter == 'pro' %} active{% endif %}">Pro</a>
+  <a href="{{ url_for('admin.users', q=q, tier='founding', status=status_filter) }}"
+     class="adm-filter-btn{% if tier_filter == 'founding' %} active{% endif %}">Founding</a>
+  <a href="{{ url_for('admin.users', q=q, tier='free', status=status_filter) }}"
+     class="adm-filter-btn{% if tier_filter == 'free' %} active{% endif %}">Free</a>
+</div>
+
+<!-- Activity filter buttons -->
+<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+  <span style="font-size:12px;color:var(--text-muted);align-self:center;">Activity:</span>
+  <a href="{{ url_for('admin.users', q=q, tier=tier_filter, status='all') }}"
+     class="adm-filter-btn{% if status_filter == 'all' %} active{% endif %}">All</a>
+  <a href="{{ url_for('admin.users', q=q, tier=tier_filter, status='active') }}"
+     class="adm-filter-btn{% if status_filter == 'active' %} active{% endif %}">Active (≤30d)</a>
+  <a href="{{ url_for('admin.users', q=q, tier=tier_filter, status='inactive') }}"
+     class="adm-filter-btn{% if status_filter == 'inactive' %} active{% endif %}">Inactive</a>
+</div>
 
 <div class="adm-card" style="padding:0;overflow:hidden;">
   {% if pagination.items %}
@@ -116,6 +161,7 @@
           <th>Rounds</th>
           <th>Last active</th>
           <th>Status</th>
+          <th>Change Tier</th>
         </tr>
       </thead>
       <tbody>
@@ -123,8 +169,13 @@
         {% set rs = round_stats.get(u.id, {}) %}
         {% set round_count = rs.get('count', 0) %}
         {% set last_date   = rs.get('last_date', None) %}
-        <tr style="cursor:pointer;" onclick="window.location='{{ url_for('admin.user_detail', user_id=u.id) }}'">
-          <td style="font-weight:500;">{{ u.first_name }} {{ u.last_name }}</td>
+        <tr>
+          <td style="font-weight:500;">
+            <a href="{{ url_for('admin.user_detail', user_id=u.id) }}" style="color:inherit;text-decoration:none;">
+              {{ u.first_name }} {{ u.last_name }}
+            </a>
+            {% if u.is_staff %}<span class="adm-badge adm-badge--gold" style="margin-left:6px;">Staff</span>{% endif %}
+          </td>
           <td style="color:var(--text-muted)">{{ u.email }}</td>
           <td style="color:var(--text-muted);white-space:nowrap;">
             {% if u.created_at %}{{ u.created_at.strftime('%d %b %Y') }}{% else %}—{% endif %}
@@ -132,8 +183,8 @@
           <td>
             {% if u.subscription_tier == 'founding_member' %}
               <span class="adm-badge adm-badge--gold">Founding</span>
-            {% elif u.subscription_tier in ('premium', 'standard') %}
-              <span class="adm-badge adm-badge--green">Standard</span>
+            {% elif u.subscription_active %}
+              <span class="adm-badge adm-badge--green">Pro{% if u.subscription_tier and u.subscription_tier != 'standard' %} · {{ u.subscription_tier }}{% endif %}</span>
             {% else %}
               <span class="adm-badge adm-badge--muted">Free</span>
             {% endif %}
@@ -151,6 +202,23 @@
               <span class="sub-free">Free</span>
             {% endif %}
           </td>
+          <td>
+            <form method="POST"
+                  action="{{ url_for('admin.set_user_tier', user_id=u.id, q=q, tier=tier_filter) }}"
+                  class="tier-form"
+                  style="display:flex;align-items:center;gap:6px;">
+              <select name="subscription_active" class="tier-select" title="Access level">
+                <option value="1"{% if u.subscription_active %} selected{% endif %}>Pro</option>
+                <option value="0"{% if not u.subscription_active %} selected{% endif %}>Free</option>
+              </select>
+              <select name="subscription_tier" class="tier-select" title="Tier label">
+                <option value="standard"{% if u.subscription_tier == 'standard' %} selected{% endif %}>Standard</option>
+                <option value="premium"{% if u.subscription_tier == 'premium' %} selected{% endif %}>Premium</option>
+                <option value="founding_member"{% if u.subscription_tier == 'founding_member' %} selected{% endif %}>Founding</option>
+              </select>
+              <button type="submit" class="tier-btn">Save</button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -163,14 +231,14 @@
       <span>Showing {{ ((pagination.page - 1) * 25) + 1 }}–{{ [pagination.page * 25, pagination.total]|min }} of {{ pagination.total }}</span>
       <div class="adm-pagination__links">
         {% if pagination.has_prev %}
-          <a href="{{ url_for('admin.users', page=pagination.prev_num, tier=tier_filter, status=status_filter) }}" class="adm-pagination__btn">← Prev</a>
+          <a href="{{ url_for('admin.users', page=pagination.prev_num, q=q, tier=tier_filter, status=status_filter) }}" class="adm-pagination__btn">← Prev</a>
         {% else %}
           <span class="adm-pagination__btn adm-pagination__btn--disabled">← Prev</span>
         {% endif %}
 
         {% for p in pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
           {% if p %}
-            <a href="{{ url_for('admin.users', page=p, tier=tier_filter, status=status_filter) }}"
+            <a href="{{ url_for('admin.users', page=p, q=q, tier=tier_filter, status=status_filter) }}"
                class="adm-pagination__btn {% if p == pagination.page %}adm-pagination__btn--active{% endif %}">{{ p }}</a>
           {% else %}
             <span class="adm-pagination__btn adm-pagination__btn--disabled">…</span>
@@ -178,7 +246,7 @@
         {% endfor %}
 
         {% if pagination.has_next %}
-          <a href="{{ url_for('admin.users', page=pagination.next_num, tier=tier_filter, status=status_filter) }}" class="adm-pagination__btn">Next →</a>
+          <a href="{{ url_for('admin.users', page=pagination.next_num, q=q, tier=tier_filter, status=status_filter) }}" class="adm-pagination__btn">Next →</a>
         {% else %}
           <span class="adm-pagination__btn adm-pagination__btn--disabled">Next →</span>
         {% endif %}
@@ -193,4 +261,8 @@
   </div>
   {% endif %}
 </div>
+
+<p style="margin-top:14px;font-size:12px;color:var(--text-muted);">
+  Tier changes take effect immediately — no payment system involvement.
+</p>
 {% endblock %}
