@@ -631,8 +631,8 @@ body::before {
 {% macro sgw(val) %}{{ [[((val | abs) / 5 * 100) | round | int, 0] | max, 100] | min }}{% endmacro %}
 {% macro sgcls(val) %}{% if val >= 0 %}p{% else %}n{% endif %}{% endmacro %}
 {% macro sgncls(val) %}{% if val >= 0 %}sg-pos{% else %}sg-neg{% endif %}{% endmacro %}
-{% macro sgfmt(val) %}{% if val > 0 %}+{% endif %}{{ val | round(1) }}{% endmacro %}
-{% macro sgcol(val) %}{% if val > 0.2 %}sg-positive{% elif val < -0.2 %}sg-negative{% else %}sg-neutral{% endif %}{% endmacro %}
+{% macro sgfmt(val) %}{% if val is none %}—{% elif val > 0 %}+{{ val | round(1) }}{% else %}{{ val | round(1) }}{% endif %}{% endmacro %}
+{% macro sgcol(val) %}{% if val is none or val == none %}sg-neutral{% elif val > 0.2 %}sg-positive{% elif val < -0.2 %}sg-negative{% else %}sg-neutral{% endif %}{% endmacro %}
 
 {# colour class for score vs par #}
 {% macro svp_cls(diff) %}{% if diff <= -2 %}c-grn{% elif diff < 0 %}c-grn{% elif diff == 0 %}c-gold{% else %}c-red{% endif %}{% endmacro %}
@@ -1293,7 +1293,7 @@ body::before {
     {% endif %}
     <div class="stat-row" style="margin-top:8px;">
       <span class="sk"><span class="mg-tip">SG Approach<span class="mg-tip-icon">ⓘ</span><span class="mg-pop">Strokes Gained: Approach — measures how many strokes your approach shots gain or lose compared to the scratch average, based on distance to the hole.</span></span></span>
-      <span class="sv {{ 'c-grn' if (sg_app_ok and sg_data.sg_approach >= 0) else 'c-red' if sg_app_ok }}">{{ sgfmt(sg_data.sg_approach) if sg_app_ok else '—' }}</span>
+      <span class="sv {{ 'c-grn' if (sg_app_ok and sg_data.sg_approach is not none and sg_data.sg_approach >= 0) else 'c-red' if sg_app_ok }}">{{ sgfmt(sg_data.sg_approach) if sg_app_ok else '—' }}</span>
     </div>
   </div>
   {% endif %}
