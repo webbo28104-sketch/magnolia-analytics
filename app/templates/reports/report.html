@@ -654,7 +654,7 @@ body::before {
 {% if sg_putt_ok and sg_data.sg_putting.total is not none %}{% set _sg_valid = _sg_valid + [sg_data.sg_putting.total] %}{% endif %}
 {% set _sg_sorted = _sg_valid | sort %}
 {% macro rankclr(val, ok=True) -%}
-  {%- if not ok or not _sg_sorted -%}var(--cream-dim)
+  {%- if not ok or not _sg_sorted or val is none -%}var(--cream-dim)
   {%- elif val == _sg_sorted | last -%}var(--green-soft)
   {%- elif val == _sg_sorted | first and _sg_sorted | length > 1 -%}var(--red-soft)
   {%- elif val > 0 -%}#a8d4b8
