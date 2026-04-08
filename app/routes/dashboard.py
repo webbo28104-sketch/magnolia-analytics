@@ -31,15 +31,15 @@ def index():
     )
 
     total_complete = len(all_complete)
-    # Free users see last 10 rounds; pro users see full history.
-    # TODO: when founding/standard tiers are introduced, update is_pro() in
-    # app/utils/access.py — do not add inline tier checks here.
     user_is_pro = is_pro(current_user)
-    # Free users get their full round history; paid feature is the performance
-    # trends/stats dashboard (last 20 rounds), not the history list itself.
+
+    # Free users get their full round history.
+    # Performance trends (stats) and SG averages are Pro-only — not computed
+    # for free users so no paid data reaches the browser.
     recent_rounds = all_complete
-    stats  = _compute_stats(all_complete[:20]) if all_complete else None
-    glance = _compute_glance(all_complete) if all_complete else None
+    stats   = _compute_stats(all_complete[:20]) if (all_complete and user_is_pro) else None
+    glance  = _compute_glance(all_complete) if all_complete else None
+    sg_avgs = _compute_sg_avgs(all_complete[:20]) if user_is_pro else None
 
     # In-progress rounds â find the next unplayed hole for each
     in_progress = (
@@ -69,8 +69,6 @@ def index():
             'next_hole_url': url_for('rounds.enter_hole', round_id=r.id, hole_number=next_seq),
             'holes_done': len(saved_holes),
         })
-
-    sg_avgs = _compute_sg_avgs(all_complete[:20])
 
     return render_template('dashboard/index.html',
         recent_rounds=recent_rounds,

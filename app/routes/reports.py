@@ -580,26 +580,35 @@ def view_report(round_id):
     holes_data = _build_holes_data(holes, course_hole_map)
     split      = _split_totals(holes_data)
 
+    user_is_pro = is_pro(current_user)
+
     # ---- Strokes Gained ----
-    # Always compute putting live — needed for per-band chart detail (not stored).
-    # Summary totals are read from stored fields (single source of truth).
-    # Fall back to live computation only if stored values are absent (pre-v2 rounds).
+    # SG Off the Tee is available to all tiers.
+    # SG Approach, ATG, Putting, and Total are Pro-only.
+    # For free users, paid SG fields are set to None so they are never
+    # included in the rendered HTML — the gate is server-side, not CSS-only.
     sg_putting_data = strokes_gained_putting(holes)
 
     if round_.sg_off_tee is not None:
-        # Stored path — authoritative values, avoids any course_hole_map sensitivity
         sg_off_tee  = round_.sg_off_tee
-        sg_approach = round_.sg_approach
-        sg_atg      = round_.sg_atg
-        sg_total    = round_.sg_total
-        sg_putting  = {'total': round_.sg_putting, 'bands': sg_putting_data['bands']}
+        sg_approach = round_.sg_approach if user_is_pro else None
+        sg_atg      = round_.sg_atg      if user_is_pro else None
+        sg_total    = round_.sg_total    if user_is_pro else None
+        sg_putting  = ({'total': round_.sg_putting, 'bands': sg_putting_data['bands']}
+                       if user_is_pro else {'total': None, 'bands': {}})
     else:
         # Live fallback for rounds without stored SG (algo_version is NULL)
         sg_off_tee  = strokes_gained_off_tee(holes, course_hole_map)
-        sg_approach = strokes_gained_approach(holes)
-        sg_atg      = strokes_gained_around_green(holes)
-        sg_putting  = sg_putting_data
-        sg_total    = round(sg_off_tee + sg_approach + sg_atg + sg_putting['total'], 2)
+        if user_is_pro:
+            sg_approach = strokes_gained_approach(holes)
+            sg_atg      = strokes_gained_around_green(holes)
+            sg_putting  = sg_putting_data
+            sg_total    = round(sg_off_tee + sg_approach + sg_atg + sg_putting['total'], 2)
+        else:
+            sg_approach = None
+            sg_atg      = None
+            sg_putting  = {'total': None, 'bands': {}}
+            sg_total    = None
 
     sg_data = {
         'sg_off_tee':  sg_off_tee,
@@ -611,10 +620,10 @@ def view_report(round_id):
 
     sg_bars = {
         'off_tee':  {'value': sg_off_tee,  'width': _sg_bar_width(sg_off_tee),  'positive': sg_off_tee  >= 0},
-        'approach': {'value': sg_approach, 'width': _sg_bar_width(sg_approach), 'positive': sg_approach >= 0},
-        'atg':      {'value': sg_atg,      'width': _sg_bar_width(sg_atg),      'positive': sg_atg      >= 0},
-        'putting':  {'value': sg_putting['total'], 'width': _sg_bar_width(sg_putting['total']), 'positive': sg_putting['total'] >= 0},
-        'total':    {'value': sg_total,    'width': _sg_bar_width(sg_total, scale=20),          'positive': sg_total >= 0},
+        'approach': {'value': sg_approach, 'width': _sg_bar_width(sg_approach or 0), 'positive': (sg_approach or 0) >= 0},
+        'atg':      {'value': sg_atg,      'width': _sg_bar_width(sg_atg or 0),      'positive': (sg_atg or 0)      >= 0},
+        'putting':  {'value': sg_putting['total'], 'width': _sg_bar_width(sg_putting['total'] or 0), 'positive': (sg_putting['total'] or 0) >= 0},
+        'total':    {'value': sg_total,    'width': _sg_bar_width(sg_total or 0, scale=20),           'positive': (sg_total or 0) >= 0},
     }
 
     # ---- Per-hole SG (used for top moments, best-shot callouts, band SG) ----
@@ -632,12 +641,14 @@ def view_report(round_id):
             best_sg_by_cat[cat] = {'sg': best[0], 'hole_number': best[1], 'par': best[2]}
 
     # ---- Analysis sections ----
+    # Approach distance breakdown and miss analysis are Pro-only.
+    # Free users receive empty collections so no data leaks into the HTML.
     tee_gir      = _tee_shot_gir_breakdown(holes_data, hole_sg_by_num)
-    approach_bds = _approach_distance_breakdown(holes_data, hole_sg_by_num)
-    miss_dirs    = _miss_direction_counts(holes_data)
+    approach_bds = _approach_distance_breakdown(holes_data, hole_sg_by_num) if user_is_pro else []
+    miss_dirs    = _miss_direction_counts(holes_data) if user_is_pro else {}
     scramble     = _scramble_stats(holes_data)
     putt_dist    = _putting_distribution(holes_data)
-    first_putt   = _first_putt_profile(holes_data)
+    first_putt   = _first_putt_profile(holes_data) if user_is_pro else []
     weakest_sg   = _weakest_sg_category(sg_data)
     par_type_gir  = _par_type_gir_breakdown(holes_data)
     lie_types     = _lie_type_breakdown(holes_data)
@@ -678,18 +689,23 @@ def view_report(round_id):
     )
     historical_ctx = _build_historical_context(round_, prev_rounds)
 
-    # ---- Claude-generated text (lazy-generate on first view, cached after) ----
-    if not report.summary_text:
-        summary_text = generate_context_summary(round_, weather, calendar_ctx)
-        report.summary_text = summary_text
-    else:
-        summary_text = report.summary_text
+    # ---- Claude-generated text (Pro-only; lazy-generate on first view, cached after) ----
+    # Free users receive None for both fields — no API call is made, no cached
+    # text is served. The template shows an upgrade prompt instead.
+    summary_text = None
+    narrative    = None
+    if user_is_pro:
+        if not report.summary_text:
+            summary_text = generate_context_summary(round_, weather, calendar_ctx)
+            report.summary_text = summary_text
+        else:
+            summary_text = report.summary_text
 
-    if not report.narrative_text:
-        narrative = generate_narrative(round_, sg_data, historical_ctx)
-        report.narrative_text = narrative
-    else:
-        narrative = report.narrative_text
+        if not report.narrative_text:
+            narrative = generate_narrative(round_, sg_data, historical_ctx)
+            report.narrative_text = narrative
+        else:
+            narrative = report.narrative_text
 
     db.session.commit()
 
@@ -713,11 +729,10 @@ def view_report(round_id):
     return render_template(
         'reports/report.html',
 
-        # Access gate — controls blur vs full display in template.
-        # All data is still computed; the gate is purely presentational.
-        # TODO: when founding/standard tiers are introduced, update is_pro() in
-        # app/utils/access.py — do not add inline tier checks here.
-        user_is_pro = is_pro(current_user),
+        # Access gate — controls both server-side data and template presentation.
+        # Paid SG fields, narrative, and analysis data are already None for free
+        # users above. This flag drives the upgrade-prompt UI in the template.
+        user_is_pro = user_is_pro,
 
         # Round
         round             = round_,
