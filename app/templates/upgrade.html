@@ -32,14 +32,12 @@
       {% endfor %}
     </ul>
 
-    <div style="background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:20px;text-align:center">
-      <p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Stripe payments coming soon</p>
-      <p style="font-size:13px;color:var(--text-muted)">
-        We're setting up secure payment processing. In the meantime,
-        <a href="mailto:team@magnoliaanalytics.golf" style="color:var(--gold-amber, #c9a84c)">contact us</a>
-        to arrange early access.
-      </p>
-    </div>
+    <a href="{{ url_for('main.pricing') }}"
+       style="display:block;width:100%;padding:14px;text-align:center;font-size:15px;font-weight:700;
+              font-family:inherit;border-radius:6px;background:var(--green-700,#2d6a4f);
+              color:#fff;text-decoration:none;box-sizing:border-box">
+      See plans &amp; pricing →
+    </a>
 
     {% if current_user.is_authenticated %}
     <p class="auth-footer" style="margin-top:20px">

@@ -10,7 +10,7 @@ from functools import wraps
 
 import stripe
 from flask import (
-    Blueprint, current_app, redirect, request, url_for, abort,
+    Blueprint, current_app, flash, redirect, render_template, request, url_for, abort,
 )
 from flask_login import current_user, login_required
 
@@ -266,3 +266,53 @@ def _handle_subscription_deleted(subscription_obj):
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error('[stripe] DB commit failed after deletion: %s', exc)
+
+
+# ---------------------------------------------------------------------------
+# Cancel subscription
+# ---------------------------------------------------------------------------
+
+@payments_bp.route('/cancel-subscription', methods=['GET'])
+@login_required
+def cancel_subscription_page():
+    """Confirmation page before cancelling."""
+    if not current_user.subscription_active or not current_user.stripe_subscription_id:
+        flash("You don't have an active subscription to cancel.", 'info')
+        return redirect(url_for('dashboard.index'))
+    return render_template('payments/cancel.html')
+
+
+@payments_bp.route('/cancel-subscription', methods=['POST'])
+@login_required
+def cancel_subscription():
+    """
+    Cancel the user's Stripe subscription at period end.
+
+    Uses cancel_at_period_end=True so the user retains access until the
+    billing period expires. The webhook (customer.subscription.deleted)
+    will fire at that point and downgrade the account.
+    """
+    if not current_user.subscription_active or not current_user.stripe_subscription_id:
+        flash("You don't have an active subscription to cancel.", 'info')
+        return redirect(url_for('dashboard.index'))
+
+    s = _stripe()
+    try:
+        s.Subscription.modify(
+            current_user.stripe_subscription_id,
+            cancel_at_period_end=True,
+        )
+        current_app.logger.info(
+            '[stripe] cancel_at_period_end set for sub %s (user_id=%s)',
+            current_user.stripe_subscription_id, current_user.id,
+        )
+        flash(
+            'Your subscription has been cancelled and will end at the close of your current billing period. '
+            'You keep full access until then.',
+            'success',
+        )
+    except stripe.error.StripeError as exc:
+        current_app.logger.error('[stripe] Cancel failed for user %s: %s', current_user.id, exc)
+        flash('Something went wrong — please try again or contact support.', 'error')
+
+    return redirect(url_for('dashboard.index'))

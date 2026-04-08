@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Cancel Subscription — Magnolia Analytics{% endblock %}
+
+{% block content %}
+<section class="auth-page">
+  <div class="auth-card" style="max-width:480px">
+
+    <div class="auth-header">
+      <h1 class="auth-title" style="font-size:1.4rem">Cancel subscription</h1>
+      <p class="auth-subtitle">We're sorry to see you go.</p>
+    </div>
+
+    <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:8px;padding:20px 24px;margin-bottom:24px;font-size:14px;color:var(--text)">
+      <p style="margin:0 0 8px;font-weight:600">What happens when you cancel</p>
+      <ul style="margin:0;padding-left:18px;color:var(--text-muted);line-height:1.8">
+        <li>Your subscription ends at the close of your current billing period</li>
+        <li>You keep full Pro access until then</li>
+        <li>After that your account reverts to the free plan</li>
+        <li>Your rounds and data are never deleted</li>
+        {% if current_user.is_founding_member %}
+        <li style="color:#a07800;font-weight:500">Your founding member rate is preserved — you can resubscribe at the same price any time</li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <form method="POST" action="{{ url_for('payments.cancel_subscription') }}">
+      <button type="submit"
+              style="width:100%;padding:13px;font-size:14px;font-weight:600;font-family:inherit;
+                     border-radius:6px;border:1.5px solid #c0392b;background:#c0392b;
+                     color:#fff;cursor:pointer;margin-bottom:12px;transition:opacity .15s"
+              onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        Confirm cancellation
+      </button>
+    </form>
+
+    <a href="{{ url_for('dashboard.index') }}"
+       style="display:block;text-align:center;font-size:13px;color:var(--text-muted);text-decoration:none">
+      ← Keep my subscription
+    </a>
+
+  </div>
+</section>
+{% endblock %}

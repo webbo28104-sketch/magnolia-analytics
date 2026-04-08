@@ -91,6 +91,19 @@
   transition:opacity .15s;
 }
 .tier-btn:hover { opacity:.85; }
+.staff-btn {
+  font-size:11px; font-weight:600; padding:3px 10px;
+  border-radius:4px; cursor:pointer; transition:opacity .15s;
+  white-space:nowrap;
+}
+.staff-btn--grant { border:1px solid #555; background:#555; color:#fff; }
+.staff-btn--revoke { border:1px solid #c0392b; background:#c0392b; color:#fff; }
+.staff-btn:hover { opacity:.8; }
+.adm-badge--fm {
+  font-size:9px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  background:rgba(201,168,76,0.12); color:#a07800; border:1px solid rgba(201,168,76,0.4);
+  border-radius:3px; padding:1px 5px; margin-left:4px; vertical-align:middle;
+}
 {% endblock %}
 
 {% block content %}
@@ -162,6 +175,7 @@
           <th>Last active</th>
           <th>Status</th>
           <th>Change Tier</th>
+          <th>Staff</th>
         </tr>
       </thead>
       <tbody>
@@ -181,12 +195,15 @@
             {% if u.created_at %}{{ u.created_at.strftime('%d %b %Y') }}{% else %}—{% endif %}
           </td>
           <td>
-            {% if u.is_founding_member %}
+            {% if u.is_founding_member and u.subscription_active %}
               <span class="adm-badge adm-badge--gold">Founding</span>
             {% elif u.subscription_active %}
-              <span class="adm-badge adm-badge--green">Pro{% if u.subscription_tier and u.subscription_tier != 'standard' %} · {{ u.subscription_tier }}{% endif %}</span>
+              <span class="adm-badge adm-badge--green">Pro</span>
             {% else %}
               <span class="adm-badge adm-badge--muted">Free</span>
+            {% endif %}
+            {% if u.is_founding_member and not u.subscription_active %}
+              <span class="adm-badge--fm" title="Eligible for founding member pricing">FM</span>
             {% endif %}
           </td>
           <td style="font-variant-numeric:tabular-nums;">{{ round_count }}</td>
@@ -218,6 +235,21 @@
               </select>
               <button type="submit" class="tier-btn">Save</button>
             </form>
+          </td>
+          <td>
+            {% if u.id != current_user.id %}
+            <form method="POST"
+                  action="{{ url_for('admin.toggle_staff', user_id=u.id, q=q, tier=tier_filter) }}"
+                  style="display:inline;">
+              {% if u.is_staff %}
+                <button type="submit" class="staff-btn staff-btn--revoke">Remove</button>
+              {% else %}
+                <button type="submit" class="staff-btn staff-btn--grant">Grant</button>
+              {% endif %}
+            </form>
+            {% else %}
+              <span style="font-size:11px;color:var(--text-muted)">You</span>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}

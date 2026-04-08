@@ -16,16 +16,14 @@ _PAID_TIERS = {'founding_member', 'premium', 'standard'}
 
 def is_pro(user) -> bool:
     """
-    Return True if the user has active paid access.
+    Return True if the user has an active paid subscription.
 
-    Checks subscription_active OR founding member status (founding members
-    always have access regardless of subscription_active, because their
-    billing may be set up separately).
+    Founding member status (is_founding_member) is an eligibility flag that
+    grants access to the discounted founding pricing — it does NOT grant free
+    access. Access is always gated on subscription_active being True.
     """
     if user is None:
         return False
-    if getattr(user, 'is_founding_member', False):
-        return True
     return bool(getattr(user, 'subscription_active', False))
 
 

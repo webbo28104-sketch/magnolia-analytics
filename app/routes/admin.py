@@ -360,13 +360,11 @@ def set_user_tier(user_id):
     user.subscription_active = new_active
     user.subscription_tier   = new_tier
 
-    # Keep is_founding_member boolean in sync with the tier form.
-    # Granting founding_member tier sets the flag; downgrading to Free clears it
-    # so is_pro() reflects what the admin actually intended.
+    # Grant founding eligibility when explicitly setting founding tier.
+    # Never clear it — is_founding_member is a lifetime eligibility flag;
+    # access is controlled solely by subscription_active.
     if new_tier in ('founding_member', 'founding'):
         user.is_founding_member = True
-    elif not new_active:
-        user.is_founding_member = False
 
     try:
         db.session.commit()
@@ -377,6 +375,27 @@ def set_user_tier(user_id):
         current_app.logger.error('[admin.set_user_tier] Failed for user %s: %s', user_id, exc)
         flash('Failed to update user — check logs.', 'error')
 
+    return redirect(url_for('admin.users', q=request.args.get('q', ''), tier=request.args.get('tier', 'all')))
+
+
+@admin_bp.route('/users/<int:user_id>/toggle-staff', methods=['POST'])
+@staff_required
+def toggle_staff(user_id):
+    """Toggle is_staff on a user. A staff member cannot remove their own staff status."""
+    from app.models.user import User
+    user = User.query.get_or_404(user_id)
+    if user.id == current_user.id:
+        flash('You cannot change your own staff status.', 'error')
+        return redirect(url_for('admin.users'))
+    user.is_staff = not user.is_staff
+    try:
+        db.session.commit()
+        action = 'granted' if user.is_staff else 'removed'
+        flash(f'Staff access {action} for {user.full_name}.', 'success')
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error('[admin.toggle_staff] Failed for user %s: %s', user_id, exc)
+        flash('Failed to update — check logs.', 'error')
     return redirect(url_for('admin.users', q=request.args.get('q', ''), tier=request.args.get('tier', 'all')))
 
 
