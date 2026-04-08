@@ -41,6 +41,11 @@ def index():
     glance  = _compute_glance(all_complete) if all_complete else None
     sg_avgs = _compute_sg_avgs(all_complete[:20]) if user_is_pro else None
 
+    # SG improvement category in the glance section exposes paid SG data to
+    # free users — clear it so no SG category names or deltas reach the browser.
+    if glance and not user_is_pro:
+        glance['sg_improved_cat'] = None
+
     # In-progress rounds â find the next unplayed hole for each
     in_progress = (
         Round.query

@@ -181,7 +181,7 @@
             {% if u.created_at %}{{ u.created_at.strftime('%d %b %Y') }}{% else %}—{% endif %}
           </td>
           <td>
-            {% if u.subscription_tier == 'founding_member' %}
+            {% if u.is_founding_member %}
               <span class="adm-badge adm-badge--gold">Founding</span>
             {% elif u.subscription_active %}
               <span class="adm-badge adm-badge--green">Pro{% if u.subscription_tier and u.subscription_tier != 'standard' %} · {{ u.subscription_tier }}{% endif %}</span>

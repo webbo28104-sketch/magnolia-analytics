@@ -441,7 +441,7 @@
   {% endif %}
 
   <!-- Performance upgrade prompt for free users -->
-  {% if stats and not user_is_pro %}
+  {% if not user_is_pro and total_complete %}
   <div class="section">
     <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:8px;font-size:13px;color:var(--text-muted)">
       <span style="font-size:16px">📊</span>

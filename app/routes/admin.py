@@ -360,6 +360,14 @@ def set_user_tier(user_id):
     user.subscription_active = new_active
     user.subscription_tier   = new_tier
 
+    # Keep is_founding_member boolean in sync with the tier form.
+    # Granting founding_member tier sets the flag; downgrading to Free clears it
+    # so is_pro() reflects what the admin actually intended.
+    if new_tier in ('founding_member', 'founding'):
+        user.is_founding_member = True
+    elif not new_active:
+        user.is_founding_member = False
+
     try:
         db.session.commit()
         status = 'Pro' if new_active else 'Free'

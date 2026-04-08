@@ -448,15 +448,18 @@ def _sg_bar_width(sg_value: float, scale: float = 8.0) -> int:
     return round(abs(clamped) / scale * 100)
 
 
-def _weakest_sg_category(sg_data: dict) -> str:
-    """Return the display name of the weakest SG category."""
+def _weakest_sg_category(sg_data: dict):
+    """Return the display name of the weakest SG category, or None if insufficient data."""
     categories = {
-        'Off the Tee':      sg_data.get('sg_off_tee', 0),
-        'Approach':         sg_data.get('sg_approach', 0),
-        'Around the Green': sg_data.get('sg_atg', 0),
-        'Putting':          sg_data.get('sg_putting', {}).get('total', 0),
+        'Off the Tee':      sg_data.get('sg_off_tee'),
+        'Approach':         sg_data.get('sg_approach'),
+        'Around the Green': sg_data.get('sg_atg'),
+        'Putting':          sg_data.get('sg_putting', {}).get('total'),
     }
-    return min(categories, key=categories.get)
+    valid = {name: val for name, val in categories.items() if val is not None}
+    if not valid:
+        return None
+    return min(valid, key=valid.get)
 
 
 def _build_historical_context(round_, prev_rounds: list) -> dict:
