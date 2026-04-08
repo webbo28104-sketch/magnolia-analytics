@@ -311,7 +311,7 @@
     </div>
   </form>
 
-  {% if current_user.subscription_active and current_user.stripe_subscription_id %}
+  {% if current_user.subscription_active %}
   <div style="margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center">
     <a href="{{ url_for('payments.cancel_subscription_page') }}"
        style="font-size:12px;color:var(--text-muted);text-decoration:none">
