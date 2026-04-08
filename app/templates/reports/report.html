@@ -648,10 +648,10 @@ body::before {
    Positive middles → light green/mint · Negative middles → light red/salmon
    Defined here (before all tab panels) so it is usable in every tab.        #}
 {% set _sg_valid = [] %}
-{% if sg_ott_ok  %}{% set _sg_valid = _sg_valid + [sg_data.sg_off_tee] %}{% endif %}
-{% if sg_app_ok  %}{% set _sg_valid = _sg_valid + [sg_data.sg_approach] %}{% endif %}
-{% if sg_atg_ok  %}{% set _sg_valid = _sg_valid + [sg_data.sg_atg] %}{% endif %}
-{% if sg_putt_ok %}{% set _sg_valid = _sg_valid + [sg_data.sg_putting.total] %}{% endif %}
+{% if sg_ott_ok  and sg_data.sg_off_tee is not none  %}{% set _sg_valid = _sg_valid + [sg_data.sg_off_tee] %}{% endif %}
+{% if sg_app_ok  and sg_data.sg_approach is not none  %}{% set _sg_valid = _sg_valid + [sg_data.sg_approach] %}{% endif %}
+{% if sg_atg_ok  and sg_data.sg_atg is not none  %}{% set _sg_valid = _sg_valid + [sg_data.sg_atg] %}{% endif %}
+{% if sg_putt_ok and sg_data.sg_putting.total is not none %}{% set _sg_valid = _sg_valid + [sg_data.sg_putting.total] %}{% endif %}
 {% set _sg_sorted = _sg_valid | sort %}
 {% macro rankclr(val, ok=True) -%}
   {%- if not ok or not _sg_sorted -%}var(--cream-dim)
@@ -1696,10 +1696,10 @@ body::before {
   {% if sg_total_ok %}
   {% set _avg_sg_total = _hctx.get('avg_sg_total') %}
   {% set _sg_vals_named = {} %}
-  {% if sg_ott_ok  %}{% set _sg_vals_named = _sg_vals_named | combine({'Off the Tee':      sg_data.sg_off_tee}) %}{% endif %}
-  {% if sg_app_ok  %}{% set _sg_vals_named = _sg_vals_named | combine({'Approach':         sg_data.sg_approach}) %}{% endif %}
-  {% if sg_atg_ok  %}{% set _sg_vals_named = _sg_vals_named | combine({'Around the Green': sg_data.sg_atg}) %}{% endif %}
-  {% if sg_putt_ok %}{% set _sg_vals_named = _sg_vals_named | combine({'Putting':          sg_data.sg_putting.total}) %}{% endif %}
+  {% if sg_ott_ok  and sg_data.sg_off_tee is not none  %}{% set _sg_vals_named = _sg_vals_named | combine({'Off the Tee':      sg_data.sg_off_tee}) %}{% endif %}
+  {% if sg_app_ok  and sg_data.sg_approach is not none  %}{% set _sg_vals_named = _sg_vals_named | combine({'Approach':         sg_data.sg_approach}) %}{% endif %}
+  {% if sg_atg_ok  and sg_data.sg_atg is not none  %}{% set _sg_vals_named = _sg_vals_named | combine({'Around the Green': sg_data.sg_atg}) %}{% endif %}
+  {% if sg_putt_ok and sg_data.sg_putting.total is not none %}{% set _sg_vals_named = _sg_vals_named | combine({'Putting':          sg_data.sg_putting.total}) %}{% endif %}
   <div class="sga-total fu d7">
     <div>
       <div class="sga-total-lbl">SG: Total</div>
