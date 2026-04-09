@@ -616,9 +616,14 @@
         <!-- Fairway checkmark (shown when fairway selected) -->
         <text id="ts-check" x="150" y="38" text-anchor="middle" fill="white" font-size="22" visibility="hidden">✓</text>
       </svg>
-      <div style="margin-top:12px;display:flex;gap:8px;justify-content:center">
-        <button type="button" class="he-pill" id="ts-bunker-btn">Bunker</button>
-        <button type="button" class="he-pill" id="ts-penalty-btn">Penalty</button>
+      <div id="tee-mod-pills" style="margin-top:12px;display:flex;gap:8px;justify-content:center">
+        {% set ts_parts = (existing.tee_shot or '').split(',') if existing else [] %}
+        <button type="button"
+                class="he-pill he-pill--multi{% if ts_parts and ts_parts[0] == 'bunker' %} is-active{% endif %}"
+                data-group="tee-mod" data-value="bunker" id="ts-bunker-btn">Bunker</button>
+        <button type="button"
+                class="he-pill he-pill--multi{% if ts_parts and ts_parts[0] == 'penalty' %} is-active{% endif %}"
+                data-group="tee-mod" data-value="penalty" id="ts-penalty-btn">Penalty</button>
       </div>
       <input type="hidden" name="tee_shot" id="tee-shot-input"
              value="{{ existing.tee_shot or '' }}">

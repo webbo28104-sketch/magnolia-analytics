@@ -3,7 +3,12 @@
  * Works with the redesigned hole.html (he-pill / is-active / he-reveal / is-visible).
  */
 
-// ── Multi-select pill groups (miss direction + lie type) ──────────────────
+// ── Tee shot state — module-level so global delegated handler can access ──────
+var _tsDir = null;
+var _tsMod = null;
+var _tsSyncUI = null; // set by initTeeShotSVG once DOM is ready
+
+// ── Multi-select pill groups (miss direction + lie type + tee mod) ────────────
 // Registered at top level (outside DOMContentLoaded) so it is active the
 // instant the script executes, avoiding a brief window on desktop where the
 // DOMContentLoaded callback hasn't run yet. The script tag is at the bottom
@@ -58,6 +63,14 @@ document.addEventListener('click', function(e) {
     pill.classList.toggle('is-active');
     const lieInput = document.getElementById('lie-type-input');
     if (lieInput) lieInput.value = getLieTypeValue();
+
+  } else if (group === 'tee-mod') {
+    // Toggle bunker/penalty modifier; mutually exclusive with each other,
+    // incompatible with fairway direction
+    _tsMod = (_tsMod === value) ? null : value;
+    if (_tsMod && _tsDir === 'fairway') _tsDir = null;
+    if (_tsSyncUI) _tsSyncUI(true);
+    return; // syncUI handles vibrate
   }
 
   if (navigator.vibrate) navigator.vibrate(10);
@@ -266,8 +279,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const tsFairway  = document.getElementById('ts-fairway');
     const tsRight    = document.getElementById('ts-right');
     const tsCheck    = document.getElementById('ts-check');
-    const penaltyBtn = document.getElementById('ts-penalty-btn');
     const bunkerBtn  = document.getElementById('ts-bunker-btn');
+    const penaltyBtn = document.getElementById('ts-penalty-btn');
     if (!input || !tsLeft || !tsFairway || !tsRight) return;
 
     const ROUGH_BASE   = '#c4a35a';
@@ -275,13 +288,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const FW_BASE      = '#2d5a27';
     const FW_ACTIVE    = '#4caf50';
 
-    // Two independent axes:
-    //   tsDir — where the ball ended up laterally: null | 'fairway' | 'left' | 'right'
-    //   tsMod — special outcome modifier:          null | 'bunker'  | 'penalty'
-    // Combined hidden input: 'fairway' | 'left' | 'right' | 'bunker' | 'bunker,left' |
-    //                        'bunker,right' | 'penalty' | 'penalty,left' | 'penalty,right'
-    let tsDir = null;
-    let tsMod = null;
+    // Two independent axes stored in module-level vars so the global delegated
+    // click handler (tee-mod group) can update them and call back into syncUI.
+    //   _tsDir — lateral direction: null | 'fairway' | 'left' | 'right'
+    //   _tsMod — outcome modifier:  null | 'bunker'  | 'penalty'
+    _tsDir = null;
+    _tsMod = null;
 
     // Initialise from existing server value on edit
     const initial = (input.value || '').trim();
@@ -289,64 +301,52 @@ document.addEventListener('DOMContentLoaded', () => {
       const parts = initial.split(',');
       const p0 = parts[0], p1 = parts[1];
       if (p0 === 'fairway') {
-        tsDir = 'fairway';
+        _tsDir = 'fairway';
       } else if (p0 === 'bunker' || p0 === 'penalty') {
-        tsMod = p0;
-        if (p1 === 'left' || p1 === 'right') tsDir = p1;
+        _tsMod = p0;
+        if (p1 === 'left' || p1 === 'right') _tsDir = p1;
       } else if (p0 === 'left' || p0 === 'right') {
-        tsDir = p0;
+        _tsDir = p0;
       }
     }
 
     function buildValue() {
-      if (tsDir === 'fairway') return 'fairway';
-      if (tsMod && tsDir)     return tsMod + ',' + tsDir;
-      if (tsMod)              return tsMod;
-      if (tsDir)              return tsDir;
+      if (_tsDir === 'fairway') return 'fairway';
+      if (_tsMod && _tsDir)    return _tsMod + ',' + _tsDir;
+      if (_tsMod)              return _tsMod;
+      if (_tsDir)              return _tsDir;
       return '';
     }
 
     function syncUI(fromInteraction) {
-      tsLeft.setAttribute('fill',    tsDir === 'left'    ? ROUGH_ACTIVE : ROUGH_BASE);
-      tsFairway.setAttribute('fill', tsDir === 'fairway' ? FW_ACTIVE    : FW_BASE);
-      tsRight.setAttribute('fill',   tsDir === 'right'   ? ROUGH_ACTIVE : ROUGH_BASE);
-      if (tsCheck) tsCheck.setAttribute('visibility', tsDir === 'fairway' ? 'visible' : 'hidden');
-      if (bunkerBtn)  bunkerBtn.classList.toggle('is-active',  tsMod === 'bunker');
-      if (penaltyBtn) penaltyBtn.classList.toggle('is-active', tsMod === 'penalty');
+      tsLeft.setAttribute('fill',    _tsDir === 'left'    ? ROUGH_ACTIVE : ROUGH_BASE);
+      tsFairway.setAttribute('fill', _tsDir === 'fairway' ? FW_ACTIVE    : FW_BASE);
+      tsRight.setAttribute('fill',   _tsDir === 'right'   ? ROUGH_ACTIVE : ROUGH_BASE);
+      if (tsCheck) tsCheck.setAttribute('visibility', _tsDir === 'fairway' ? 'visible' : 'hidden');
+      if (bunkerBtn)  bunkerBtn.classList.toggle('is-active',  _tsMod === 'bunker');
+      if (penaltyBtn) penaltyBtn.classList.toggle('is-active', _tsMod === 'penalty');
       input.value = buildValue();
       if (fromInteraction && navigator.vibrate) navigator.vibrate(10);
     }
 
-    // SVG zone clicks — direction only; modifiers remain
+    // Expose syncUI so the global delegated handler can call it after updating _tsMod
+    _tsSyncUI = syncUI;
+
+    // SVG zone clicks — direction only; modifier (_tsMod) is handled by the
+    // global delegated handler via data-group="tee-mod" on the pill buttons
     tsLeft.addEventListener('click', () => {
-      tsDir = (tsDir === 'left') ? null : 'left'; // tap again to deselect direction
+      _tsDir = (_tsDir === 'left') ? null : 'left';
       syncUI(true);
     });
     tsFairway.addEventListener('click', () => {
-      tsDir = 'fairway';
-      tsMod = null; // fairway is incompatible with bunker/penalty
+      _tsDir = 'fairway';
+      _tsMod = null; // fairway is incompatible with bunker/penalty
       syncUI(true);
     });
     tsRight.addEventListener('click', () => {
-      tsDir = (tsDir === 'right') ? null : 'right';
+      _tsDir = (_tsDir === 'right') ? null : 'right';
       syncUI(true);
     });
-
-    // Modifier toggles — coexist with left/right direction, incompatible with fairway
-    if (bunkerBtn) {
-      bunkerBtn.addEventListener('click', () => {
-        tsMod = (tsMod === 'bunker') ? null : 'bunker';
-        if (tsMod && tsDir === 'fairway') tsDir = null; // fairway + modifier = clear fairway
-        syncUI(true);
-      });
-    }
-    if (penaltyBtn) {
-      penaltyBtn.addEventListener('click', () => {
-        tsMod = (tsMod === 'penalty') ? null : 'penalty';
-        if (tsMod && tsDir === 'fairway') tsDir = null;
-        syncUI(true);
-      });
-    }
 
     // Apply initial state (no vibrate)
     syncUI(false);
@@ -434,9 +434,12 @@ document.addEventListener('DOMContentLoaded', () => {
     holeForm.addEventListener('submit', e => {
 
       // 1. Require at least one miss direction when GIR = No
+      // Exception: bunker lie already implies location — direction not required
       const mr = document.getElementById('miss-reveal');
       const mi = document.getElementById('approach-miss-input');
-      if (mr && mr.classList.contains('is-visible') && mi && !mi.value) {
+      const lieTypEl = document.getElementById('lie-type-input');
+      const bunkerLieActive = (lieTypEl ? lieTypEl.value : '').split(',').includes('bunker');
+      if (mr && mr.classList.contains('is-visible') && mi && !mi.value && !bunkerLieActive) {
         e.preventDefault();
         const lbl = document.querySelector('#miss-dir-pills')
                              ?.closest('.he-field')?.querySelector('.he-label');
