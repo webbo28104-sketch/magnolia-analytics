@@ -599,31 +599,29 @@
     </div>
 
     <!-- 2. Tee shot (hidden for par 3) ───────────────────────────────── -->
-    <div class="he-field he-reveal{% if init_par != 3 %} is-visible{% endif %}" id="tee-shot-reveal">
-      <div class="he-reveal-inner">
-        <label class="he-label">Tee shot</label>
-        <svg id="tee-shot-svg" viewBox="0 0 300 80" xmlns="http://www.w3.org/2000/svg"
-             style="width:100%;max-width:min(300px,100%);display:block;margin:8px auto 0;border-radius:8px;overflow:hidden;pointer-events:none">
-          <!-- Left rough — pointer-events:all so it receives taps despite svg being none -->
-          <rect id="ts-left"    x="0"   y="0" width="90"  height="80" fill="#c4a35a" style="pointer-events:all;cursor:pointer"/>
-          <!-- Fairway -->
-          <rect id="ts-fairway" x="90"  y="0" width="120" height="80" fill="#2d5a27" style="pointer-events:all;cursor:pointer"/>
-          <!-- Right rough -->
-          <rect id="ts-right"   x="210" y="0" width="90"  height="80" fill="#c4a35a" style="pointer-events:all;cursor:pointer"/>
-          <!-- Area labels -->
-          <text x="45"  y="46" text-anchor="middle" fill="rgba(255,255,255,.8)"  font-size="10" font-family="DM Mono,monospace" letter-spacing="1">LEFT</text>
-          <text x="150" y="43" text-anchor="middle" fill="rgba(255,255,255,.9)"  font-size="10" font-family="DM Mono,monospace" letter-spacing="1">FAIRWAY</text>
-          <text x="255" y="46" text-anchor="middle" fill="rgba(255,255,255,.8)"  font-size="10" font-family="DM Mono,monospace" letter-spacing="1">RIGHT</text>
-          <!-- Fairway checkmark (shown when fairway selected) -->
-          <text id="ts-check" x="150" y="38" text-anchor="middle" fill="white" font-size="22" visibility="hidden">✓</text>
-        </svg>
-        <div style="text-align:center;margin-top:10px;display:flex;gap:8px;justify-content:center">
-          <button type="button" class="he-pill" id="ts-bunker-btn">Bunker</button>
-          <button type="button" class="he-pill" id="ts-penalty-btn">Penalty</button>
-        </div>
-        <input type="hidden" name="tee_shot" id="tee-shot-input"
-               value="{{ existing.tee_shot or '' }}">
+    <div class="he-field" id="tee-shot-reveal"{% if init_par == 3 %} style="display:none"{% endif %}>
+      <label class="he-label">Tee shot</label>
+      <svg id="tee-shot-svg" viewBox="0 0 300 80" xmlns="http://www.w3.org/2000/svg"
+           style="width:100%;max-width:min(300px,100%);display:block;margin:8px auto 0;border-radius:8px;overflow:hidden;pointer-events:none">
+        <!-- Left rough — pointer-events:all so it receives taps despite svg being none -->
+        <rect id="ts-left"    x="0"   y="0" width="90"  height="80" fill="#c4a35a" style="pointer-events:all;cursor:pointer"/>
+        <!-- Fairway -->
+        <rect id="ts-fairway" x="90"  y="0" width="120" height="80" fill="#2d5a27" style="pointer-events:all;cursor:pointer"/>
+        <!-- Right rough -->
+        <rect id="ts-right"   x="210" y="0" width="90"  height="80" fill="#c4a35a" style="pointer-events:all;cursor:pointer"/>
+        <!-- Area labels -->
+        <text x="45"  y="46" text-anchor="middle" fill="rgba(255,255,255,.8)"  font-size="10" font-family="DM Mono,monospace" letter-spacing="1">LEFT</text>
+        <text x="150" y="43" text-anchor="middle" fill="rgba(255,255,255,.9)"  font-size="10" font-family="DM Mono,monospace" letter-spacing="1">FAIRWAY</text>
+        <text x="255" y="46" text-anchor="middle" fill="rgba(255,255,255,.8)"  font-size="10" font-family="DM Mono,monospace" letter-spacing="1">RIGHT</text>
+        <!-- Fairway checkmark (shown when fairway selected) -->
+        <text id="ts-check" x="150" y="38" text-anchor="middle" fill="white" font-size="22" visibility="hidden">✓</text>
+      </svg>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:center">
+        <button type="button" class="he-pill" id="ts-bunker-btn">Bunker</button>
+        <button type="button" class="he-pill" id="ts-penalty-btn">Penalty</button>
       </div>
+      <input type="hidden" name="tee_shot" id="tee-shot-input"
+             value="{{ existing.tee_shot or '' }}">
     </div>
 
     <!-- 3. Second shot distance (par 5 only) ─────────────────────────── -->

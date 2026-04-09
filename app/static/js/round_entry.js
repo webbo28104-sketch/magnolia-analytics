@@ -151,9 +151,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const parInput = document.getElementById('par-input');
   const initPar  = parInput ? parseInt(parInput.value) : 4;
 
-  // Tee shot: hide for par 3
-  const teeShotReveal  = document.getElementById('tee-shot-reveal');
-  reveal(teeShotReveal, initPar !== 3);
+  // Tee shot: hide for par 3 — uses display:none directly (no reveal animation needed
+  // since par is fixed at page load and the he-reveal overflow:hidden was clipping buttons)
+  const teeShotReveal = document.getElementById('tee-shot-reveal');
+  if (teeShotReveal) teeShotReveal.style.display = (initPar === 3) ? 'none' : '';
 
   // Second shot: show for par 5
   const secondShotReveal = document.getElementById('second-shot-reveal');
