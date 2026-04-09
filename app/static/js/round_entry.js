@@ -266,6 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tsRight    = document.getElementById('ts-right');
     const tsCheck    = document.getElementById('ts-check');
     const penaltyBtn = document.getElementById('ts-penalty-btn');
+    const bunkerBtn  = document.getElementById('ts-bunker-btn');
     if (!input || !tsLeft || !tsFairway || !tsRight) return;
 
     const ROUGH_BASE    = '#c4a35a';
@@ -279,6 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tsRight.setAttribute('fill',   ROUGH_BASE);
       if (tsCheck)    tsCheck.setAttribute('visibility', 'hidden');
       if (penaltyBtn) penaltyBtn.classList.remove('is-active');
+      if (bunkerBtn)  bunkerBtn.classList.remove('is-active');
     }
 
     function select(area) {
@@ -291,6 +293,8 @@ document.addEventListener('DOMContentLoaded', () => {
         tsLeft.setAttribute('fill', ROUGH_ACTIVE);
       } else if (area === 'right') {
         tsRight.setAttribute('fill', ROUGH_ACTIVE);
+      } else if (area === 'bunker') {
+        if (bunkerBtn) bunkerBtn.classList.add('is-active');
       } else if (area === 'penalty') {
         if (penaltyBtn) penaltyBtn.classList.add('is-active');
       }
@@ -300,6 +304,13 @@ document.addEventListener('DOMContentLoaded', () => {
     tsLeft.addEventListener('click',    () => select('left'));
     tsFairway.addEventListener('click', () => select('fairway'));
     tsRight.addEventListener('click',   () => select('right'));
+
+    if (bunkerBtn) {
+      bunkerBtn.addEventListener('click', () => {
+        if (input.value === 'bunker') { reset(); input.value = ''; }
+        else select('bunker');
+      });
+    }
 
     if (penaltyBtn) {
       penaltyBtn.addEventListener('click', () => {

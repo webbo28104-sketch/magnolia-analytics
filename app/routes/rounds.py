@@ -374,5 +374,9 @@ def delete_round(round_id):
     round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
     db.session.delete(round_)
     db.session.commit()
+    try:
+        _recalculate_handicap(current_user)
+    except Exception as e:
+        current_app.logger.exception(f"[delete_round] Handicap recalc failed: {e}")
     flash('Round deleted.', 'info')
     return redirect(url_for('dashboard.index'))

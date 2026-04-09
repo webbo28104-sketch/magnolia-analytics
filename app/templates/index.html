@@ -782,7 +782,7 @@
         <a href="{{ url_for('rounds.new_round') }}" class="btn--hero-ghost">Log a Round</a>
       {% else %}
         <a href="{{ url_for('auth.register') }}" class="btn--hero-primary">Sign up free</a>
-        <a href="#how-it-works" class="btn--hero-ghost">See how it works</a>
+        <a href="{{ url_for('auth.login') }}" class="btn--hero-ghost">Sign in</a>
       {% endif %}
     </div>
 
@@ -1140,7 +1140,11 @@
     </div>
 
     <div class="lp-founding-cta-wrap">
-      <a href="{{ url_for('auth.register') }}" class="btn--hero-primary">Sign up and lock in £9.99/month</a>
+      {% if logged_in %}
+        <a href="{{ url_for('main.pricing') }}" class="btn--hero-primary">View founding member pricing</a>
+      {% else %}
+        <a href="{{ url_for('auth.register') }}" class="btn--hero-primary">Sign up and lock in £9.99/month</a>
+      {% endif %}
     </div>
     <p class="lp-founding-small">Free to start &nbsp;·&nbsp; No card required &nbsp;·&nbsp; Cancel any time</p>
 
