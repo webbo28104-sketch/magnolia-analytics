@@ -781,7 +781,7 @@
         <a href="{{ url_for('dashboard.index') }}" class="btn--hero-primary">Go to Dashboard</a>
         <a href="{{ url_for('rounds.new_round') }}" class="btn--hero-ghost">Log a Round</a>
       {% else %}
-        <a href="{{ url_for('auth.register') }}" class="btn--hero-primary">Get Early Access</a>
+        <a href="{{ url_for('auth.register') }}" class="btn--hero-primary">Sign up free</a>
         <a href="#how-it-works" class="btn--hero-ghost">See how it works</a>
       {% endif %}
     </div>
@@ -789,7 +789,7 @@
     {% if not already_subscribed %}
     <p class="lp-founding-pill">
       <span class="lp-pill-star">✦</span>
-      Founding member pricing — £9.99/mo locked for life. Limited spots.
+      Sign up in April and lock in our founding member rate — £9.99/mo forever. Rises to £12.99 after April.
     </p>
     {% endif %}
 
@@ -1104,9 +1104,9 @@
 {% if not already_subscribed %}
 <section class="lp-founding" id="founding">
   <div class="lp-founding-inner">
-    <p class="section-eyebrow">Limited availability</p>
-    <h2 class="section-title">Join as a Founding Member</h2>
-    <p class="lp-founding-sub">Locked pricing, beta access, and a direct line to shaping the roadmap. A small number of spots are available while we're in beta.</p>
+    <p class="section-eyebrow">April only</p>
+    <h2 class="section-title">Lock in our founding member rate</h2>
+    <p class="lp-founding-sub">Sign up this month and pay £9.99/month forever — regardless of what we charge new members in the future. Price rises to £12.99 in May.</p>
 
     <div class="lp-plan-grid">
 
@@ -1140,9 +1140,9 @@
     </div>
 
     <div class="lp-founding-cta-wrap">
-      <a href="{{ url_for('main.pricing') }}" class="btn--hero-primary">Claim Founding Member Pricing</a>
+      <a href="{{ url_for('auth.register') }}" class="btn--hero-primary">Sign up and lock in £9.99/month</a>
     </div>
-    <p class="lp-founding-small">Invite only &nbsp;·&nbsp; Limited spots remaining &nbsp;·&nbsp; Cancel any time</p>
+    <p class="lp-founding-small">Free to start &nbsp;·&nbsp; No card required &nbsp;·&nbsp; Cancel any time</p>
 
   </div>
 </section>

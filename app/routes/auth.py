@@ -1,10 +1,9 @@
 import secrets
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models.user import User
-from app.models.access_code import AccessCode
 from app.services.sendgrid_service import send_welcome, send_password_reset, send_password_changed
 from datetime import datetime, timedelta
 
@@ -23,31 +22,8 @@ def register():
         password         = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
 
-        # Prefer the code entered in the form; fall back to the session (modal flow)
-        form_code    = request.form.get('invite_code', '').strip().upper()
-        session_code = (session.get('access_code') or '').strip().upper()
-        code_str     = form_code or session_code
-
         def _form(**kw):
-            return render_template('auth/register.html', code_prefill=code_str, **kw)
-
-        # --- Invite code: must be present and still available at submission time ---
-        if not code_str:
-            flash(
-                'Access to Magnolia is currently by invite only. '
-                'Join the waitlist at magnoliaanalytics.golf',
-                'error',
-            )
-            return _form()
-
-        access_code_obj = AccessCode.query.filter_by(code=code_str).first()
-        if not access_code_obj or not access_code_obj.is_available:
-            flash(
-                'Access to Magnolia is currently by invite only. '
-                'Join the waitlist at magnoliaanalytics.golf',
-                'error',
-            )
-            return _form()
+            return render_template('auth/register.html', **kw)
 
         # --- Basic field validation ---
         if not all([first_name, last_name, email, password]):
@@ -66,7 +42,6 @@ def register():
         # --- Create user ---
         user = User(first_name=first_name, last_name=last_name, email=email)
         user.set_password(password)
-        user.invite_code = code_str
 
         if current_app.config.get('BETA_MODE'):
             from decimal import Decimal
@@ -78,21 +53,7 @@ def register():
             user.subscription_tier = 'free'
 
         db.session.add(user)
-
-        # Consume the code
-        access_code_obj.mark_used(email)
-
-        # Mark the matching waitlist entry as converted
-        from app.models.waitlist import WaitingList
-        wl_entry = WaitingList.query.filter_by(access_code=code_str).first()
-        if wl_entry:
-            wl_entry.status = 'converted'
-
         db.session.commit()
-
-        # Clear session access flags
-        session.pop('access_granted', None)
-        session.pop('access_code', None)
 
         login_user(user)
 
@@ -104,9 +65,7 @@ def register():
         flash(f'Welcome to Magnolia Analytics, {first_name}!', 'success')
         return redirect(url_for('dashboard.index'))
 
-    # GET — pre-fill from URL param, fall back to session (modal flow)
-    code_prefill = request.args.get('code', '').strip().upper() or (session.get('access_code') or '')
-    return render_template('auth/register.html', code_prefill=code_prefill)
+    return render_template('auth/register.html')
 
 
 @auth_bp.route('/validate-code', methods=['POST'])

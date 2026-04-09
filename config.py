@@ -23,8 +23,8 @@ class Config:
     APP_NAME = 'Magnolia Analytics'
     DEFAULT_COURSE = 'Seaford GC'
 
-    # Access control — set to True to require an invite code at registration
-    INVITE_ONLY = True
+    # Access control — invite-only gate removed; direct signup now open
+    INVITE_ONLY = False
 
     # Founding member period — set False at public launch
     BETA_MODE = True

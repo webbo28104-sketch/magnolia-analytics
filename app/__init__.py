@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, url_for, session
+from flask import Flask, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager, user_logged_in, current_user
@@ -47,7 +47,7 @@ def create_app(config_name='default'):
     # Recompute stale stats for the user on every login (covers login + register)
     user_logged_in.connect(_recompute_stale_on_login, app)
 
-    # Access gate: redirect unauthenticated visitors to /waitlist
+    # Access gate: public routes are open; only admin requires login when unauthenticated
     @app.before_request
     def _access_gate():
         # Always allow static files and PWA assets
@@ -55,33 +55,15 @@ def create_app(config_name='default'):
             return None
         if request.endpoint in ('main.service_worker', 'main.manifest'):
             return None
-        # Always allow the waitlist page itself
-        if request.endpoint in ('waitlist.index',):
-            return None
         # Always allow the Stripe webhook (Stripe cannot send a session cookie)
         if request.endpoint == 'payments.webhook_handler':
-            return None
-        # Always allow login, validate-code, and the password-reset flow
-        if request.endpoint in (
-            'auth.login', 'auth.validate_code', 'auth.logout',
-            'auth.forgot_password', 'auth.reset_password',
-        ):
             return None
         # Authenticated users pass through
         if current_user.is_authenticated:
             return None
-        # Admin routes → redirect to login (not waitlist) when unauthenticated
+        # Admin routes → redirect to login when unauthenticated
         if request.endpoint and request.endpoint.startswith('admin.'):
             return redirect(url_for('auth.login'))
-        # Allow /auth/register via modal flow (session flag) or direct invite link (?code= / form field)
-        if request.endpoint == 'auth.register':
-            if session.get('access_granted'):
-                return None
-            if request.args.get('code') or request.form.get('invite_code'):
-                return None
-            return redirect(url_for('waitlist.index'))
-        # All other unauthenticated requests → waitlist
-        return redirect(url_for('waitlist.index'))
 
     # Custom Jinja2 filters
     @app.template_filter('combine')
