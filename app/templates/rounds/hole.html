@@ -603,13 +603,13 @@
       <div class="he-reveal-inner">
         <label class="he-label">Tee shot</label>
         <svg id="tee-shot-svg" viewBox="0 0 300 80" xmlns="http://www.w3.org/2000/svg"
-             style="width:100%;max-width:min(300px,100%);display:block;margin:8px auto 0;border-radius:8px;overflow:hidden;cursor:pointer">
-          <!-- Left rough -->
-          <rect id="ts-left"    x="0"   y="0" width="90"  height="80" fill="#c4a35a"/>
+             style="width:100%;max-width:min(300px,100%);display:block;margin:8px auto 0;border-radius:8px;overflow:hidden;pointer-events:none">
+          <!-- Left rough — pointer-events:all so it receives taps despite svg being none -->
+          <rect id="ts-left"    x="0"   y="0" width="90"  height="80" fill="#c4a35a" style="pointer-events:all;cursor:pointer"/>
           <!-- Fairway -->
-          <rect id="ts-fairway" x="90"  y="0" width="120" height="80" fill="#2d5a27"/>
+          <rect id="ts-fairway" x="90"  y="0" width="120" height="80" fill="#2d5a27" style="pointer-events:all;cursor:pointer"/>
           <!-- Right rough -->
-          <rect id="ts-right"   x="210" y="0" width="90"  height="80" fill="#c4a35a"/>
+          <rect id="ts-right"   x="210" y="0" width="90"  height="80" fill="#c4a35a" style="pointer-events:all;cursor:pointer"/>
           <!-- Area labels -->
           <text x="45"  y="46" text-anchor="middle" fill="rgba(255,255,255,.8)"  font-size="10" font-family="DM Mono,monospace" letter-spacing="1">LEFT</text>
           <text x="150" y="43" text-anchor="middle" fill="rgba(255,255,255,.9)"  font-size="10" font-family="DM Mono,monospace" letter-spacing="1">FAIRWAY</text>
@@ -682,7 +682,7 @@
           <label class="he-label">Miss direction</label>
           <div class="he-pills" id="miss-dir-pills">
             {% set miss_vals = (init_miss or '').split(',') %}
-            {% for option, label in [('left','Left'), ('right','Right'), ('long','Long'), ('short','Short'), ('bunker','Bunker')] %}
+            {% for option, label in [('left','Left'), ('right','Right'), ('long','Long'), ('short','Short')] %}
             <button type="button"
                     class="he-pill he-pill--multi{% if option in miss_vals %} is-active{% endif %}"
                     data-group="miss-dir" data-value="{{ option }}">{{ label }}</button>

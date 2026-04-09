@@ -151,12 +151,18 @@ def expected_scramble(distance_yds: float, lie: str = 'rough') -> float:
 
 
 def _tee_shot_lie(tee_shot: str) -> str:
-    """Map tee_shot field value to approach-baseline lie category."""
-    if tee_shot == 'fairway':
+    """Map tee_shot field value to approach-baseline lie category.
+
+    tee_shot may be a single value ('fairway', 'left', 'bunker', 'penalty')
+    or a comma-separated modifier+direction pair ('bunker,left', 'penalty,right').
+    The primary outcome (first token) determines the lie category.
+    """
+    primary = tee_shot.split(',')[0] if tee_shot else tee_shot
+    if primary == 'fairway':
         return 'fairway'
-    if tee_shot == 'penalty':
+    if primary == 'penalty':
         return 'recovery'
-    if tee_shot == 'bunker':
+    if primary == 'bunker':
         return 'bunker'
     return 'rough'  # left / right / other
 
@@ -252,10 +258,11 @@ def strokes_gained_off_tee(holes, course_hole_map=None) -> float:
             exp_end   = expected_approach(remaining, lie)
             sg += exp_start - 1 - exp_end
         else:
-            # Fallback: flat adjustment by lie result
-            if hole.tee_shot == 'fairway':
+            # Fallback: flat adjustment by lie result (use primary token only)
+            primary = (hole.tee_shot or '').split(',')[0]
+            if primary == 'fairway':
                 sg += 0.2
-            elif hole.tee_shot == 'penalty':
+            elif primary == 'penalty':
                 sg -= 0.7
             else:
                 sg -= 0.2

@@ -269,57 +269,86 @@ document.addEventListener('DOMContentLoaded', () => {
     const bunkerBtn  = document.getElementById('ts-bunker-btn');
     if (!input || !tsLeft || !tsFairway || !tsRight) return;
 
-    const ROUGH_BASE    = '#c4a35a';
-    const ROUGH_ACTIVE  = '#c8860b';
-    const FW_BASE       = '#2d5a27';
-    const FW_ACTIVE     = '#4caf50';
+    const ROUGH_BASE   = '#c4a35a';
+    const ROUGH_ACTIVE = '#c8860b';
+    const FW_BASE      = '#2d5a27';
+    const FW_ACTIVE    = '#4caf50';
 
-    function reset() {
-      tsLeft.setAttribute('fill',    ROUGH_BASE);
-      tsFairway.setAttribute('fill', FW_BASE);
-      tsRight.setAttribute('fill',   ROUGH_BASE);
-      if (tsCheck)    tsCheck.setAttribute('visibility', 'hidden');
-      if (penaltyBtn) penaltyBtn.classList.remove('is-active');
-      if (bunkerBtn)  bunkerBtn.classList.remove('is-active');
-    }
+    // Two independent axes:
+    //   tsDir — where the ball ended up laterally: null | 'fairway' | 'left' | 'right'
+    //   tsMod — special outcome modifier:          null | 'bunker'  | 'penalty'
+    // Combined hidden input: 'fairway' | 'left' | 'right' | 'bunker' | 'bunker,left' |
+    //                        'bunker,right' | 'penalty' | 'penalty,left' | 'penalty,right'
+    let tsDir = null;
+    let tsMod = null;
 
-    function select(area) {
-      reset();
-      input.value = area;
-      if (area === 'fairway') {
-        tsFairway.setAttribute('fill', FW_ACTIVE);
-        if (tsCheck) tsCheck.setAttribute('visibility', 'visible');
-      } else if (area === 'left') {
-        tsLeft.setAttribute('fill', ROUGH_ACTIVE);
-      } else if (area === 'right') {
-        tsRight.setAttribute('fill', ROUGH_ACTIVE);
-      } else if (area === 'bunker') {
-        if (bunkerBtn) bunkerBtn.classList.add('is-active');
-      } else if (area === 'penalty') {
-        if (penaltyBtn) penaltyBtn.classList.add('is-active');
+    // Initialise from existing server value on edit
+    const initial = (input.value || '').trim();
+    if (initial) {
+      const parts = initial.split(',');
+      const p0 = parts[0], p1 = parts[1];
+      if (p0 === 'fairway') {
+        tsDir = 'fairway';
+      } else if (p0 === 'bunker' || p0 === 'penalty') {
+        tsMod = p0;
+        if (p1 === 'left' || p1 === 'right') tsDir = p1;
+      } else if (p0 === 'left' || p0 === 'right') {
+        tsDir = p0;
       }
-      if (area && navigator.vibrate) navigator.vibrate(10);
     }
 
-    tsLeft.addEventListener('click',    () => select('left'));
-    tsFairway.addEventListener('click', () => select('fairway'));
-    tsRight.addEventListener('click',   () => select('right'));
+    function buildValue() {
+      if (tsDir === 'fairway') return 'fairway';
+      if (tsMod && tsDir)     return tsMod + ',' + tsDir;
+      if (tsMod)              return tsMod;
+      if (tsDir)              return tsDir;
+      return '';
+    }
 
+    function syncUI(fromInteraction) {
+      tsLeft.setAttribute('fill',    tsDir === 'left'    ? ROUGH_ACTIVE : ROUGH_BASE);
+      tsFairway.setAttribute('fill', tsDir === 'fairway' ? FW_ACTIVE    : FW_BASE);
+      tsRight.setAttribute('fill',   tsDir === 'right'   ? ROUGH_ACTIVE : ROUGH_BASE);
+      if (tsCheck) tsCheck.setAttribute('visibility', tsDir === 'fairway' ? 'visible' : 'hidden');
+      if (bunkerBtn)  bunkerBtn.classList.toggle('is-active',  tsMod === 'bunker');
+      if (penaltyBtn) penaltyBtn.classList.toggle('is-active', tsMod === 'penalty');
+      input.value = buildValue();
+      if (fromInteraction && navigator.vibrate) navigator.vibrate(10);
+    }
+
+    // SVG zone clicks — direction only; modifiers remain
+    tsLeft.addEventListener('click', () => {
+      tsDir = (tsDir === 'left') ? null : 'left'; // tap again to deselect direction
+      syncUI(true);
+    });
+    tsFairway.addEventListener('click', () => {
+      tsDir = 'fairway';
+      tsMod = null; // fairway is incompatible with bunker/penalty
+      syncUI(true);
+    });
+    tsRight.addEventListener('click', () => {
+      tsDir = (tsDir === 'right') ? null : 'right';
+      syncUI(true);
+    });
+
+    // Modifier toggles — coexist with left/right direction, incompatible with fairway
     if (bunkerBtn) {
       bunkerBtn.addEventListener('click', () => {
-        if (input.value === 'bunker') { reset(); input.value = ''; }
-        else select('bunker');
+        tsMod = (tsMod === 'bunker') ? null : 'bunker';
+        if (tsMod && tsDir === 'fairway') tsDir = null; // fairway + modifier = clear fairway
+        syncUI(true);
       });
     }
-
     if (penaltyBtn) {
       penaltyBtn.addEventListener('click', () => {
-        if (input.value === 'penalty') { reset(); input.value = ''; }
-        else select('penalty');
+        tsMod = (tsMod === 'penalty') ? null : 'penalty';
+        if (tsMod && tsDir === 'fairway') tsDir = null;
+        syncUI(true);
       });
     }
 
-    if (input.value) select(input.value);
+    // Apply initial state (no vibrate)
+    syncUI(false);
   })();
 
 
