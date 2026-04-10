@@ -326,13 +326,15 @@ def _compute_sg_avgs(rounds):
     if not categories:
         return None
 
-    # Overall HCP equivalent: sum all four category avgs (already 18-hole normalised)
+    # Overall HCP equivalent: total SG = strokes vs scratch, so hcp ≈ -total_sg
     overall_sg = sum(c['avg'] for c in categories)
-    if overall_sg > 0:
-        overall_hcp_equiv = 'Tour'
+    hcp_raw = round(-overall_sg)
+    if hcp_raw < 0:
+        overall_hcp_equiv = f'+{abs(hcp_raw)}'
+    elif hcp_raw == 0:
+        overall_hcp_equiv = 'Scratch'
     else:
-        hcp_raw = round((overall_sg + 1) * -4 + 4)
-        overall_hcp_equiv = f'+{abs(hcp_raw)}' if hcp_raw < 0 else str(hcp_raw)
+        overall_hcp_equiv = str(hcp_raw)
 
     # Relative colour ranking: best (highest avg) → green, worst → red, middle → gold
     ranked = sorted(categories, key=lambda c: c['avg'])
