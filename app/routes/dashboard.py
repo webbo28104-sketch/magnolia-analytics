@@ -308,15 +308,31 @@ def _compute_sg_avgs(rounds):
             before = sum(vals[1:]) / len(vals[1:])
             delta  = round(avg - before, 2)
 
+        # HCP equivalent: avg is already 18-hole normalised
+        if avg > 0:
+            hcp_equiv = 'Tour'
+        else:
+            hcp_raw = round((avg + 1) * -4 + 4)
+            hcp_equiv = f'+{abs(hcp_raw)}' if hcp_raw < 0 else str(hcp_raw)
+
         categories.append({
-            'name':  name,
-            'avg':   round(avg, 2),
-            'delta': delta,
-            'count': len(cat_rounds),
+            'name':      name,
+            'avg':       round(avg, 2),
+            'delta':     delta,
+            'count':     len(cat_rounds),
+            'hcp_equiv': hcp_equiv,
         })
 
     if not categories:
         return None
+
+    # Overall HCP equivalent: average of all category avgs (already 18-hole normalised)
+    overall_avg = sum(c['avg'] for c in categories) / len(categories)
+    if overall_avg > 0:
+        overall_hcp_equiv = 'Tour'
+    else:
+        hcp_raw = round((overall_avg + 1) * -4 + 4)
+        overall_hcp_equiv = f'+{abs(hcp_raw)}' if hcp_raw < 0 else str(hcp_raw)
 
     # Relative colour ranking: best (highest avg) → green, worst → red, middle → gold
     ranked = sorted(categories, key=lambda c: c['avg'])
@@ -348,7 +364,8 @@ def _compute_sg_avgs(rounds):
             cat['positive']  = True
 
     return {
-        'categories':   categories,
-        'rounds_count': max_count,
-        'zero_pct':     zero_pct,
+        'categories':      categories,
+        'rounds_count':    max_count,
+        'zero_pct':        zero_pct,
+        'overall_hcp_equiv': overall_hcp_equiv,
     }

@@ -261,9 +261,17 @@
 .sg-val--best  { color: #2d6a4f; }
 .sg-val--mid   { color: #c9a84c; }
 .sg-val--worst { color: #c0635a; }
+.sg-hcp-equiv {
+  font-size: .68rem;
+  color: var(--text-muted, #888);
+  white-space: nowrap;
+  min-width: 52px;
+  font-family: var(--font-sans, 'Inter', sans-serif);
+}
 @media (max-width: 480px) {
   .sg-lbl { width: 90px; font-size: .72rem; }
   .sg-val { width: 36px; font-size: .72rem; }
+  .sg-hcp-equiv { display: none; }
 }
 </style>
 {% endblock %}
@@ -487,6 +495,10 @@
         <div class="sg-val sg-val--{{ cat.color }}">
           {{ '+' if cat.avg > 0 else '' }}{{ '%.2f'|format(cat.avg) }}
         </div>
+        <div class="sg-hcp-equiv">
+          {%- if cat.hcp_equiv == 'Tour' -%}Tour
+          {%- else -%}≈ {{ cat.hcp_equiv }} hcp{%- endif -%}
+        </div>
       </div>
       {% else %}
       <div class="sg-row sg-row--locked">
@@ -508,6 +520,17 @@
       </div>
       {% endif %}
     </div>
+
+    {% if sg_avgs.overall_hcp_equiv and user_is_pro %}
+    <div style="margin-top:14px;padding:12px 16px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div style="font-size:.8rem;color:var(--text-muted);">Overall playing equivalent</div>
+      <div style="font-size:.95rem;font-weight:700;font-family:'DM Mono',monospace;color:var(--text);">
+        {%- if sg_avgs.overall_hcp_equiv == 'Tour' -%}Tour level
+        {%- else -%}{{ sg_avgs.overall_hcp_equiv }} hcp{%- endif -%}
+      </div>
+    </div>
+    {% endif %}
+
   </div>
   {% endif %}
 
