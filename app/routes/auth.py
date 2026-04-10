@@ -4,7 +4,10 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models.user import User
-from app.services.sendgrid_service import send_welcome, send_password_reset, send_password_changed
+from app.services.sendgrid_service import (
+    send_welcome, send_password_reset, send_password_changed,
+    send_email_confirmation, send_admin_new_user_notification,
+)
 from datetime import datetime, timedelta
 
 auth_bp = Blueprint('auth', __name__)
@@ -52,20 +55,54 @@ def register():
         else:
             user.subscription_tier = 'free'
 
+        # Generate email confirmation token
+        user.email_confirmed     = False
+        user.email_confirm_token = secrets.token_urlsafe(32)
+
         db.session.add(user)
         db.session.commit()
 
-        login_user(user)
-
+        confirm_url = url_for('auth.confirm_email', token=user.email_confirm_token, _external=True)
         try:
-            send_welcome(user)
+            send_email_confirmation(user, confirm_url)
         except Exception as exc:
-            current_app.logger.error('[register] Welcome email failed for %s: %s', email, exc, exc_info=True)
+            current_app.logger.error('[register] Confirmation email failed for %s: %s', email, exc, exc_info=True)
 
-        flash(f'Welcome to Magnolia Analytics, {first_name}!', 'success')
-        return redirect(url_for('dashboard.index'))
+        flash(
+            f"We've sent a confirmation link to {email}. "
+            "Click the link in the email to activate your account.",
+            'success',
+        )
+        return redirect(url_for('auth.login'))
 
     return render_template('auth/register.html')
+
+
+@auth_bp.route('/confirm-email/<token>')
+def confirm_email(token):
+    user = User.query.filter_by(email_confirm_token=token).first()
+    if not user:
+        flash('That confirmation link is invalid or has already been used.', 'error')
+        return redirect(url_for('auth.login'))
+
+    user.email_confirmed     = True
+    user.email_confirm_token = None
+    db.session.commit()
+
+    login_user(user)
+
+    try:
+        send_welcome(user)
+    except Exception as exc:
+        current_app.logger.error('[confirm_email] Welcome email failed for %s: %s', user.email, exc, exc_info=True)
+
+    try:
+        send_admin_new_user_notification(user)
+    except Exception as exc:
+        current_app.logger.error('[confirm_email] Admin notification failed for %s: %s', user.email, exc, exc_info=True)
+
+    flash(f'Email confirmed! Welcome to Magnolia Analytics, {user.first_name}.', 'success')
+    return redirect(url_for('dashboard.index'))
 
 
 @auth_bp.route('/validate-code', methods=['POST'])
@@ -93,6 +130,13 @@ def login():
         remember = request.form.get('remember_me') == 'on'
         user     = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
+            if not user.email_confirmed:
+                flash(
+                    'Please confirm your email address before signing in. '
+                    'Check your inbox for the confirmation link.',
+                    'warning',
+                )
+                return render_template('auth/login.html')
             user.last_login = datetime.utcnow()
             db.session.commit()
             login_user(user, remember=remember)

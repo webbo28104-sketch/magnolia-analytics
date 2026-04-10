@@ -1,0 +1,52 @@
+{% extends 'email/base_email.html' %}
+
+{% block email_title %}New confirmed user — Magnolia Analytics{% endblock %}
+{% block email_preheader %}A new user has confirmed their email address.{% endblock %}
+
+{% block email_body %}
+
+  <div style="padding-bottom:24px;border-bottom:1px solid #e8e4dc;margin-bottom:24px;">
+    <div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:700;color:#1B4332;margin-bottom:6px;">New confirmed user</div>
+    <p style="font-size:14px;color:#6b7a6b;margin:0;">A user has confirmed their email address and activated their account.</p>
+  </div>
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #f0ece4;">
+        <span style="font-size:12px;font-weight:600;color:#8a9a7a;text-transform:uppercase;letter-spacing:0.1em;">Name</span>
+      </td>
+      <td style="padding:10px 0;border-bottom:1px solid #f0ece4;text-align:right;">
+        <span style="font-size:14px;color:#1B4332;font-weight:600;">{{ user.first_name }} {{ user.last_name }}</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #f0ece4;">
+        <span style="font-size:12px;font-weight:600;color:#8a9a7a;text-transform:uppercase;letter-spacing:0.1em;">Email</span>
+      </td>
+      <td style="padding:10px 0;border-bottom:1px solid #f0ece4;text-align:right;">
+        <span style="font-size:14px;color:#1B4332;">{{ user.email }}</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #f0ece4;">
+        <span style="font-size:12px;font-weight:600;color:#8a9a7a;text-transform:uppercase;letter-spacing:0.1em;">Tier</span>
+      </td>
+      <td style="padding:10px 0;border-bottom:1px solid #f0ece4;text-align:right;">
+        <span style="font-size:14px;color:#1B4332;">{{ user.subscription_tier | replace('_', ' ') | title }}</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:10px 0;">
+        <span style="font-size:12px;font-weight:600;color:#8a9a7a;text-transform:uppercase;letter-spacing:0.1em;">Registered</span>
+      </td>
+      <td style="padding:10px 0;text-align:right;">
+        <span style="font-size:14px;color:#1B4332;">{{ user.created_at.strftime('%d %B %Y') if user.created_at else '—' }}</span>
+      </td>
+    </tr>
+  </table>
+
+  <p style="font-size:12px;color:#a0b0a0;text-align:center;margin:0;line-height:1.7;">
+    Magnolia Analytics internal notification
+  </p>
+
+{% endblock %}

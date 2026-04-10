@@ -132,6 +132,9 @@ def _run_column_migrations():
         ('users',     'stripe_customer_id',        'VARCHAR(255)'),
         ('users',     'stripe_subscription_id',    'VARCHAR(255)'),
         ('users',     'stripe_price_id',           'VARCHAR(255)'),
+        # Existing users are already confirmed; new users start unconfirmed (set in route)
+        ('users',     'email_confirmed',            'BOOLEAN DEFAULT TRUE'),
+        ('users',     'email_confirm_token',        'VARCHAR(100)'),
     ]
     for table, column, col_type in migrations:
         try:

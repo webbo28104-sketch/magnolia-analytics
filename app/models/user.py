@@ -42,6 +42,10 @@ class User(UserMixin, db.Model):
     invite_code = db.Column(db.String(50), nullable=True)
     is_staff = db.Column(db.Boolean, default=False)
 
+    # Email confirmation
+    email_confirmed      = db.Column(db.Boolean, default=False)
+    email_confirm_token  = db.Column(db.String(100), nullable=True)
+
     # Password reset
     password_reset_token   = db.Column(db.String(100), nullable=True)
     password_reset_expires = db.Column(db.DateTime, nullable=True)

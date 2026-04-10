@@ -1614,12 +1614,13 @@ body::before {
       <span class="mg-pop">Strokes Gained (SG) measures performance in each area relative to a scratch handicap baseline, following Mark Broadie's methodology. Positive = gained strokes vs scratch; negative = lost strokes. Values are estimates derived from your shot data.</span>
     </span>
   </div>
-  {% macro hcplabel(sg, ok=True) -%}
+  {% macro hcplabel(sg, ok=True, holes=18) -%}
     {%- if ok and sg is not none -%}
-      {%- if sg > 0 -%}
+      {%- set sg_18 = sg * 18 / (holes if holes and holes > 0 else 18) -%}
+      {%- if sg_18 > 0 -%}
         <div class="sg-hcp">Tour level</div>
       {%- else -%}
-        {%- set hcp = ((sg + 1) * -4 + 4) | round | int -%}
+        {%- set hcp = ((sg_18 + 1) * -4 + 4) | round | int -%}
         {%- if hcp < 0 -%}
           <div class="sg-hcp c-grn">Plays to +{{ hcp | abs }}</div>
         {%- else -%}
@@ -1638,7 +1639,7 @@ body::before {
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_off_tee, sg_ott_ok) }}">{{ sgfmt(sg_data.sg_off_tee) if sg_ott_ok else '—' }}</div>
       <div class="sg-sub">{{ fw_pct }}% fairways</div>
-      {{ hcplabel(sg_data.sg_off_tee, sg_ott_ok) }}
+      {{ hcplabel(sg_data.sg_off_tee, sg_ott_ok, round.holes_played) }}
     </div>
     <div class="sg-card">
       <div class="sg-cat">
@@ -1648,7 +1649,7 @@ body::before {
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_approach, sg_app_ok) }}">{{ sgfmt(sg_data.sg_approach) if sg_app_ok else '—' }}</div>
       <div class="sg-sub">{{ gir_pct }}% GIR</div>
-      {{ hcplabel(sg_data.sg_approach, sg_app_ok) }}
+      {{ hcplabel(sg_data.sg_approach, sg_app_ok, round.holes_played) }}
     </div>
     <div class="sg-card">
       <div class="sg-cat">
@@ -1658,7 +1659,7 @@ body::before {
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_atg, sg_atg_ok) }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</div>
       <div class="sg-sub">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% scramble</div>
-      {{ hcplabel(sg_data.sg_atg, sg_atg_ok) }}
+      {{ hcplabel(sg_data.sg_atg, sg_atg_ok, round.holes_played) }}
     </div>
     <div class="sg-card">
       <div class="sg-cat">
@@ -1668,7 +1669,7 @@ body::before {
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_putting.total, sg_putt_ok) }}">{{ sgfmt(sg_data.sg_putting.total) if sg_putt_ok else '—' }}</div>
       <div class="sg-sub">{{ round.total_putts }} total putts</div>
-      {{ hcplabel(sg_data.sg_putting.total, sg_putt_ok) }}
+      {{ hcplabel(sg_data.sg_putting.total, sg_putt_ok, round.holes_played) }}
     </div>
   </div>
   <div class="sg-bars fu d7">

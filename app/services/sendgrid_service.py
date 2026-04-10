@@ -13,7 +13,8 @@ from flask import current_app, render_template, url_for
 from app import db
 from app.utils.access import is_pro
 
-ADMIN_EMAIL = 'team@magnoliaanalytics.golf'
+ADMIN_EMAIL     = 'team@magnoliaanalytics.golf'
+OWNER_EMAIL     = 'magnoliaanalytics@outlook.com'
 
 
 # ---------------------------------------------------------------------------
@@ -320,7 +321,38 @@ def send_subscription_welcome(user, plan_name: str, plan_price: str, is_founding
 
 
 # ---------------------------------------------------------------------------
-# 9. Admin waitlist notification
+# 9. Email confirmation
+# ---------------------------------------------------------------------------
+
+def send_email_confirmation(user, confirm_url: str) -> bool:
+    """Send the email address confirmation link to a newly registered user."""
+    html = render_template(
+        'email/email_confirm.html',
+        first_name  = user.first_name,
+        confirm_url = confirm_url,
+    )
+    return _send_email(user.email, 'Confirm your Magnolia Analytics email address', html)
+
+
+# ---------------------------------------------------------------------------
+# 10. Admin new-user notification
+# ---------------------------------------------------------------------------
+
+def send_admin_new_user_notification(user) -> bool:
+    """Notify the owner when a new user confirms their email address."""
+    html = render_template(
+        'email/admin_new_user.html',
+        user = user,
+    )
+    return _send_email(
+        OWNER_EMAIL,
+        f'New confirmed user: {user.first_name} {user.last_name}',
+        html,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 11. Admin waitlist notification
 # ---------------------------------------------------------------------------
 
 def send_admin_waitlist_notification(entry, position: int, real_count: int) -> bool:
