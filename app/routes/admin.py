@@ -378,6 +378,29 @@ def set_user_tier(user_id):
     return redirect(url_for('admin.users', q=request.args.get('q', ''), tier=request.args.get('tier', 'all')))
 
 
+@admin_bp.route('/users/<int:user_id>/delete', methods=['POST'])
+@staff_required
+def delete_user(user_id):
+    """Permanently delete a user and all their data (rounds, holes, reports)."""
+    from app.models.user import User
+    user = User.query.get_or_404(user_id)
+    if user.id == current_user.id:
+        flash('You cannot delete your own account.', 'error')
+        return redirect(url_for('admin.users'))
+    name = user.full_name
+    email = user.email
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        current_app.logger.info('[admin] User deleted: %s <%s> by %s', name, email, current_user.email)
+        flash(f'Account for {name} ({email}) has been permanently deleted.', 'success')
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error('[admin] delete_user failed for user_id=%s: %s', user_id, exc)
+        flash('Failed to delete account — check logs.', 'error')
+    return redirect(url_for('admin.users', q=request.args.get('q', ''), tier=request.args.get('tier', 'all')))
+
+
 @admin_bp.route('/users/<int:user_id>/toggle-staff', methods=['POST'])
 @staff_required
 def toggle_staff(user_id):

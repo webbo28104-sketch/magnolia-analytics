@@ -99,6 +99,14 @@
 .staff-btn--grant { border:1px solid #555; background:#555; color:#fff; }
 .staff-btn--revoke { border:1px solid #c0392b; background:#c0392b; color:#fff; }
 .staff-btn:hover { opacity:.8; }
+.delete-btn {
+  font-size:11px; font-weight:600; padding:3px 10px;
+  border:1px solid #c0392b; border-radius:4px;
+  background:#fff; color:#c0392b; cursor:pointer;
+  transition:opacity .15s, background .15s;
+  white-space:nowrap;
+}
+.delete-btn:hover { background:#c0392b; color:#fff; }
 .adm-badge--fm {
   font-size:9px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
   background:rgba(201,168,76,0.12); color:#a07800; border:1px solid rgba(201,168,76,0.4);
@@ -176,6 +184,7 @@
           <th>Status</th>
           <th>Change Tier</th>
           <th>Staff</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -249,6 +258,16 @@
             </form>
             {% else %}
               <span style="font-size:11px;color:var(--text-muted)">You</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.id != current_user.id %}
+            <form method="POST"
+                  action="{{ url_for('admin.delete_user', user_id=u.id, q=q, tier=tier_filter) }}"
+                  style="display:inline;"
+                  onsubmit="return confirm('Permanently delete {{ u.first_name }} {{ u.last_name }} ({{ u.email }}) and all their data?\n\nThis cannot be undone.');">
+              <button type="submit" class="delete-btn">Delete</button>
+            </form>
             {% endif %}
           </td>
         </tr>
