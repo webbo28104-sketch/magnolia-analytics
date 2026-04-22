@@ -359,11 +359,56 @@ function collectPanelShot(type) {
   return shot;
 }
 
+// ── Auto-open next panel ──────────────────────────────────────────────────────
+// Called after a new shot is committed (not on edits). Opens the most likely
+// next panel based on the current shot sequence and par. Never forces a decision.
+function _autoOpenNext() {
+  const par  = getPar();
+  const last = _shots.length > 0 ? _shots[_shots.length - 1] : null;
+
+  if (!last) {
+    // Fresh hole: par 3 starts with approach, par 4/5 starts off the tee
+    const type = par === 3 ? 'app' : 'ott';
+    clearPanel(type); openPanel(type, false);
+    return;
+  }
+
+  if (last.type === 'gimme') {
+    // Hole complete — scroll to the Next Hole button
+    closePanel();
+    setTimeout(() => document.querySelector('.he-next-btn')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+    return;
+  }
+
+  if (last.type === 'ott') {
+    // Penalty on tee shot → re-tee (another OTT); otherwise next is approach
+    const type = last.mod === 'penalty' ? 'ott' : 'app';
+    clearPanel(type); openPanel(type, false);
+    return;
+  }
+
+  if (last.type === 'app') {
+    // Hit green → putt; missed green → around the green
+    const type = last.miss ? 'atg' : 'putt';
+    clearPanel(type); openPanel(type, false);
+    return;
+  }
+
+  if (last.type === 'atg') {
+    clearPanel('putt'); openPanel('putt', false);
+    return;
+  }
+
+  // After a putt: don't auto-open (might be done, or need another putt)
+  closePanel();
+}
+
 // ── Shot CRUD ─────────────────────────────────────────────────────────────────
 function _doCommitShot() {
   if (!_activeType) return;
+  const wasEdit = _editIdx !== null;
   const shot = collectPanelShot(_activeType);
-  if (_editIdx !== null) {
+  if (wasEdit) {
     _shots[_editIdx] = shot;
   } else {
     _shots.push(shot);
@@ -374,6 +419,7 @@ function _doCommitShot() {
   updateScoreDisplay();
   scheduleAutosave();
   if (navigator.vibrate) navigator.vibrate(10);
+  if (!wasEdit) _autoOpenNext();
 }
 
 // ── Commit-time guards ─────────────────────────────────────────────────────────
@@ -596,6 +642,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initTeeShotSVG();
 
+  // Auto-open the predicted first panel on fresh holes only
+  if (_shots.length === 0) _autoOpenNext();
+
   // Shot type buttons
   document.querySelectorAll('.he-type-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -604,6 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
         _shots.push({ type: 'gimme' });
         saveState(); renderShotList(); updateScoreDisplay(); scheduleAutosave();
         if (navigator.vibrate) navigator.vibrate(10);
+        _autoOpenNext(); // scrolls to Next Hole button
         return;
       }
       if (_activeType === type && _editIdx === null) { closePanel(); return; }
