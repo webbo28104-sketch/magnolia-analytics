@@ -136,6 +136,10 @@
 
   /* Penalties row */
   .he-penalties-row { padding:14px 16px 8px;text-align:center; }
+
+  /* Panel inline warnings */
+  .he-panel-warn { display:none;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.45);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:.78rem;color:#5c3d00;line-height:1.5; }
+  .he-panel-warn.is-visible { display:block; }
 </style>
 {% endblock %}
 
@@ -242,6 +246,7 @@
     <!-- OTT panel -->
     <div class="he-shot-panel" id="panel-ott">
       <div class="he-panel-lbl">Off the Tee</div>
+      <div class="he-panel-warn" id="warn-ott"></div>
       <svg id="tee-shot-svg" viewBox="0 0 300 80" xmlns="http://www.w3.org/2000/svg"
            style="width:100%;max-width:min(300px,100%);display:block;margin:0 auto 12px;border-radius:8px;overflow:hidden;pointer-events:none">
         <rect id="ts-left"    x="0"   y="0" width="90"  height="80" fill="#c4a35a" style="pointer-events:all;cursor:pointer"/>
@@ -261,6 +266,7 @@
     <!-- App panel -->
     <div class="he-shot-panel" id="panel-app">
       <div class="he-panel-lbl">Approach</div>
+      <div class="he-panel-warn" id="warn-app"></div>
       <div class="he-panel-row">
         <label class="he-label">Distance to hole <span class="he-label-hint">yds · from this position before the shot</span></label>
         <input type="number" id="app-dist-exact" class="he-exact" placeholder="yds" min="1" max="600" inputmode="numeric">
@@ -302,6 +308,7 @@
     <!-- ATG panel -->
     <div class="he-shot-panel" id="panel-atg">
       <div class="he-panel-lbl">Around the Green</div>
+      <div class="he-panel-warn" id="warn-atg"></div>
       <div class="he-panel-row">
         <label class="he-label">Distance to hole <span class="he-label-hint">yds</span></label>
         <input type="number" id="atg-dist-exact" class="he-exact" placeholder="yds" min="1" max="60" inputmode="numeric">
@@ -352,6 +359,18 @@
     <div class="he-modal-actions">
       <button type="button" id="he-modal-fix"     class="he-modal-btn he-modal-btn--ghost">Let me fix it</button>
       <button type="button" id="he-modal-confirm" class="he-modal-btn he-modal-btn--gold">Yes, looks right</button>
+    </div>
+  </div>
+</div>
+
+<!-- Type-switch modal -->
+<div id="he-typeswitch-overlay" class="he-modal-overlay" style="display:none">
+  <div class="he-modal-box">
+    <p class="he-modal-title">Are you sure about the shot type?</p>
+    <p class="he-modal-par" id="he-typeswitch-msg" style="font-size:.82rem;color:#444;line-height:1.5;margin:0 0 20px"></p>
+    <div class="he-modal-actions">
+      <button type="button" id="he-typeswitch-switch" class="he-modal-btn he-modal-btn--gold"></button>
+      <button type="button" id="he-typeswitch-keep"   class="he-modal-btn he-modal-btn--ghost"></button>
     </div>
   </div>
 </div>

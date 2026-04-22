@@ -72,6 +72,16 @@ function getScore() {
   return _shots.length + _penalties;
 }
 
+// ── Panel warning helpers ─────────────────────────────────────────────────────
+function showPanelWarn(type, msg) {
+  const el = document.getElementById('warn-' + type);
+  if (!el) return;
+  if (!msg) { el.classList.remove('is-visible'); el.textContent = ''; return; }
+  el.innerHTML = '⚠ ' + msg;
+  el.classList.add('is-visible');
+}
+function hidePanelWarn(type) { showPanelWarn(type, ''); }
+
 // ── Shot rendering ────────────────────────────────────────────────────────────
 function shotTypeLabel(type) {
   return { ott: 'OTT', app: 'App', atg: 'ATG', putt: 'Putt', gimme: 'Gimme' }[type] || type;
@@ -202,6 +212,18 @@ function openPanel(type, editing) {
   if (panel) panel.classList.add('is-visible');
   const btn = document.getElementById('panel-add-btn');
   if (btn) { btn.style.display = 'block'; btn.textContent = editing ? 'Update Shot' : 'Add Shot'; }
+
+  // Context-aware OTT warning
+  if (type === 'ott' && !editing) {
+    const shotNum = _shots.length + 1;
+    const hasPrevPenalty = _shots.some(s => s.type === 'ott' && s.mod === 'penalty') || _penalties > 0;
+    const par = getPar();
+    if (shotNum > 1 && !hasPrevPenalty) {
+      showPanelWarn('ott', `You're adding a tee shot as shot #${shotNum}. Off the Tee is for your first shot from the tee box — a second OTT only makes sense after a penalty stroke (OB/water re-tee). Consider Approach or ATG instead.`);
+    } else if (par === 3 && shotNum === 1) {
+      showPanelWarn('ott', `On a par 3, tee shots are classified as Approach in PGA Tour SG methodology. Recording this as OTT will count toward SG Off the Tee rather than SG Approach.`);
+    }
+  }
 }
 
 function closePanel() {
@@ -214,6 +236,7 @@ function closePanel() {
 }
 
 function clearPanel(type) {
+  hidePanelWarn(type);
   if (type === 'ott') {
     _tsDir = null; _tsMod = null;
     if (_tsSyncUI) _tsSyncUI(false);
@@ -294,8 +317,7 @@ function collectPanelShot(type) {
 }
 
 // ── Shot CRUD ─────────────────────────────────────────────────────────────────
-function commitShot() {
-  if (!_activeType) return;
+function _doCommitShot() {
   const shot = collectPanelShot(_activeType);
   if (_editIdx !== null) {
     _shots[_editIdx] = shot;
@@ -308,6 +330,70 @@ function commitShot() {
   updateScoreDisplay();
   scheduleAutosave();
   if (navigator.vibrate) navigator.vibrate(10);
+}
+
+function commitShot() {
+  if (!_activeType) return;
+
+  // Guard: App distance ≤ 30y → PGA Tour ATG boundary
+  if (_activeType === 'app') {
+    const dist = parseInt(document.getElementById('app-dist-exact')?.value);
+    if (dist && dist <= 30) {
+      showTypeSwitchModal('app', 'atg', dist,
+        `${dist} yards is within the PGA Tour's 30-yard ATG boundary. At this distance you are likely chipping or pitching — "Around the Green" will give more accurate SG data.`);
+      return;
+    }
+  }
+
+  // Guard: ATG distance > 50y → beyond system ATG baseline range
+  if (_activeType === 'atg') {
+    const dist = parseInt(document.getElementById('atg-dist-exact')?.value);
+    if (dist && dist > 50) {
+      showTypeSwitchModal('atg', 'app', dist,
+        `${dist} yards exceeds the ATG baseline range (max 50 yards). The PGA Tour's ATG category covers shots within 30 yards. Beyond 50 yards is Approach territory for accurate SG analysis.`);
+      return;
+    }
+  }
+
+  // Guard: OTT as shot 2+ with no penalty
+  if (_activeType === 'ott' && _editIdx === null) {
+    const shotNum = _shots.length + 1;
+    const hasPrevPenalty = _shots.some(s => s.type === 'ott' && s.mod === 'penalty') || _penalties > 0;
+    if (shotNum > 1 && !hasPrevPenalty) {
+      showTypeSwitchModal('ott', null, null,
+        `You're logging a tee shot as shot #${shotNum} without a penalty on the previous shot. Off the Tee is only used for your first tee shot — or a re-tee after OB/water. Are you sure?`);
+      return;
+    }
+  }
+
+  _doCommitShot();
+}
+
+// ── Type-switch modal ─────────────────────────────────────────────────────────
+function showTypeSwitchModal(fromType, toType, dist, msg) {
+  const overlay   = document.getElementById('he-typeswitch-overlay');
+  const msgEl     = document.getElementById('he-typeswitch-msg');
+  const switchBtn = document.getElementById('he-typeswitch-switch');
+  const keepBtn   = document.getElementById('he-typeswitch-keep');
+  if (!overlay) return;
+  if (msgEl) msgEl.textContent = msg;
+  const labels = { app: 'Approach', atg: 'ATG', ott: 'OTT', putt: 'Putt' };
+  if (toType && switchBtn) {
+    switchBtn.textContent = `Switch to ${labels[toType]}`;
+    switchBtn.style.display = '';
+    overlay.dataset.toType = toType;
+    overlay.dataset.dist   = dist || '';
+  } else if (switchBtn) {
+    switchBtn.style.display = 'none';
+  }
+  if (keepBtn) keepBtn.textContent = `Keep as ${labels[fromType] || fromType}`;
+  overlay.dataset.fromType = fromType;
+  overlay.style.display = 'flex';
+}
+
+function hideTypeSwitchModal() {
+  const overlay = document.getElementById('he-typeswitch-overlay');
+  if (overlay) overlay.style.display = 'none';
 }
 
 // Called via delegated click on shot-list
@@ -499,6 +585,54 @@ document.addEventListener('DOMContentLoaded', () => {
     const href = e.currentTarget.getAttribute('href');
     await triggerAutosave();
     window.location.href = href;
+  });
+
+  // Distance-based inline hints
+  document.getElementById('app-dist-exact')?.addEventListener('input', function() {
+    const val = parseInt(this.value);
+    if (!val || val <= 0) { hidePanelWarn('app'); return; }
+    if (val <= 30) {
+      showPanelWarn('app', `${val} yards — PGA Tour classifies shots within 30 yards as Around the Green (ATG). Consider switching type.`);
+    } else if (val <= 50) {
+      showPanelWarn('app', `${val} yards is in the 30–50 yard scoring zone. PGA Tour's ATG boundary is 30 yards; this system's ATG baseline covers up to 50 yards. Use ATG if this is a chip or pitch.`);
+    } else {
+      hidePanelWarn('app');
+    }
+  });
+
+  document.getElementById('atg-dist-exact')?.addEventListener('input', function() {
+    const val = parseInt(this.value);
+    if (!val || val <= 0) { hidePanelWarn('atg'); return; }
+    if (val > 50) {
+      showPanelWarn('atg', `${val} yards exceeds the ATG baseline range (50 yards max). PGA Tour ATG threshold is 30 yards — beyond 50 yards is Approach territory.`);
+    } else if (val > 30) {
+      showPanelWarn('atg', `${val} yards is between the PGA Tour's 30-yard ATG limit and this system's 50-yard ATG range. If this is a full wedge shot, Approach may be more accurate.`);
+    } else {
+      hidePanelWarn('atg');
+    }
+  });
+
+  // Type-switch modal handlers
+  document.getElementById('he-typeswitch-keep')?.addEventListener('click', () => {
+    hideTypeSwitchModal();
+    _doCommitShot();
+  });
+  document.getElementById('he-typeswitch-switch')?.addEventListener('click', () => {
+    const overlay  = document.getElementById('he-typeswitch-overlay');
+    const fromType = overlay?.dataset.fromType;
+    const toType   = overlay?.dataset.toType;
+    const dist     = parseInt(overlay?.dataset.dist) || null;
+    hideTypeSwitchModal();
+    if (!toType) return;
+    clearPanel(fromType);
+    _activeType = null;
+    _editIdx    = null;
+    clearPanel(toType);
+    openPanel(toType, false);
+    if (dist) {
+      const distInput = document.getElementById(toType + '-dist-exact');
+      if (distInput) { distInput.value = dist; distInput.dispatchEvent(new Event('input')); }
+    }
   });
 
   // Validation modal buttons
