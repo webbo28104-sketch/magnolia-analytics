@@ -8,6 +8,7 @@ from app.models.course import Course
 from app.models.tee_set import TeeSet
 from app.models.course_hole import CourseHole
 from app.services.claude_service import generate_report
+from app.utils.round_stats import build_course_hole_map
 from app.services.sendgrid_service import send_report_email, send_personal_best
 from app.utils.round_stats import compute_all_stats
 from app.utils.personal_bests import check_recent_personal_best
@@ -156,14 +157,11 @@ def enter_hole(round_id, hole_number):
 
     course_par     = None
     course_yardage = None
-    if round_.tee_set_id:
-        ch = CourseHole.query.filter_by(
-            tee_set_id=round_.tee_set_id,
-            hole_number=actual_hole_number
-        ).first()
-        if ch:
-            course_par     = ch.par
-            course_yardage = ch.yardage
+    course_hole_map = build_course_hole_map(round_)
+    ch = course_hole_map.get(actual_hole_number)
+    if ch:
+        course_par     = ch.par
+        course_yardage = ch.yardage
 
     if course_par is None and round_.course and round_.course.par_list:
         course_par = round_.course.par_list[actual_hole_number - 1]
