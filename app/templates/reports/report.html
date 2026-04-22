@@ -591,13 +591,16 @@ body::before {
 
 /* ── SG Shot-by-Shot Breakdown ──────────────────────────────────── */
 .sg-hbyh-wrap { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:16px 18px; }
-.sg-hbyh-row { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid rgba(201,168,76,0.065); }
+.sg-hbyh-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(201,168,76,0.065); }
 .sg-hbyh-row:last-child { border-bottom:none; }
-.sg-hbyh-meta { display:flex; align-items:center; gap:7px; width:110px; flex-shrink:0; }
+.sg-hbyh-meta { display:flex; align-items:center; gap:6px; width:96px; flex-shrink:0; }
 .sg-hbyh-num  { font-size:11px; font-weight:600; color:var(--cream); width:26px; }
 .sg-hbyh-par  { font-size:9px; color:var(--cream-faint); letter-spacing:.04em; }
-.sg-hbyh-score { font-size:10px; font-weight:500; margin-left:auto; }
-.sg-dots-row { display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
+.sg-hbyh-score { font-size:10px; font-weight:500; }
+.sg-dots-row { display:flex; gap:7px; align-items:center; flex-wrap:wrap; flex:1; min-width:0; }
+.sg-hbyh-totals { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; min-width:60px; }
+.sg-hbyh-tot { font-family:'Inter',system-ui,sans-serif; font-size:16px; font-weight:700; line-height:1; letter-spacing:-.01em; }
+.sg-hbyh-avg { font-size:9px; color:var(--cream-faint); letter-spacing:.04em; }
 .sg-dot-wrap { position:relative; }
 .sg-dot {
   width:38px; height:38px; border-radius:50%; border:none; cursor:pointer;
@@ -1935,12 +1938,6 @@ body::before {
         <span class="sg-hbyh-num">H{{ h.hole_number }}</span>
         <span class="sg-hbyh-par">Par {{ h.par }}</span>
         <span class="sg-hbyh-score {{ 'c-grn' if h.score_vs_par <= -1 else 'c-red' if h.score_vs_par >= 2 else '' }}">{{ h.score_label }}</span>
-        {% if _htot is not none %}
-        <span style="margin-left:auto;font-size:10px;font-weight:700;color:{{ 'var(--green-soft)' if _htot >= 0 else 'var(--red-soft)' }};">{{ '+' if _htot >= 0 }}{{ '%.2f'|format(_htot) }}</span>
-        {% endif %}
-        {% if _hhist %}
-        <span style="font-size:8px;color:var(--cream-faint);margin-left:4px;" title="Avg SG on this hole at this course ({{ _hhist.count }} round{{ 's' if _hhist.count != 1 }})">avg {{ '+' if _hhist.sg_avg >= 0 }}{{ '%.2f'|format(_hhist.sg_avg) }}</span>
-        {% endif %}
       </div>
       <div class="sg-dots-row">
 
@@ -2025,6 +2022,14 @@ body::before {
         </div>
         {% endif %}
 
+      </div>
+      <div class="sg-hbyh-totals">
+        {% if _htot is not none %}
+        <span class="sg-hbyh-tot" style="color:{{ 'var(--green-soft)' if _htot >= 0 else 'var(--red-soft)' }};">{{ '+' if _htot >= 0 }}{{ '%.2f'|format(_htot) }}</span>
+        {% endif %}
+        {% if _hhist %}
+        <span class="sg-hbyh-avg" title="Avg SG on this hole at this course ({{ _hhist.count }} round{{ 's' if _hhist.count != 1 }})">avg {{ '+' if _hhist.sg_avg >= 0 }}{{ '%.2f'|format(_hhist.sg_avg) }}</span>
+        {% endif %}
       </div>
     </div>
     {% endif %}
