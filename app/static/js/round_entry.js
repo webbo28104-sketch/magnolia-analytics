@@ -1,546 +1,523 @@
 /**
- * Magnolia Analytics — Round Entry JavaScript
- * Works with the redesigned hole.html (he-pill / is-active / he-reveal / is-visible).
+ * Magnolia Analytics — Round Entry (shot-by-shot)
  */
 
-// ── Tee shot state — module-level so global delegated handler can access ──────
-var _tsDir = null;
-var _tsMod = null;
-var _tsSyncUI = null; // set by initTeeShotSVG once DOM is ready
+// ── Module-level tee-shot SVG state ──────────────────────────────────────────
+var _tsDir = null;   // 'fairway' | 'left' | 'right' | null
+var _tsMod = null;   // 'bunker' | 'penalty' | null
+var _tsSyncUI = null;
 
-// ── Multi-select pill groups (miss direction + lie type + tee mod) ────────────
-// Registered at top level (outside DOMContentLoaded) so it is active the
-// instant the script executes, avoiding a brief window on desktop where the
-// DOMContentLoaded callback hasn't run yet. The script tag is at the bottom
-// of <body> so document always exists at this point.
-//
-// Group A (miss-dir): Left/Right mutually exclusive; Long/Short mutually exclusive.
-// Group B (lie-type): fully multi-select, no exclusions.
+// ── Shot list state ───────────────────────────────────────────────────────────
+var _shots    = [];
+var _penalties = 0;
+var _editIdx  = null;   // null = adding new, integer = editing existing
+var _activeType = null; // currently open panel type
+var _appMissed  = false;
 
-function getMissDirValue() {
-  return Array.from(document.querySelectorAll('#miss-dir-pills .he-pill--multi.is-active'))
-              .map(p => p.dataset.value).join(',');
-}
-
-function getLieTypeValue() {
-  return Array.from(document.querySelectorAll('#lie-type-pills .he-pill--multi.is-active'))
-              .map(p => p.dataset.value).join(',');
-}
-
+// ── Global multi-pill delegated click handler ─────────────────────────────────
+// Handles groups: miss-dir, app-miss-dir, lie-type, app-lie, atg-lie, tee-mod
 document.addEventListener('click', function(e) {
   const pill = e.target.closest('.he-pill--multi');
   if (!pill) return;
-
   const group = pill.dataset.group;
   const value = pill.dataset.value;
 
-  if (group === 'miss-dir') {
+  if (group === 'miss-dir' || group === 'app-miss-dir') {
     if (pill.classList.contains('is-active')) {
-      // Tap active pill to deselect
       pill.classList.remove('is-active');
     } else {
-      // Auto-deselect the conflicting opposite before activating
       const conflict = { left: 'right', right: 'left', long: 'short', short: 'long' }[value];
-      if (conflict) {
-        document.querySelectorAll(`#miss-dir-pills .he-pill--multi[data-value="${conflict}"]`)
-                .forEach(p => p.classList.remove('is-active'));
+      const container = pill.closest('.he-pills');
+      if (conflict && container) {
+        container.querySelectorAll(`.he-pill--multi[data-value="${conflict}"]`)
+                 .forEach(p => p.classList.remove('is-active'));
       }
       pill.classList.add('is-active');
     }
-    const newVal = getMissDirValue();
-    const missInput = document.getElementById('approach-miss-input');
-    if (missInput) missInput.value = newVal;
-    handleApproachMissChange(newVal);
-    // Reset miss-label error colour if a direction is now selected
-    if (newVal) {
-      const lbl = document.querySelector('#miss-dir-pills')
-                           ?.closest('.he-field')?.querySelector('.he-label');
-      if (lbl) lbl.style.color = '';
-    }
 
-  } else if (group === 'lie-type') {
-    // Fully multi-select: toggle freely
+  } else if (group === 'lie-type' || group === 'app-lie' || group === 'atg-lie') {
     pill.classList.toggle('is-active');
-    const lieInput = document.getElementById('lie-type-input');
-    if (lieInput) lieInput.value = getLieTypeValue();
 
   } else if (group === 'tee-mod') {
-    // Toggle bunker/penalty modifier; mutually exclusive with each other,
-    // incompatible with fairway direction
     _tsMod = (_tsMod === value) ? null : value;
     if (_tsMod && _tsDir === 'fairway') _tsDir = null;
     if (_tsSyncUI) _tsSyncUI(true);
-    return; // syncUI handles vibrate
+    return;
   }
 
+  // Sync hidden input via data-target on the container
+  const container = pill.closest('[data-target]');
+  if (container) {
+    const input = document.getElementById(container.dataset.target);
+    if (input) {
+      input.value = Array.from(container.querySelectorAll('.he-pill--multi.is-active'))
+                         .map(p => p.dataset.value).join(',');
+    }
+  }
   if (navigator.vibrate) navigator.vibrate(10);
 });
 
-// ── Shared helpers (top-level so the click handler above can call them) ───────
-
+// ── Helpers ────────────────────────────────────────────────────────────────────
 function reveal(el, show) {
   if (!el) return;
   if (show) el.classList.add('is-visible');
-  else       el.classList.remove('is-visible');
+  else      el.classList.remove('is-visible');
 }
 
-function clearScrambleInputs() {
-  const distInput = document.getElementById('scramble-distance-input');
-  const exactEl   = document.getElementById('scramble-dist-exact');
-  if (distInput) distInput.value = '';
-  if (exactEl)   exactEl.value = '';
+function getPar() {
+  return parseInt(document.getElementById('par-input')?.value) || 4;
 }
 
-function handleApproachMissChange(missValue) {
-  const scrambleReveal = document.getElementById('scramble-reveal');
-  reveal(scrambleReveal, !!missValue);
-  if (!missValue) clearScrambleInputs();
+function getScore() {
+  return _shots.length + _penalties;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+// ── Shot rendering ────────────────────────────────────────────────────────────
+function shotTypeLabel(type) {
+  return { ott: 'OTT', app: 'App', atg: 'ATG', putt: 'Putt', gimme: 'Gimme' }[type] || type;
+}
 
-
-  // ── Radio pill tap-button groups (all non-multi pills) ────────────────────
-  // Each .he-pill carries data-field and data-value.
-  // Tap again = stays selected (radio behaviour).
-  document.querySelectorAll('.he-pill:not(.he-pill--multi)').forEach(pill => {
-    pill.addEventListener('click', () => {
-      const field  = pill.dataset.field;
-      if (!field) return; // handled separately (e.g. tee-shot SVG penalty btn)
-      const value  = pill.dataset.value;
-      const target = pill.dataset.target;
-
-      const group = pill.closest('.he-pills');
-
-      // Deactivate siblings
-      if (group) {
-        group.querySelectorAll('.he-pill').forEach(b => b.classList.remove('is-active'));
-      }
-      pill.classList.add('is-active');
-
-      // Write to hidden input
-      const inputId = target || `${field.replace(/_/g, '-')}-input`;
-      const input = document.getElementById(inputId)
-                 || document.querySelector(`input[name="${field}"]`);
-      if (input) input.value = value;
-
-      if (navigator.vibrate) navigator.vibrate(10);
-    });
-  });
-
-
-  // ── GIR toggle ──────────────────────────────────────────
-  const girYes     = document.getElementById('gir-yes');
-  const girNo      = document.getElementById('gir-no');
-  const missReveal = document.getElementById('miss-reveal');
-
-  if (girYes) {
-    girYes.addEventListener('click', () => {
-      girYes.classList.add('is-active');
-      girNo.classList.remove('is-active');
-      reveal(missReveal, false);
-      const missInput = document.getElementById('approach-miss-input');
-      if (missInput) missInput.value = '';
-      document.querySelectorAll('#miss-dir-pills .he-pill--multi').forEach(b => b.classList.remove('is-active'));
-      document.querySelectorAll('#lie-type-pills .he-pill--multi').forEach(b => b.classList.remove('is-active'));
-      const lieInput = document.getElementById('lie-type-input');
-      if (lieInput) lieInput.value = '';
-      handleApproachMissChange('');
-      if (navigator.vibrate) navigator.vibrate(10);
-    });
-  }
-
-  if (girNo) {
-    girNo.addEventListener('click', () => {
-      girNo.classList.add('is-active');
-      girYes.classList.remove('is-active');
-      reveal(missReveal, true);
-      if (navigator.vibrate) navigator.vibrate(10);
-    });
-  }
-
-
-  // ── On-load: apply initial conditional state from server-rendered values ────
-  const parInput = document.getElementById('par-input');
-  const initPar  = parInput ? parseInt(parInput.value) : 4;
-
-  // Tee shot: hide for par 3 — uses display:none directly (no reveal animation needed
-  // since par is fixed at page load and the he-reveal overflow:hidden was clipping buttons)
-  const teeShotReveal = document.getElementById('tee-shot-reveal');
-  if (teeShotReveal) teeShotReveal.style.display = (initPar === 3) ? 'none' : '';
-
-  // Second shot: show for par 5
-  const secondShotReveal = document.getElementById('second-shot-reveal');
-  reveal(secondShotReveal, initPar === 5);
-
-  // Approach miss — sync scramble reveal from server-rendered value
-  const missInput = document.getElementById('approach-miss-input');
-  const initMiss  = missInput ? missInput.value : '';
-  if (initMiss) {
-    handleApproachMissChange(initMiss);
-  }
-
-
-  // ── Exact number inputs → hidden inputs ───────────────────────────────────
-  // Pills are removed; exact inputs are now the sole input method for distances.
-  function bindExactInput(exactId, hiddenInputId) {
-    const exactEl  = document.getElementById(exactId);
-    const hiddenEl = document.getElementById(hiddenInputId);
-    if (!exactEl || !hiddenEl) return;
-
-    // Sync on load (in case the field has a pre-filled value)
-    if (exactEl.value.trim() !== '') hiddenEl.value = exactEl.value.trim();
-
-    exactEl.addEventListener('input', () => {
-      hiddenEl.value = exactEl.value.trim();
-    });
-  }
-
-  bindExactInput('approach-dist-exact',  'approach-distance-input');
-  bindExactInput('second-shot-exact',    'second-shot-distance-input');
-  bindExactInput('first-putt-exact',     'first-putt-input');
-
-  // Scramble — store as integer string
-  (function bindScrambleExact() {
-    const exactEl  = document.getElementById('scramble-dist-exact');
-    const hiddenEl = document.getElementById('scramble-distance-input');
-    if (!exactEl || !hiddenEl) return;
-
-    exactEl.addEventListener('input', () => {
-      const val = parseInt(exactEl.value);
-      hiddenEl.value = (!isNaN(val) && exactEl.value.trim() !== '') ? String(val) : '';
-    });
-  })();
-
-
-  // ── Steppers ───────────────────────────────────────────────────────────────
-  function initStepper(downId, upId, displayId, inputId, min, max) {
-    const downBtn = document.getElementById(downId);
-    const upBtn   = document.getElementById(upId);
-    const display = document.getElementById(displayId);
-    const input   = document.getElementById(inputId);
-    if (!downBtn || !upBtn || !display || !input) return;
-
-    function update(val) {
-      display.textContent = val;
-      input.value = val;
-      if (navigator.vibrate) navigator.vibrate(8);
+function shotSummary(shot) {
+  switch (shot.type) {
+    case 'ott': {
+      const parts = [];
+      if (shot.direction === 'fairway') parts.push('Fairway');
+      else if (shot.direction === 'left') parts.push('Left rough');
+      else if (shot.direction === 'right') parts.push('Right rough');
+      if (shot.mod === 'bunker') parts.push('Bunker');
+      else if (shot.mod === 'penalty') parts.push('Penalty');
+      return parts.join(' · ') || 'Tee shot';
     }
-
-    downBtn.addEventListener('click', () => {
-      const val = parseInt(input.value) || 0;
-      if (val > min) update(val - 1);
-    });
-    upBtn.addEventListener('click', () => {
-      const val = parseInt(input.value) || 0;
-      if (val < max) update(val + 1);
-    });
-  }
-
-  initStepper('score-down',     'score-up',     'score-display',     'score-input',     1, 15);
-  initStepper('putts-down',     'putts-up',     'putts-display',     'putts-input',     0, 10);
-  initStepper('penalties-down', 'penalties-up', 'penalties-display', 'penalties-input', 0, 10);
-
-
-
-
-  // ── Score vs par live label ────────────────────────────────────────────────
-  (function initScoreVsParLabel() {
-    const scoreInputEl = document.getElementById('score-input');
-    const parInputEl   = document.getElementById('par-input');
-    const label        = document.getElementById('score-vs-par');
-    if (!scoreInputEl || !parInputEl || !label) return;
-
-    function update() {
-      const score = parseInt(scoreInputEl.value) || 4;
-      const par   = parseInt(parInputEl.value)   || 4;
-      const diff  = score - par;
-      let text, cls;
-      if      (diff <= -2)  { text = diff === -2 ? 'Eagle' : 'Albatross'; cls = '--birdie'; }
-      else if (diff === -1) { text = 'Birdie';   cls = '--birdie'; }
-      else if (diff ===  0) { text = 'Par';      cls = '--par';    }
-      else if (diff ===  1) { text = 'Bogey';    cls = '--bogey';  }
-      else if (diff ===  2) { text = 'Double';   cls = '--double'; }
-      else                  { text = 'Triple+';  cls = '--double'; }
-      label.textContent = text;
-      label.className   = 'he-score-vs-par he-score-vs-par' + cls;
+    case 'app': {
+      const parts = [];
+      if (shot.distance) parts.push(shot.distance + 'y');
+      if (shot.miss) parts.push('Miss ' + shot.miss.replace(',', '/'));
+      if (shot.lie) parts.push(shot.lie.charAt(0).toUpperCase() + shot.lie.slice(1));
+      return parts.join(' · ') || 'Approach';
     }
-
-    document.getElementById('score-down')?.addEventListener('click', update);
-    document.getElementById('score-up')?.addEventListener('click',   update);
-    update();
-  })();
-
-
-  // ── Tee shot SVG ──────────────────────────────────────────────────────────
-  (function initTeeShotSVG() {
-    const input      = document.getElementById('tee-shot-input');
-    const tsLeft     = document.getElementById('ts-left');
-    const tsFairway  = document.getElementById('ts-fairway');
-    const tsRight    = document.getElementById('ts-right');
-    const tsCheck    = document.getElementById('ts-check');
-    const bunkerBtn  = document.getElementById('ts-bunker-btn');
-    const penaltyBtn = document.getElementById('ts-penalty-btn');
-    if (!input || !tsLeft || !tsFairway || !tsRight) return;
-
-    const ROUGH_BASE   = '#c4a35a';
-    const ROUGH_ACTIVE = '#c8860b';
-    const FW_BASE      = '#2d5a27';
-    const FW_ACTIVE    = '#4caf50';
-
-    // Two independent axes stored in module-level vars so the global delegated
-    // click handler (tee-mod group) can update them and call back into syncUI.
-    //   _tsDir — lateral direction: null | 'fairway' | 'left' | 'right'
-    //   _tsMod — outcome modifier:  null | 'bunker'  | 'penalty'
-    _tsDir = null;
-    _tsMod = null;
-
-    // Initialise from existing server value on edit
-    const initial = (input.value || '').trim();
-    if (initial) {
-      const parts = initial.split(',');
-      const p0 = parts[0], p1 = parts[1];
-      if (p0 === 'fairway') {
-        _tsDir = 'fairway';
-      } else if (p0 === 'bunker' || p0 === 'penalty') {
-        _tsMod = p0;
-        if (p1 === 'left' || p1 === 'right') _tsDir = p1;
-      } else if (p0 === 'left' || p0 === 'right') {
-        _tsDir = p0;
-      }
+    case 'atg': {
+      const parts = [];
+      if (shot.distance) parts.push(shot.distance + 'y');
+      if (shot.lie) parts.push(shot.lie.charAt(0).toUpperCase() + shot.lie.slice(1));
+      return parts.join(' · ') || 'Short game';
     }
-
-    function buildValue() {
-      if (_tsDir === 'fairway') return 'fairway';
-      if (_tsMod && _tsDir)    return _tsMod + ',' + _tsDir;
-      if (_tsMod)              return _tsMod;
-      if (_tsDir)              return _tsDir;
+    case 'putt':
+      return shot.putt_distance ? shot.putt_distance + 'ft' : 'Putt';
+    case 'gimme':
+      return 'Conceded';
+    default:
       return '';
-    }
+  }
+}
 
-    function syncUI(fromInteraction) {
-      tsLeft.setAttribute('fill',    _tsDir === 'left'    ? ROUGH_ACTIVE : ROUGH_BASE);
-      tsFairway.setAttribute('fill', _tsDir === 'fairway' ? FW_ACTIVE    : FW_BASE);
-      tsRight.setAttribute('fill',   _tsDir === 'right'   ? ROUGH_ACTIVE : ROUGH_BASE);
-      if (tsCheck) tsCheck.setAttribute('visibility', _tsDir === 'fairway' ? 'visible' : 'hidden');
-      if (bunkerBtn)  bunkerBtn.classList.toggle('is-active',  _tsMod === 'bunker');
-      if (penaltyBtn) penaltyBtn.classList.toggle('is-active', _tsMod === 'penalty');
-      input.value = buildValue();
-      if (fromInteraction && navigator.vibrate) navigator.vibrate(10);
-    }
+function renderShotList() {
+  const container = document.getElementById('shot-list');
+  if (!container) return;
+  if (_shots.length === 0) {
+    container.innerHTML = '<div class="he-no-shots">Tap a shot type below to begin</div>';
+    return;
+  }
+  container.innerHTML = _shots.map((shot, i) => `
+    <div class="he-shot-row${_editIdx === i ? ' is-editing' : ''}" data-idx="${i}">
+      <span class="he-shot-badge he-shot-badge--${shot.type}">${shotTypeLabel(shot.type)}</span>
+      <span class="he-shot-summary">${shotSummary(shot)}</span>
+      <button type="button" class="he-shot-del" data-del="${i}" aria-label="Remove shot">×</button>
+    </div>
+  `).join('');
+}
 
-    // Expose syncUI so the global delegated handler can call it after updating _tsMod
-    _tsSyncUI = syncUI;
+function updateScoreDisplay() {
+  const score = getScore();
+  const par   = getPar();
+  const diff  = score - par;
+  const el    = document.getElementById('auto-score');
+  const lbl   = document.getElementById('score-vs-par');
+  if (el) el.textContent = score;
+  if (lbl) {
+    const texts = { '-3': 'Albatross', '-2': 'Eagle', '-1': 'Birdie', '0': 'Par', '1': 'Bogey', '2': 'Double', '3': 'Triple' };
+    lbl.textContent = texts[diff] ?? (diff > 0 ? `+${diff}` : String(diff));
+    lbl.className = 'he-score-vs-par' + (diff <= -1 ? ' he-score-vs-par--birdie' : diff === 0 ? ' he-score-vs-par--par' : diff === 1 ? ' he-score-vs-par--bogey' : ' he-score-vs-par--double');
+  }
+}
 
-    // SVG zone clicks — direction only; modifier (_tsMod) is handled by the
-    // global delegated handler via data-group="tee-mod" on the pill buttons
-    tsLeft.addEventListener('click', () => {
-      _tsDir = (_tsDir === 'left') ? null : 'left';
-      syncUI(true);
+// ── State serialisation ───────────────────────────────────────────────────────
+function setHidden(name, value) {
+  const el = document.querySelector(`#hole-form input[name="${name}"]`);
+  if (el) el.value = (value == null) ? '' : value;
+}
+
+function saveState() {
+  setHidden('shots_json', JSON.stringify(_shots));
+  setHidden('score', getScore());
+  setHidden('penalties', _penalties);
+
+  // Derive legacy fields from shots for SG calculations
+  const ott   = _shots.find(s => s.type === 'ott');
+  const apps  = _shots.filter(s => s.type === 'app');
+  const atgs  = _shots.filter(s => s.type === 'atg');
+  const putts = _shots.filter(s => s.type === 'putt' || s.type === 'gimme');
+  const par   = getPar();
+
+  // tee_shot
+  if (ott) {
+    let val = '';
+    if (ott.direction === 'fairway') val = 'fairway';
+    else { const p = [ott.mod, ott.direction].filter(Boolean); val = p.join(','); }
+    setHidden('tee_shot', val);
+  }
+
+  // approach_distance, approach_miss, lie_type, second_shot_distance
+  if (par === 5 && apps.length >= 2) {
+    setHidden('second_shot_distance', apps[0].distance || '');
+    const last = apps[apps.length - 1];
+    setHidden('approach_distance', last.distance || '');
+    setHidden('approach_miss',     last.miss || '');
+    setHidden('lie_type',          last.lie  || '');
+  } else if (apps.length) {
+    setHidden('approach_distance', apps[0].distance || '');
+    setHidden('approach_miss',     apps[0].miss || '');
+    setHidden('lie_type',          apps[0].lie  || '');
+  }
+
+  // scramble_distance (first ATG), atg_strokes, sand_save
+  setHidden('atg_strokes', atgs.length || 0);
+  if (atgs.length) {
+    setHidden('scramble_distance',  atgs[0].distance || '');
+    const bunkerAtg = atgs.find(s => s.lie === 'bunker');
+    setHidden('sand_save_attempt',  bunkerAtg ? 'true' : '');
+  }
+
+  // GIR → sent via approach_miss being empty = GIR (server recalculates)
+  // putts, first_putt_distance
+  setHidden('putts', putts.length);
+  if (putts.length) setHidden('first_putt_distance', putts[0].putt_distance || '');
+}
+
+// ── Panel management ──────────────────────────────────────────────────────────
+function openPanel(type, editing) {
+  _activeType = type;
+  document.querySelectorAll('.he-type-btn').forEach(b => b.classList.toggle('is-active', b.dataset.type === type));
+  document.querySelectorAll('.he-shot-panel').forEach(p => p.classList.remove('is-visible'));
+  const panel = document.getElementById('panel-' + type);
+  if (panel) panel.classList.add('is-visible');
+  const btn = document.getElementById('panel-add-btn');
+  if (btn) { btn.style.display = 'block'; btn.textContent = editing ? 'Update Shot' : 'Add Shot'; }
+}
+
+function closePanel() {
+  _activeType = null;
+  _editIdx = null;
+  document.querySelectorAll('.he-type-btn').forEach(b => b.classList.remove('is-active'));
+  document.querySelectorAll('.he-shot-panel').forEach(p => p.classList.remove('is-visible'));
+  const btn = document.getElementById('panel-add-btn');
+  if (btn) btn.style.display = 'none';
+}
+
+function clearPanel(type) {
+  if (type === 'ott') {
+    _tsDir = null; _tsMod = null;
+    if (_tsSyncUI) _tsSyncUI(false);
+  } else if (type === 'app') {
+    const d = document.getElementById('app-dist-exact'); if (d) d.value = '';
+    document.querySelectorAll('#app-miss-dir-pills .he-pill--multi').forEach(p => p.classList.remove('is-active'));
+    document.querySelectorAll('#app-lie-pills .he-pill--multi').forEach(p => p.classList.remove('is-active'));
+    const mi = document.getElementById('app-miss-input'); if (mi) mi.value = '';
+    const li = document.getElementById('app-lie-input');  if (li) li.value = '';
+    _appMissed = false;
+    document.getElementById('app-hit-green')?.classList.add('is-active');
+    document.getElementById('app-missed-green')?.classList.remove('is-active');
+    reveal(document.getElementById('app-miss-reveal'), false);
+  } else if (type === 'atg') {
+    const d = document.getElementById('atg-dist-exact'); if (d) d.value = '';
+    document.querySelectorAll('#atg-lie-pills .he-pill--multi').forEach(p => p.classList.remove('is-active'));
+    const li = document.getElementById('atg-lie-input'); if (li) li.value = '';
+  } else if (type === 'putt') {
+    const d = document.getElementById('putt-dist-exact'); if (d) d.value = '';
+  }
+}
+
+function populatePanel(shot) {
+  const type = shot.type;
+  if (type === 'ott') {
+    _tsDir = shot.direction || null;
+    _tsMod = shot.mod || null;
+    if (_tsSyncUI) _tsSyncUI(false);
+  } else if (type === 'app') {
+    const d = document.getElementById('app-dist-exact'); if (d) d.value = shot.distance || '';
+    _appMissed = !!shot.miss;
+    document.getElementById('app-hit-green')?.classList.toggle('is-active', !_appMissed);
+    document.getElementById('app-missed-green')?.classList.toggle('is-active', _appMissed);
+    reveal(document.getElementById('app-miss-reveal'), _appMissed);
+    // Set miss direction pills
+    const missVals = new Set((shot.miss || '').split(',').filter(Boolean));
+    document.querySelectorAll('#app-miss-dir-pills .he-pill--multi').forEach(p => {
+      p.classList.toggle('is-active', missVals.has(p.dataset.value));
     });
-    tsFairway.addEventListener('click', () => {
-      _tsDir = 'fairway';
-      _tsMod = null; // fairway is incompatible with bunker/penalty
-      syncUI(true);
+    const mi = document.getElementById('app-miss-input'); if (mi) mi.value = shot.miss || '';
+    // Set lie pills
+    const lieVal = shot.lie || '';
+    document.querySelectorAll('#app-lie-pills .he-pill--multi').forEach(p => {
+      p.classList.toggle('is-active', p.dataset.value === lieVal);
     });
-    tsRight.addEventListener('click', () => {
-      _tsDir = (_tsDir === 'right') ? null : 'right';
-      syncUI(true);
+    const li = document.getElementById('app-lie-input'); if (li) li.value = lieVal;
+  } else if (type === 'atg') {
+    const d = document.getElementById('atg-dist-exact'); if (d) d.value = shot.distance || '';
+    const lieVal = shot.lie || '';
+    document.querySelectorAll('#atg-lie-pills .he-pill--multi').forEach(p => {
+      p.classList.toggle('is-active', p.dataset.value === lieVal);
     });
+    const li = document.getElementById('atg-lie-input'); if (li) li.value = lieVal;
+  } else if (type === 'putt') {
+    const d = document.getElementById('putt-dist-exact'); if (d) d.value = shot.putt_distance || '';
+  }
+}
 
-    // Apply initial state (no vibrate)
-    syncUI(false);
-  })();
+function collectPanelShot(type) {
+  const shot = { type };
+  if (type === 'ott') {
+    shot.direction = _tsDir || null;
+    shot.mod = _tsMod || null;
+  } else if (type === 'app') {
+    const raw = document.getElementById('app-dist-exact')?.value;
+    shot.distance = raw ? parseInt(raw) : null;
+    shot.miss = _appMissed ? (document.getElementById('app-miss-input')?.value || null) : null;
+    shot.lie  = _appMissed ? (document.getElementById('app-lie-input')?.value || null) : null;
+  } else if (type === 'atg') {
+    const raw = document.getElementById('atg-dist-exact')?.value;
+    shot.distance = raw ? parseInt(raw) : null;
+    shot.lie = document.getElementById('atg-lie-input')?.value || null;
+  } else if (type === 'putt') {
+    const raw = document.getElementById('putt-dist-exact')?.value;
+    shot.putt_distance = raw ? parseInt(raw) : null;
+  }
+  return shot;
+}
 
+// ── Shot CRUD ─────────────────────────────────────────────────────────────────
+function commitShot() {
+  if (!_activeType) return;
+  const shot = collectPanelShot(_activeType);
+  if (_editIdx !== null) {
+    _shots[_editIdx] = shot;
+  } else {
+    _shots.push(shot);
+  }
+  closePanel();
+  saveState();
+  renderShotList();
+  updateScoreDisplay();
+  scheduleAutosave();
+  if (navigator.vibrate) navigator.vibrate(10);
+}
 
-  // ── Arithmetic validation ─────────────────────────────────────────────────
-  // Derives impossible/unusual combinations from first principles.
-  // Does NOT block submission — shows a confirmation modal instead.
+// Called via delegated click on shot-list
+function handleShotListClick(e) {
+  const delBtn = e.target.closest('[data-del]');
+  if (delBtn) {
+    const idx = parseInt(delBtn.dataset.del);
+    _shots.splice(idx, 1);
+    if (_editIdx !== null && _editIdx >= idx) { closePanel(); }
+    saveState(); renderShotList(); updateScoreDisplay(); scheduleAutosave();
+    return;
+  }
+  const row = e.target.closest('.he-shot-row');
+  if (row) {
+    const idx = parseInt(row.dataset.idx);
+    _editIdx = idx;
+    populatePanel(_shots[idx]);
+    openPanel(_shots[idx].type, true);
+    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
 
-  function getHoleIssues() {
-    const par   = parseInt(document.getElementById('par-input')?.value)   || 4;
-    const score = parseInt(document.getElementById('score-input')?.value) || par;
-    const putts = parseInt(document.getElementById('putts-input')?.value) || 0;
-    // GIR = Yes when gir-yes pill is active; default to true for first render
-    const girYesEl = document.getElementById('gir-yes');
-    const girNoEl  = document.getElementById('gir-no');
-    let gir = true; // default: assume GIR unless No is active
-    if (girNoEl?.classList.contains('is-active'))  gir = false;
-    if (girYesEl?.classList.contains('is-active')) gir = true;
+// ── Validation ────────────────────────────────────────────────────────────────
+function getHoleIssues() {
+  const score = getScore();
+  const par   = getPar();
+  const diff  = score - par;
+  const putts = _shots.filter(s => s.type === 'putt' || s.type === 'gimme').length;
+  const issues = [];
 
-    const issues = [];
-
-    // Putts ≥ score: need at least 1 non-putt stroke (the tee shot)
-    if (putts >= score) {
-      issues.push(
-        `${putts} putt${putts !== 1 ? 's' : ''} with a score of ${score} — ` +
-        `you need at least 1 non-putt stroke`
-      );
-    }
-
-    // GIR = Yes but shots-to-green exceeds par − 2
-    // GIR requires reaching the green in at most (par − 2) shots.
-    if (gir) {
-      const shotsToGreen = score - putts;
-      const maxForGIR    = par - 2;   // par3→1, par4→2, par5→3
-      if (shotsToGreen > maxForGIR) {
-        issues.push(
-          `GIR marked Yes, but ${shotsToGreen} shot${shotsToGreen !== 1 ? 's' : ''} to the green — ` +
-          `a par ${par} allows at most ${maxForGIR} for GIR`
-        );
-      }
-    }
-
-    // Score = 1 (hole in one): valid but always confirm
-    if (score === 1) {
-      issues.push(`Score of 1 on a par ${par} — confirming this as a hole in one`);
-    }
-
-    // Missed-green arithmetic: check minimum shots needed to reach green
-    // Par 3/4: need tee + approach-miss + chip = par-1 shots minimum before putting
-    // Par 5: can miss in 3 shots (tee + approach-miss + chip), so par-2 minimum
-    if (!gir && putts < score) {
-      const shotsBeforePutts = score - putts;
-      const minBeforePutts   = par === 5 ? par - 2 : par - 1;
-      if (shotsBeforePutts < minBeforePutts) {
-        issues.push(
-          `Score of ${score} with ${putts} putt${putts !== 1 ? 's' : ''} after missing the green on ` +
-          `par ${par} — that leaves only ${shotsBeforePutts} shot${shotsBeforePutts !== 1 ? 's' : ''} ` +
-          `to reach the green, but a missed par ${par} needs at least ${minBeforePutts}`
-        );
-      }
-    }
-
+  if (_shots.length === 0) {
+    issues.push('No shots recorded — add at least one shot before saving');
     return issues;
   }
+  if (score === 1) issues.push(`Score of 1 on par ${par} — confirming hole in one`);
+  if (score <= par - 2 && score > 1) issues.push(`Score of ${score} on par ${par} — that's an eagle or better. Please confirm.`);
+  if (putts === 0 && score > 1) issues.push(`No putts or gimmes recorded — did you hole out from off the green?`);
+  if (putts >= 4) issues.push(`${putts} putting shots is unusual — please confirm`);
+  return issues;
+}
 
-  function showValidationModal(issues) {
-    const overlay  = document.getElementById('he-validation-overlay');
-    const listEl   = document.getElementById('he-modal-issues');
-    const parEl    = document.getElementById('he-modal-par');
-    if (!overlay || !listEl) return;
+function showValidationModal(issues) {
+  const overlay = document.getElementById('he-validation-overlay');
+  const listEl  = document.getElementById('he-modal-issues');
+  const parEl   = document.getElementById('he-modal-par');
+  if (!overlay || !listEl) return;
+  if (parEl) parEl.textContent = `Par ${getPar()} · hole ${getScore() - getPar() >= 0 ? '+' : ''}${getScore() - getPar()} · double-check:`;
+  listEl.innerHTML = issues.map(i => `<li>${i}</li>`).join('');
+  overlay.style.display = 'flex';
+}
 
-    const par = parseInt(document.getElementById('par-input')?.value) || 4;
-    if (parEl) parEl.textContent = `Par ${par} · your stats look unusual:`;
-    listEl.innerHTML = issues.map(i => `<li>${i}</li>`).join('');
-    overlay.style.display = 'flex';
+function hideValidationModal() {
+  const overlay = document.getElementById('he-validation-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+// ── Autosave ──────────────────────────────────────────────────────────────────
+let _saveTimer = null;
+
+async function triggerAutosave() {
+  saveState(); // ensure hidden inputs are current
+  const form = document.getElementById('hole-form');
+  const url  = form?.dataset.autosaveUrl;
+  if (!form || !url) return;
+  const statusEl = document.getElementById('autosave-status');
+  if (statusEl) { statusEl.textContent = 'Saving…'; statusEl.className = 'autosave-status autosave-saving'; }
+  try {
+    const resp = await fetch(url, { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    if (statusEl) {
+      if (resp.ok) { statusEl.textContent = 'Saved'; statusEl.className = 'autosave-status autosave-saved'; }
+      else         { statusEl.textContent = 'Save failed'; statusEl.className = 'autosave-status autosave-error'; }
+    }
+  } catch {
+    if (statusEl) { statusEl.textContent = 'Save failed'; statusEl.className = 'autosave-status autosave-error'; }
   }
+}
 
-  function hideValidationModal() {
-    const overlay = document.getElementById('he-validation-overlay');
-    if (overlay) overlay.style.display = 'none';
+function scheduleAutosave() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(triggerAutosave, 1500);
+}
+
+// ── OTT SVG ───────────────────────────────────────────────────────────────────
+function initTeeShotSVG() {
+  const input      = document.getElementById('tee-shot-svg-hidden');
+  const tsLeft     = document.getElementById('ts-left');
+  const tsFairway  = document.getElementById('ts-fairway');
+  const tsRight    = document.getElementById('ts-right');
+  const tsCheck    = document.getElementById('ts-check');
+  if (!tsLeft || !tsFairway || !tsRight) return;
+
+  const ROUGH_BASE   = '#c4a35a', ROUGH_ACTIVE = '#c8860b';
+  const FW_BASE      = '#2d5a27', FW_ACTIVE    = '#4caf50';
+
+  function syncUI(vibrate) {
+    tsLeft.setAttribute('fill',    _tsDir === 'left'    ? ROUGH_ACTIVE : ROUGH_BASE);
+    tsFairway.setAttribute('fill', _tsDir === 'fairway' ? FW_ACTIVE    : FW_BASE);
+    tsRight.setAttribute('fill',   _tsDir === 'right'   ? ROUGH_ACTIVE : ROUGH_BASE);
+    if (tsCheck) tsCheck.setAttribute('visibility', _tsDir === 'fairway' ? 'visible' : 'hidden');
+    document.getElementById('ts-bunker-btn')?.classList.toggle('is-active', _tsMod === 'bunker');
+    document.getElementById('ts-penalty-btn')?.classList.toggle('is-active', _tsMod === 'penalty');
+    if (vibrate && navigator.vibrate) navigator.vibrate(10);
   }
+  _tsSyncUI = syncUI;
 
-  // Modal buttons
-  document.getElementById('he-modal-fix')?.addEventListener('click', hideValidationModal);
+  tsLeft.addEventListener('click',    () => { _tsDir = (_tsDir === 'left')    ? null : 'left';    syncUI(true); });
+  tsFairway.addEventListener('click', () => { _tsDir = 'fairway'; _tsMod = null; syncUI(true); });
+  tsRight.addEventListener('click',   () => { _tsDir = (_tsDir === 'right')   ? null : 'right';   syncUI(true); });
+  syncUI(false);
+}
 
-  document.getElementById('he-modal-confirm')?.addEventListener('click', () => {
-    hideValidationModal();
-    validationOverride = true;
-    document.getElementById('hole-form')?.requestSubmit();
-  });
+// ── Main init ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
 
+  // Init shot state from server-rendered initial data
+  try { _shots    = JSON.parse(window.INITIAL_SHOTS || '[]'); } catch { _shots = []; }
+  _penalties = parseInt(window.INITIAL_PENALTIES) || 0;
+  renderShotList();
+  updateScoreDisplay();
 
-  // ── Form submit: miss direction check + arithmetic validation ──────────────
-  let validationOverride = false;
-  const holeForm = document.getElementById('hole-form');
+  // Update penalties display
+  const penDisplay = document.getElementById('pen-display');
+  if (penDisplay) penDisplay.textContent = _penalties;
 
-  if (holeForm) {
-    holeForm.addEventListener('submit', e => {
+  // Init OTT SVG
+  initTeeShotSVG();
 
-      // 1. Require at least one miss direction when GIR = No
-      // Exception: bunker lie already implies location — direction not required
-      const mr = document.getElementById('miss-reveal');
-      const mi = document.getElementById('approach-miss-input');
-      const lieTypEl = document.getElementById('lie-type-input');
-      const bunkerLieActive = (lieTypEl ? lieTypEl.value : '').split(',').includes('bunker');
-      if (mr && mr.classList.contains('is-visible') && mi && !mi.value && !bunkerLieActive) {
-        e.preventDefault();
-        const lbl = document.querySelector('#miss-dir-pills')
-                             ?.closest('.he-field')?.querySelector('.he-label');
-        if (lbl) {
-          lbl.style.color = 'var(--he-red)';
-          lbl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+  // Shot type buttons
+  document.querySelectorAll('.he-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const type = btn.dataset.type;
+      if (type === 'gimme') {
+        _shots.push({ type: 'gimme' });
+        saveState(); renderShotList(); updateScoreDisplay(); scheduleAutosave();
+        if (navigator.vibrate) navigator.vibrate(10);
         return;
       }
+      if (_activeType === type && _editIdx === null) { closePanel(); return; }
+      _editIdx = null;
+      clearPanel(type);
+      openPanel(type, false);
+    });
+  });
 
-      // 2. Arithmetic validation — skip if user already confirmed
-      if (!validationOverride) {
-        const issues = getHoleIssues();
-        if (issues.length > 0) {
-          e.preventDefault();
-          showValidationModal(issues);
-          return;
-        }
-      }
-      validationOverride = false; // reset after each submit attempt
+  // Shot list delegation (edit + delete)
+  document.getElementById('shot-list')?.addEventListener('click', handleShotListClick);
+
+  // Panel add/update button
+  document.getElementById('panel-add-btn')?.addEventListener('click', commitShot);
+
+  // App hit/miss toggle
+  document.getElementById('app-hit-green')?.addEventListener('click', () => {
+    _appMissed = false;
+    document.getElementById('app-hit-green')?.classList.add('is-active');
+    document.getElementById('app-missed-green')?.classList.remove('is-active');
+    reveal(document.getElementById('app-miss-reveal'), false);
+  });
+  document.getElementById('app-missed-green')?.addEventListener('click', () => {
+    _appMissed = true;
+    document.getElementById('app-missed-green')?.classList.add('is-active');
+    document.getElementById('app-hit-green')?.classList.remove('is-active');
+    reveal(document.getElementById('app-miss-reveal'), true);
+  });
+
+  // Penalties stepper
+  const penDown = document.getElementById('pen-down');
+  const penUp   = document.getElementById('pen-up');
+  const penDisp = document.getElementById('pen-display');
+  if (penDown && penUp && penDisp) {
+    penDown.addEventListener('click', () => {
+      if (_penalties > 0) { _penalties--; penDisp.textContent = _penalties; updateScoreDisplay(); saveState(); scheduleAutosave(); if (navigator.vibrate) navigator.vibrate(8); }
+    });
+    penUp.addEventListener('click', () => {
+      if (_penalties < 10) { _penalties++; penDisp.textContent = _penalties; updateScoreDisplay(); saveState(); scheduleAutosave(); if (navigator.vibrate) navigator.vibrate(8); }
     });
   }
 
-
-  // ── Autosave ───────────────────────────────────────────────────────────────
-  // Persists current hole data via AJAX so navigating away never loses changes.
-  // Triggered on any form interaction (debounced) and always awaited before
-  // navigating via the hole grid or the "Submit Round Early" skip link.
-
-  let _saveTimer = null;
-
-  async function triggerAutosave() {
-    const form = document.getElementById('hole-form');
-    const url  = form?.dataset.autosaveUrl;
-    if (!form || !url) return;
-    const statusEl = document.getElementById('autosave-status');
-    if (statusEl) { statusEl.textContent = 'Saving…'; statusEl.className = 'autosave-status autosave-saving'; }
-    try {
-      const resp = await fetch(url, {
-        method: 'POST',
-        body: new FormData(form),
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-      });
-      if (statusEl) {
-        if (resp.ok) { statusEl.textContent = 'Saved'; statusEl.className = 'autosave-status autosave-saved'; }
-        else         { statusEl.textContent = 'Save failed'; statusEl.className = 'autosave-status autosave-error'; }
-      }
-    } catch {
-      if (statusEl) { statusEl.textContent = 'Save failed'; statusEl.className = 'autosave-status autosave-error'; }
-    }
-  }
-
-  function scheduleAutosave() {
-    clearTimeout(_saveTimer);
-    _saveTimer = setTimeout(triggerAutosave, 1500);
-  }
-
-  // Schedule save on any click or input within the form
-  const _holeForm = document.getElementById('hole-form');
-  if (_holeForm) {
-    _holeForm.addEventListener('click',  scheduleAutosave);
-    _holeForm.addEventListener('input',  scheduleAutosave);
-    _holeForm.addEventListener('change', scheduleAutosave);
-  }
-
-  // Intercept hole navigation grid — save before navigating
+  // Nav interception — save before navigating away
   document.querySelectorAll('.he-nav-dot').forEach(a => {
     a.addEventListener('click', async e => {
-      const href = a.getAttribute('href');
-      // Don't intercept current hole (no-op navigation)
       if (a.classList.contains('he-nav-dot--current')) return;
       e.preventDefault();
       await triggerAutosave();
-      window.location.href = href;
+      window.location.href = a.getAttribute('href');
     });
   });
+  document.querySelector('.he-skip-btn')?.addEventListener('click', async e => {
+    e.preventDefault();
+    const href = e.currentTarget.getAttribute('href');
+    await triggerAutosave();
+    window.location.href = href;
+  });
 
-  // Intercept "Submit Round Early" skip link — save before navigating
-  const skipBtn = document.querySelector('.he-skip-btn');
-  if (skipBtn) {
-    skipBtn.addEventListener('click', async e => {
-      e.preventDefault();
-      const href = skipBtn.getAttribute('href');
-      await triggerAutosave();
-      window.location.href = href;
-    });
-  }
+  // Validation modal buttons
+  document.getElementById('he-modal-fix')?.addEventListener('click', hideValidationModal);
+  document.getElementById('he-modal-confirm')?.addEventListener('click', () => {
+    hideValidationModal();
+    _validationOverride = true;
+    document.getElementById('hole-form')?.requestSubmit();
+  });
+
+  // Form submit
+  let _validationOverride = false;
+  document.getElementById('hole-form')?.addEventListener('submit', e => {
+    saveState();
+    if (!_validationOverride) {
+      const issues = getHoleIssues();
+      if (issues.length > 0) { e.preventDefault(); showValidationModal(issues); return; }
+    }
+    _validationOverride = false;
+  });
 
 });

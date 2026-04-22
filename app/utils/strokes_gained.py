@@ -368,7 +368,7 @@ def strokes_gained_around_green(holes) -> float:
         if sdist and hole.first_putt_distance:
             exp_start = expected_scramble(sdist, atg_lie)
             exp_end   = expected_putts(hole.first_putt_distance)
-            sg += exp_start - 1 - exp_end
+            sg += exp_start - (hole.atg_strokes or 1) - exp_end
         else:
             # Fallback: score-relative model
             score_diff = hole.score - hole.par

@@ -12,557 +12,158 @@
     --he-border:  #d8d0c0;
     --he-muted:   #7a7060;
     --he-red:     #c0392b;
-    --he-nav:     60px;   /* height of the app navbar */
+    --he-nav:     60px;
   }
-
-  /* ── Page shell ────────────────────────────────────────────────────────── */
   body { background: var(--he-cream) !important; }
+  .he-course-prompt { background:rgba(201,168,76,.09);border-bottom:1px solid rgba(201,168,76,.22);padding:9px 16px;text-align:center; }
+  .he-course-prompt-link { font-size:.75rem;color:var(--he-gold);text-decoration:none;font-family:'DM Mono',monospace;letter-spacing:.03em;opacity:.85; }
+  .he-course-prompt-link:hover { opacity:1; }
+  .he-page { width:100%;max-width:480px;margin:0 auto;padding-bottom:120px;font-family:'Inter',system-ui,sans-serif; }
+  .he-header { position:sticky;top:var(--he-nav);z-index:100;background:var(--he-green);color:#fff;padding:0;box-shadow:0 2px 8px rgba(0,0,0,.25); }
+  .he-progress { height:4px;background:rgba(255,255,255,.15); }
+  .he-progress-fill { height:100%;background:var(--he-gold);transition:width .3s ease; }
+  .he-header-body { text-align:center;padding:10px 16px 14px;position:relative; }
+  .he-back-link { position:absolute;top:10px;left:16px;color:var(--he-gold);font-size:.75rem;font-family:'DM Mono',monospace;text-decoration:none;letter-spacing:.04em;opacity:.75;padding:8px 12px 8px 0; }
+  .he-back-link:hover { opacity:1; }
+  .he-hole-num { font-family:'Inter',system-ui,sans-serif;font-style:italic;font-size:2.4rem;font-weight:700;color:var(--he-gold);line-height:1.1;margin-top:4px; }
+  .he-hole-info { font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.09em;font-variant:small-caps;color:var(--he-cream);opacity:.85;margin-top:3px; }
+  .he-prev-pill { display:inline-block;margin-top:8px;padding:3px 14px;border-radius:999px;font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.05em;font-weight:600; }
+  .he-prev-pill--under  { background:#2d7a2d;color:#fff; }
+  .he-prev-pill--par    { background:rgba(245,240,232,.15);color:var(--he-cream);border:1px solid rgba(245,240,232,.3); }
+  .he-prev-pill--bogey  { background:#a07800;color:#fff; }
+  .he-prev-pill--double { background:var(--he-red);color:#fff; }
 
-  .he-course-prompt {
-    background: rgba(201,168,76,.09);
-    border-bottom: 1px solid rgba(201,168,76,.22);
-    padding: 9px 16px;
-    text-align: center;
-  }
-  .he-course-prompt-link {
-    font-size: .75rem;
-    color: var(--he-gold);
-    text-decoration: none;
-    font-family: 'DM Mono', monospace;
-    letter-spacing: .03em;
-    opacity: .85;
-  }
-  .he-course-prompt-link:hover { opacity: 1; }
+  /* Pill tap buttons */
+  .he-pills { display:flex;flex-wrap:wrap;gap:8px;justify-content:center; }
+  .he-pill { min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid var(--he-border);background:var(--he-surface);color:var(--he-green);font-family:'Inter',system-ui,sans-serif;font-size:.875rem;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:border-color .15s,background .15s,color .15s;-webkit-tap-highlight-color:transparent;white-space:nowrap; }
+  .he-pill:hover { border-color:var(--he-green); }
+  .he-pill.is-active { background:var(--he-green);color:var(--he-gold);border-color:var(--he-green); }
+  .he-pill--multi.is-active { background:var(--he-gold);color:var(--he-green);border-color:var(--he-gold); }
 
-  .he-page {
-    width: 100%;
-    max-width: 480px;
-    margin: 0 auto;
-    padding-bottom: 100px; /* space for sticky button */
-    font-family: 'Inter', system-ui, sans-serif;
-  }
+  /* Exact number inputs */
+  .he-exact { display:block;width:140px;margin:0 auto;padding:8px 12px;background:transparent;border:none;border-bottom:2px solid var(--he-border);color:var(--he-green);font-family:'Inter',system-ui,sans-serif;font-size:1.5rem;font-weight:600;text-align:center;box-sizing:border-box;-webkit-appearance:none;appearance:none; }
+  .he-exact::placeholder { color:#ccc;font-weight:400;font-size:1rem; }
+  .he-exact:focus { outline:none;border-bottom-color:var(--he-gold); }
 
-  /* ── Sticky header ─────────────────────────────────────────────────────── */
-  .he-header {
-    position: sticky;
-    top: var(--he-nav);
-    z-index: 100;
-    background: var(--he-green);
-    color: #fff;
-    padding: 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,.25);
-  }
+  /* Mini steppers */
+  .he-mini-row { display:flex;align-items:center;gap:16px;justify-content:center; }
+  .he-mini-btn { width:36px;height:36px;border-radius:50%;border:1.5px solid var(--he-border);background:var(--he-surface);color:var(--he-green);font-size:1.2rem;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:border-color .15s,background .15s; }
+  .he-mini-btn:active { background:var(--he-green);color:var(--he-gold);border-color:var(--he-green); }
+  .he-mini-val { font-family:'Inter',system-ui,sans-serif;font-size:1.6rem;font-weight:600;color:var(--he-green);min-width:36px;text-align:center;line-height:1; }
 
-  /* Progress bar — full width flush at very top */
-  .he-progress {
-    height: 4px;
-    background: rgba(255,255,255,.15);
-  }
-  .he-progress-fill {
-    height: 100%;
-    background: var(--he-gold);
-    transition: width .3s ease;
-  }
+  /* Labels */
+  .he-label { font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--he-muted);margin-bottom:10px;display:block;text-align:center; }
+  .he-label-hint { font-family:'Inter',system-ui,sans-serif;font-size:.65rem;letter-spacing:0;text-transform:none;color:#aaa;margin-left:.3em; }
 
-  /* Centered header body */
-  .he-header-body {
-    text-align: center;
-    padding: 10px 16px 14px;
-    position: relative;
-  }
+  /* Progressive disclosure */
+  .he-reveal { display:grid;grid-template-rows:0fr;transition:grid-template-rows .25s ease;overflow:hidden; }
+  .he-reveal.is-visible { grid-template-rows:1fr; }
+  .he-reveal > .he-reveal-inner { min-height:0;overflow:hidden; }
 
-  .he-back-link {
-    position: absolute;
-    top: 10px;
-    left: 16px;
-    color: var(--he-gold);
-    font-size: .75rem;
-    font-family: 'DM Mono', monospace;
-    text-decoration: none;
-    letter-spacing: .04em;
-    opacity: .75;
-    padding: 8px 12px 8px 0;
-  }
-  .he-back-link:hover { opacity: 1; }
+  /* Validation modal */
+  .he-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:flex;align-items:center;justify-content:center;padding:16px; }
+  .he-modal-box { background:#fff;border-radius:16px;padding:24px 20px 20px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.18); }
+  .he-modal-title { font-weight:700;font-size:.95rem;color:var(--he-green);margin:0 0 6px; }
+  .he-modal-par { font-family:'DM Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--he-muted);margin:0 0 14px; }
+  .he-modal-issues { margin:0 0 20px;padding-left:1.1em;font-size:.85rem;color:#444;line-height:1.55; }
+  .he-modal-actions { display:flex;gap:10px; }
+  .he-modal-btn { flex:1;height:44px;border-radius:999px;font-size:.875rem;font-weight:600;cursor:pointer;border:1.5px solid;-webkit-tap-highlight-color:transparent; }
+  .he-modal-btn--ghost { background:transparent;border-color:var(--he-border);color:var(--he-muted); }
+  .he-modal-btn--gold  { background:var(--he-green);border-color:var(--he-green);color:var(--he-gold); }
 
-  /* HOLE XX — large Playfair italic gold */
-  .he-hole-num {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-style: italic;
-    font-size: 2.4rem;
-    font-weight: 700;
-    color: var(--he-gold);
-    line-height: 1.1;
-    margin-top: 4px;
-  }
+  /* Sticky next button */
+  .he-next-wrap { position:fixed;bottom:0;left:0;right:0;z-index:200;padding:12px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--he-cream) 30%);pointer-events:none; }
+  .he-skip-btn { display:block;width:100%;text-align:center;padding:.5rem 1rem;margin-bottom:.5rem;background:transparent;border:1.5px solid rgba(201,168,76,.55);border-radius:10px;color:var(--he-gold);font-size:.82rem;font-weight:600;font-family:inherit;cursor:pointer;text-decoration:none;transition:background .15s,border-color .15s;pointer-events:auto; }
+  .he-skip-btn:hover { background:rgba(201,168,76,.1);border-color:var(--he-gold); }
+  .he-next-btn { display:block;width:100%;max-width:480px;margin:0 auto;height:52px;border-radius:999px;border:none;background:var(--he-green);color:var(--he-gold);font-family:'Inter',system-ui,sans-serif;font-size:1rem;font-weight:600;letter-spacing:.03em;cursor:pointer;transition:opacity .15s;-webkit-tap-highlight-color:transparent;pointer-events:auto; }
+  .he-next-btn:hover { opacity:.9; }
+  .he-next-btn:active { opacity:.75; }
+  .autosave-status { display:block;text-align:center;height:14px;margin-bottom:4px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;pointer-events:none;transition:opacity .4s; }
+  .autosave-saving { color:rgba(201,168,76,.45); }
+  .autosave-saved  { color:rgba(201,168,76,.7); }
+  .autosave-error  { color:#e05c5c; }
 
-  /* Par · yardage — DM Mono small-caps cream */
-  .he-hole-info {
-    font-family: 'DM Mono', monospace;
-    font-size: .7rem;
-    letter-spacing: .09em;
-    font-variant: small-caps;
-    color: var(--he-cream);
-    opacity: .85;
-    margin-top: 3px;
-  }
+  /* Nav grid */
+  .he-nav-grid { display:grid;grid-template-columns:repeat(9,1fr);padding:2px 4px 4px;background:var(--he-green);border-bottom:1px solid rgba(255,255,255,.08); }
+  .he-nav-dot { display:flex;align-items:center;justify-content:center;min-height:44px;text-decoration:none;-webkit-tap-highlight-color:transparent;pointer-events:auto; }
+  .he-nav-dot-inner { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0;border:1.5px solid rgba(201,168,76,.3);color:rgba(201,168,76,.4);transition:background .15s,border-color .15s,color .15s; }
+  .he-nav-dot--done .he-nav-dot-inner { background:rgba(201,168,76,.18);border-color:rgba(201,168,76,.65);color:var(--he-gold); }
+  .he-nav-dot--current .he-nav-dot-inner { background:var(--he-gold);border-color:var(--he-gold);color:var(--he-green); }
 
-  /* Prev hole score pill */
-  .he-prev-pill {
-    display: inline-block;
-    margin-top: 8px;
-    padding: 3px 14px;
-    border-radius: 999px;
-    font-family: 'DM Mono', monospace;
-    font-size: .68rem;
-    letter-spacing: .05em;
-    font-weight: 600;
-  }
-  .he-prev-pill--under  { background: #2d7a2d; color: #fff; }
-  .he-prev-pill--par    { background: rgba(245,240,232,.15); color: var(--he-cream); border: 1px solid rgba(245,240,232,.3); }
-  .he-prev-pill--bogey  { background: #a07800; color: #fff; }
-  .he-prev-pill--double { background: var(--he-red); color: #fff; }
+  /* ── Shot-by-shot UI ────────────────────────────────────────────────────── */
+  /* Score auto-display */
+  .he-score-wrap { text-align:center;padding:20px 16px 8px; }
+  .he-score-big { font-family:'Inter',system-ui,sans-serif;font-size:72px;font-weight:700;color:var(--he-green);line-height:1; }
+  .he-score-vs-par { display:block;font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;margin-top:4px;min-height:1.2em; }
+  .he-score-vs-par--birdie { color:var(--he-gold); }
+  .he-score-vs-par--par    { color:var(--he-green); }
+  .he-score-vs-par--bogey  { color:#a07800; }
+  .he-score-vs-par--double { color:var(--he-red); }
 
-  /* ── Form card ──────────────────────────────────────────────────────────── */
-  .he-form {
-    padding: 0 16px;
-    margin-top: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
+  /* Section wrapper */
+  .he-section { padding:0 16px 8px; }
+  .he-section-hdr { font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--he-muted);padding:14px 0 8px;border-top:1px solid var(--he-border); }
 
-  /* ── Field sections ─────────────────────────────────────────────────────── */
-  .he-field {
-    padding: 18px 0 16px;
-    border-bottom: 1px solid var(--he-border);
-  }
-  .he-field:last-of-type { border-bottom: none; }
+  /* Shot list */
+  .he-no-shots { font-size:.8rem;color:#bbb;text-align:center;padding:12px 0 8px; }
+  .he-shot-row { display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.055);cursor:pointer;-webkit-tap-highlight-color:transparent; }
+  .he-shot-row.is-editing { background:rgba(201,168,76,.07);border-radius:8px;padding:10px 8px;margin:0 -8px; }
+  .he-shot-row:last-child { border-bottom:none; }
+  .he-shot-badge { flex-shrink:0;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase; }
+  .he-shot-badge--ott   { background:#2d5a27;color:#fff; }
+  .he-shot-badge--app   { background:#1a3a6a;color:#fff; }
+  .he-shot-badge--atg   { background:#7a4a1a;color:#fff; }
+  .he-shot-badge--putt  { background:#4a2a7a;color:#fff; }
+  .he-shot-badge--gimme { background:#4a2a7a;color:rgba(255,255,255,.7); }
+  .he-shot-summary { flex:1;font-size:13px;color:var(--he-muted); }
+  .he-shot-del { flex-shrink:0;background:none;border:none;font-size:18px;color:rgba(0,0,0,.2);cursor:pointer;padding:4px 8px;line-height:1;-webkit-tap-highlight-color:transparent; }
+  .he-shot-del:active { color:var(--he-red); }
 
-  .he-label {
-    font-family: 'DM Mono', monospace;
-    font-size: .65rem;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--he-muted);
-    margin-bottom: 10px;
-    display: block;
-    text-align: center;
-  }
-  .he-label-hint {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: .65rem;
-    letter-spacing: 0;
-    text-transform: none;
-    color: #aaa;
-    margin-left: .3em;
-  }
+  /* Type buttons */
+  .he-type-btns { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px; }
+  .he-type-btn { flex:1;min-width:52px;height:44px;border-radius:10px;border:1.5px solid var(--he-border);background:var(--he-surface);color:var(--he-green);font-family:'Inter',system-ui,sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.04em;cursor:pointer;transition:border-color .15s,background .15s,color .15s;-webkit-tap-highlight-color:transparent; }
+  .he-type-btn:hover { border-color:var(--he-green); }
+  .he-type-btn.is-active { background:var(--he-green);color:var(--he-gold);border-color:var(--he-green); }
 
-  /* ── Score stepper (large Playfair) ─────────────────────────────────────── */
-  .he-score-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 24px;
-  }
-  .he-stepper-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    border: 1.5px solid var(--he-border);
-    background: var(--he-surface);
-    color: var(--he-green);
-    font-size: 1.4rem;
-    font-weight: 300;
-    line-height: 1;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: border-color .15s, background .15s;
-    -webkit-tap-highlight-color: transparent;
-    pointer-events: auto; /* re-enable on the actual button */
-  }
-  .he-stepper-btn:active {
-    background: var(--he-green);
-    color: var(--he-gold);
-    border-color: var(--he-green);
-  }
+  /* Shot panels */
+  .he-shot-panel { display:none;background:rgba(0,0,0,.03);border-radius:12px;padding:16px;margin-bottom:10px; }
+  .he-shot-panel.is-visible { display:block; }
+  .he-panel-lbl { font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--he-muted);margin-bottom:14px; }
+  .he-panel-row { margin-bottom:14px; }
+  .he-panel-row:last-child { margin-bottom:0; }
+  .he-panel-add-btn { display:block;width:100%;height:46px;border-radius:10px;border:none;background:var(--he-green);color:var(--he-gold);font-family:'Inter',system-ui,sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:14px;-webkit-tap-highlight-color:transparent;transition:opacity .15s; }
+  .he-panel-add-btn:active { opacity:.75; }
 
-  .he-score-val {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 72px;
-    font-weight: 700;
-    color: var(--he-green);
-    min-width: 88px;
-    text-align: center;
-    line-height: 1;
-  }
-
-  /* Live score-vs-par label */
-  .he-score-vs-par {
-    display: block;
-    text-align: center;
-    font-family: 'DM Mono', monospace;
-    font-size: .7rem;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    margin-top: 6px;
-    min-height: 1.2em;
-    transition: color .15s;
-  }
-  .he-score-vs-par--birdie { color: var(--he-gold); }
-  .he-score-vs-par--par    { color: var(--he-green); }
-  .he-score-vs-par--bogey  { color: #a07800; }
-  .he-score-vs-par--double { color: var(--he-red); }
-
-  /* Mini steppers (putts, penalties) */
-  .he-mini-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    justify-content: center;
-  }
-  .he-mini-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1.5px solid var(--he-border);
-    background: var(--he-surface);
-    color: var(--he-green);
-    font-size: 1.2rem;
-    font-weight: 300;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    -webkit-tap-highlight-color: transparent;
-    transition: border-color .15s, background .15s;
-  }
-  .he-mini-btn:active {
-    background: var(--he-green);
-    color: var(--he-gold);
-    border-color: var(--he-green);
-  }
-  .he-mini-val {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 1.6rem;
-    font-weight: 600;
-    color: var(--he-green);
-    min-width: 36px;
-    text-align: center;
-    line-height: 1;
-  }
-
-  /* ── Pill tap buttons ────────────────────────────────────────────────────── */
-  .he-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-  }
-
-  .he-pill {
-    min-height: 44px;
-    padding: 0 16px;
-    border-radius: 999px;
-    border: 1.5px solid var(--he-border);
-    background: var(--he-surface);
-    color: var(--he-green);
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: .875rem;
-    font-weight: 500;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: border-color .15s, background .15s, color .15s;
-    -webkit-tap-highlight-color: transparent;
-    white-space: nowrap;
-  }
-  .he-pill:hover { border-color: var(--he-green); }
-  .he-pill.is-active {
-    background: var(--he-green);
-    color: var(--he-gold);
-    border-color: var(--he-green);
-  }
-  /* Multi-select pills use gold background when active */
-  .he-pill--multi.is-active {
-    background: var(--he-gold);
-    color: var(--he-green);
-    border-color: var(--he-gold);
-  }
-
-  /* ── Number distance inputs (primary input, no bucket pills) ─────────────── */
-  .he-exact {
-    display: block;
-    width: 140px;
-    margin: 0 auto;
-    padding: 8px 12px;
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid var(--he-border);
-    color: var(--he-green);
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 1.5rem;
-    font-weight: 600;
-    text-align: center;
-    box-sizing: border-box;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  .he-exact::placeholder { color: #ccc; font-weight: 400; font-size: 1rem; }
-  .he-exact:focus {
-    outline: none;
-    border-bottom-color: var(--he-gold);
-  }
-
-  /* ── Validation modal ────────────────────────────────────────────────────── */
-  .he-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.5);
-    z-index: 400;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-  }
-  .he-modal-box {
-    background: #fff;
-    border-radius: 16px;
-    padding: 24px 20px 20px;
-    max-width: 320px;
-    width: 100%;
-    box-shadow: 0 8px 32px rgba(0,0,0,.18);
-  }
-  .he-modal-title {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-weight: 700;
-    font-size: .95rem;
-    color: var(--he-green);
-    margin: 0 0 6px;
-  }
-  .he-modal-par {
-    font-family: 'DM Mono', monospace;
-    font-size: .7rem;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    color: var(--he-muted);
-    margin: 0 0 14px;
-  }
-  .he-modal-issues {
-    margin: 0 0 20px;
-    padding-left: 1.1em;
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: .85rem;
-    color: #444;
-    line-height: 1.55;
-  }
-  .he-modal-actions {
-    display: flex;
-    gap: 10px;
-  }
-  .he-modal-btn {
-    flex: 1;
-    height: 44px;
-    border-radius: 999px;
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: .875rem;
-    font-weight: 600;
-    cursor: pointer;
-    border: 1.5px solid;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .he-modal-btn--ghost {
-    background: transparent;
-    border-color: var(--he-border);
-    color: var(--he-muted);
-  }
-  .he-modal-btn--gold {
-    background: var(--he-green);
-    border-color: var(--he-green);
-    color: var(--he-gold);
-  }
-
-  /* ── Progressive disclosure ──────────────────────────────────────────────── */
-  .he-reveal {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows .25s ease;
-    overflow: hidden;
-    min-width: 0; /* prevent flex item expanding to grid content's intrinsic width */
-  }
-  .he-reveal.is-visible {
-    grid-template-rows: 1fr;
-  }
-  .he-reveal > .he-reveal-inner {
-    min-height: 0;
-    min-width: 0; /* prevent grid item expanding beyond track width */
-    overflow: hidden;
-  }
-
-  /* ── Overflow guard: no child can be wider than the form ────────────────── */
-  .he-form { width: 100%; }
-  .he-field { min-width: 0; }
-  .he-form svg { display: block; max-width: 100%; }
-
-  /* ── Penalties (de-emphasised) ───────────────────────────────────────────── */
-  .he-field--muted .he-label { color: #bbb; }
-  .he-field--muted .he-mini-val { color: var(--he-muted); font-size: 1.2rem; }
-  .he-field--muted .he-mini-btn {
-    width: 28px; height: 28px;
-    font-size: .9rem;
-    border-color: #ddd;
-    color: var(--he-muted);
-  }
-
-  /* ── Sticky next button ──────────────────────────────────────────────────── */
-  .he-next-wrap {
-    position: fixed;
-    bottom: 0;
-    left: 0; right: 0;
-    z-index: 200;
-    padding: 12px 16px;
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
-    background: linear-gradient(transparent, var(--he-cream) 30%);
-    pointer-events: none; /* transparent gradient zone must not block taps */
-  }
-  .he-skip-btn {
-    display: block;
-    width: 100%;
-    text-align: center;
-    padding: .5rem 1rem;
-    margin-bottom: .5rem;
-    background: transparent;
-    border: 1.5px solid rgba(201,168,76,.55);
-    border-radius: 10px;
-    color: var(--he-gold);
-    font-size: .82rem;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background .15s, border-color .15s;
-    pointer-events: auto;
-  }
-  .he-skip-btn:hover { background: rgba(201,168,76,.1); border-color: var(--he-gold); }
-  .he-next-btn {
-    display: block;
-    width: 100%;
-    max-width: 480px;
-    margin: 0 auto;
-    height: 52px;
-    border-radius: 999px;
-    border: none;
-    background: var(--he-green);
-    color: var(--he-gold);
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: .03em;
-    cursor: pointer;
-    transition: opacity .15s;
-    -webkit-tap-highlight-color: transparent;
-    pointer-events: auto;
-    pointer-events: auto;
-  }
-  .he-next-btn:hover { opacity: .9; }
-  .he-next-btn:active { opacity: .75; }
-
-  .autosave-status {
-    display: block; text-align: center; height: 14px; margin-bottom: 4px;
-    font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
-    pointer-events: none; transition: opacity .4s;
-  }
-  .autosave-saving { color: rgba(201,168,76,.45); }
-  .autosave-saved  { color: rgba(201,168,76,.7); }
-  .autosave-error  { color: #e05c5c; }
-
-  /* ── Hole navigation grid ───────────────────────────────────────────────── */
-  .he-nav-grid {
-    display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    padding: 2px 4px 4px;
-    background: var(--he-green);
-    border-bottom: 1px solid rgba(255,255,255,.08);
-  }
-  .he-nav-dot {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-    text-decoration: none;
-    -webkit-tap-highlight-color: transparent;
-    pointer-events: auto;
-  }
-  .he-nav-dot-inner {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: .6rem;
-    font-weight: 700;
-    font-family: 'DM Mono', monospace;
-    letter-spacing: 0;
-    border: 1.5px solid rgba(201,168,76,.3);
-    color: rgba(201,168,76,.4);
-    transition: background .15s, border-color .15s, color .15s;
-  }
-  /* Completed hole */
-  .he-nav-dot--done .he-nav-dot-inner {
-    background: rgba(201,168,76,.18);
-    border-color: rgba(201,168,76,.65);
-    color: var(--he-gold);
-  }
-  /* Current hole */
-  .he-nav-dot--current .he-nav-dot-inner {
-    background: var(--he-gold);
-    border-color: var(--he-gold);
-    color: var(--he-green);
-  }
+  /* Penalties row */
+  .he-penalties-row { padding:14px 16px 8px;text-align:center; }
 </style>
 {% endblock %}
 
 {% block content %}
-{# Derive initial state from server data #}
-{% set init_par = existing.par if existing else (course_par or 4) %}
-{% set init_score = existing.score if existing else init_par %}
-{% set init_miss = existing.approach_miss if existing else '' %}
-{% set init_putts = existing.putts if existing else 2 %}
+{% set init_par      = existing.par if existing else (course_par or 4) %}
 {% set init_penalties = existing.penalties if existing else 0 %}
 
 <div class="he-page">
 
   {% if show_hole_prompt and course_edit_url %}
   <div class="he-course-prompt">
-    <a href="{{ course_edit_url }}" class="he-course-prompt-link">
-      ⛳ Add course hole data for more accurate stats →
-    </a>
+    <a href="{{ course_edit_url }}" class="he-course-prompt-link">⛳ Add course hole data for more accurate stats →</a>
   </div>
   {% endif %}
 
-  <!-- ── Sticky header ──────────────────────────────────────────────────── -->
+  <!-- Sticky header -->
   <header class="he-header">
-    <!-- Gold progress bar — flush at very top, full width -->
     <div class="he-progress">
       <div class="he-progress-fill" style="width:{{ (hole_number / total_holes * 100)|int }}%"></div>
     </div>
-
-    <!-- Centered header body -->
     <div class="he-header-body">
       {% if hole_number > 1 %}
-      <a href="{{ url_for('rounds.enter_hole', round_id=round.id, hole_number=hole_number - 1) }}"
-         class="he-back-link">← H{{ display_hole_number - 1 }}</a>
+      <a href="{{ url_for('rounds.enter_hole', round_id=round.id, hole_number=hole_number - 1) }}" class="he-back-link">← H{{ display_hole_number - 1 }}</a>
       {% else %}
       <a href="{{ url_for('dashboard.index') }}" class="he-back-link">← Back</a>
       {% endif %}
-
       <div class="he-hole-num">HOLE {{ display_hole_number }}</div>
       <div class="he-hole-info">Par {{ init_par }}{% if course_yardage %} · {{ course_yardage }} yds{% endif %}</div>
-
       {% if holes_completed > 0 %}
       <div class="he-prev-pill he-prev-pill--{{ 'under' if running_vs_par < 0 else ('par' if running_vs_par == 0 else ('bogey' if running_vs_par <= 3 else 'double')) }}">
         Thru {{ holes_completed }}: {{ running_gross }} ({% if running_vs_par > 0 %}+{{ running_vs_par }}{% elif running_vs_par < 0 %}{{ running_vs_par }}{% else %}E{% endif %})
@@ -571,7 +172,7 @@
     </div>
   </header>
 
-  {# ── Hole navigation grid ────────────────────────────────────────────────── #}
+  <!-- Nav grid -->
   {%- set nav_offset = display_hole_number - hole_number %}
   <nav class="he-nav-grid" aria-label="Hole navigation">
     {%- for n in range(1, total_holes + 1) %}
@@ -586,201 +187,187 @@
     {%- endfor %}
   </nav>
 
-  <!-- ── Form ──────────────────────────────────────────────────────────── -->
+  <!-- Initialise JS state from server data -->
+  <script>
+    window.INITIAL_SHOTS    = {{ existing_shots_json | tojson | safe }};
+    window.INITIAL_PENALTIES = {{ init_penalties }};
+  </script>
+
+  <!-- Hidden form — data submitted here, UI is outside -->
   <form method="POST"
         action="{{ url_for('rounds.enter_hole', round_id=round.id, hole_number=hole_number) }}"
         id="hole-form"
-        data-autosave-url="{{ url_for('rounds.autosave_hole', round_id=round.id, hole_number=hole_number) }}"
-        class="he-form">
-
-    <!-- par comes from server only — not user-selectable -->
-    <input type="hidden" name="par" id="par-input" value="{{ init_par }}">
-
-    <!-- 1. Score ──────────────────────────────────────────────────────── -->
-    <div class="he-field">
-      <label class="he-label">Score</label>
-      <div class="he-score-row">
-        <button type="button" class="he-stepper-btn" id="score-down">−</button>
-        <span class="he-score-val" id="score-display">{{ init_score }}</span>
-        <button type="button" class="he-stepper-btn" id="score-up">+</button>
-      </div>
-      <span class="he-score-vs-par" id="score-vs-par"></span>
-      <input type="hidden" name="score" id="score-input" value="{{ init_score }}">
-    </div>
-
-    <!-- 2. Tee shot (hidden for par 3) ───────────────────────────────── -->
-    <div class="he-field" id="tee-shot-reveal"{% if init_par == 3 %} style="display:none"{% endif %}>
-      <label class="he-label">Tee shot</label>
-      <svg id="tee-shot-svg" viewBox="0 0 300 80" xmlns="http://www.w3.org/2000/svg"
-           style="width:100%;max-width:min(300px,100%);display:block;margin:8px auto 0;border-radius:8px;overflow:hidden;pointer-events:none">
-        <!-- Left rough — pointer-events:all so it receives taps despite svg being none -->
-        <rect id="ts-left"    x="0"   y="0" width="90"  height="80" fill="#c4a35a" style="pointer-events:all;cursor:pointer"/>
-        <!-- Fairway -->
-        <rect id="ts-fairway" x="90"  y="0" width="120" height="80" fill="#2d5a27" style="pointer-events:all;cursor:pointer"/>
-        <!-- Right rough -->
-        <rect id="ts-right"   x="210" y="0" width="90"  height="80" fill="#c4a35a" style="pointer-events:all;cursor:pointer"/>
-        <!-- Area labels -->
-        <text x="45"  y="46" text-anchor="middle" fill="rgba(255,255,255,.8)"  font-size="10" font-family="DM Mono,monospace" letter-spacing="1">LEFT</text>
-        <text x="150" y="43" text-anchor="middle" fill="rgba(255,255,255,.9)"  font-size="10" font-family="DM Mono,monospace" letter-spacing="1">FAIRWAY</text>
-        <text x="255" y="46" text-anchor="middle" fill="rgba(255,255,255,.8)"  font-size="10" font-family="DM Mono,monospace" letter-spacing="1">RIGHT</text>
-        <!-- Fairway checkmark (shown when fairway selected) -->
-        <text id="ts-check" x="150" y="38" text-anchor="middle" fill="white" font-size="22" visibility="hidden">✓</text>
-      </svg>
-      <div id="tee-mod-pills" style="margin-top:12px;display:flex;gap:8px;justify-content:center">
-        {% set ts_parts = (existing.tee_shot or '').split(',') if existing else [] %}
-        <button type="button"
-                class="he-pill he-pill--multi{% if ts_parts and ts_parts[0] == 'bunker' %} is-active{% endif %}"
-                data-group="tee-mod" data-value="bunker" id="ts-bunker-btn">Bunker</button>
-        <button type="button"
-                class="he-pill he-pill--multi{% if ts_parts and ts_parts[0] == 'penalty' %} is-active{% endif %}"
-                data-group="tee-mod" data-value="penalty" id="ts-penalty-btn">Penalty</button>
-      </div>
-      <input type="hidden" name="tee_shot" id="tee-shot-input"
-             value="{{ existing.tee_shot or '' }}">
-    </div>
-
-    <!-- 3. Second shot distance (par 5 only) ─────────────────────────── -->
-    <div class="he-field he-reveal{% if init_par == 5 %} is-visible{% endif %}" id="second-shot-reveal">
-      <div class="he-reveal-inner">
-        <label class="he-label">2nd shot distance to hole (yds) <span class="he-label-hint">how far you were from the hole before this shot, not how far the ball travelled</span></label>
-        <input type="number" id="second-shot-exact" class="he-exact"
-               placeholder="yds" min="1" max="600" inputmode="numeric" pattern="[0-9]*"
-               value="{{ existing.second_shot_distance if existing and existing.second_shot_distance else '' }}">
-        <input type="hidden" name="second_shot_distance" id="second-shot-distance-input"
-               value="{{ existing.second_shot_distance or '' }}">
-      </div>
-    </div>
-
-    <!-- 4. Approach distance (always visible) ────────────────────────── -->
-    <div class="he-field">
-      <label class="he-label">Approach distance to hole (yds) <span class="he-label-hint">how far you were from the hole before this shot</span></label>
-      <input type="number" id="approach-dist-exact" class="he-exact"
-             placeholder="yds" min="1" max="600"
-             value="{{ existing.approach_distance if existing and existing.approach_distance else '' }}">
-      <input type="hidden" name="approach_distance" id="approach-distance-input"
-             value="{{ existing.approach_distance or '' }}">
-    </div>
-
-    <!-- 5. GIR? ─────────────────────────────────────────────────────── -->
-    <div class="he-field">
-      <label class="he-label">GIR? <span class="he-label-hint">on the green for a birdie putt</span></label>
-      <div class="he-pills" id="gir-pills">
-        <button type="button" class="he-pill{% if existing and not existing.approach_miss %} is-active{% endif %}" id="gir-yes">Yes</button>
-        <button type="button" class="he-pill{% if init_miss %} is-active{% endif %}" id="gir-no">No</button>
-      </div>
-    </div>
-
-    <!-- 6. Miss direction + lie type + scramble (revealed when GIR = No) ───── -->
-    <div class="he-reveal{% if init_miss %} is-visible{% endif %}" id="miss-reveal">
-      <div class="he-reveal-inner">
-
-        <!-- Group A: Miss direction — Left/Right mutually exclusive, Long/Short mutually exclusive -->
-        <div class="he-field">
-          <label class="he-label">Miss direction</label>
-          <div class="he-pills" id="miss-dir-pills">
-            {% set miss_vals = (init_miss or '').split(',') %}
-            {% for option, label in [('left','Left'), ('right','Right'), ('long','Long'), ('short','Short')] %}
-            <button type="button"
-                    class="he-pill he-pill--multi{% if option in miss_vals %} is-active{% endif %}"
-                    data-group="miss-dir" data-value="{{ option }}">{{ label }}</button>
-            {% endfor %}
-          </div>
-          <input type="hidden" name="approach_miss" id="approach-miss-input"
-                 value="{{ init_miss or '' }}">
-        </div>
-
-        <!-- Group B: Lie type — fully multi-select, optional -->
-        <div class="he-field">
-          <label class="he-label">Lie <span class="he-label-hint">optional</span></label>
-          <div class="he-pills he-pills--wrap" id="lie-type-pills">
-            {% set lie_vals = (existing.lie_type or '').split(',') if existing else [] %}
-            {% for option, label in [('fairway','Fairway'), ('rough','Rough'), ('bunker','Bunker'), ('water','Water'), ('trees','Trees'), ('fringe','Fringe')] %}
-            <button type="button"
-                    class="he-pill he-pill--multi{% if option in lie_vals %} is-active{% endif %}"
-                    data-group="lie-type" data-value="{{ option }}">{{ label }}</button>
-            {% endfor %}
-          </div>
-          <input type="hidden" name="lie_type" id="lie-type-input"
-                 value="{{ existing.lie_type or '' }}">
-        </div>
-
-        <!-- Scramble section (revealed when miss selected) ─────────── -->
-        <div class="he-reveal{% if init_miss %} is-visible{% endif %}" id="scramble-reveal">
-          <div class="he-reveal-inner">
-            <div class="he-field">
-              <label class="he-label">Short game distance (yds)</label>
-              <input type="number" id="scramble-dist-exact" class="he-exact"
-                     placeholder="yds" min="0" inputmode="numeric" pattern="[0-9]*"
-                     value="{{ existing.scramble_distance if existing and existing.scramble_distance and existing.scramble_distance.isdigit() else '' }}">
-              <input type="hidden" name="scramble_distance" id="scramble-distance-input"
-                     value="{{ existing.scramble_distance or '' }}">
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- 7. Putts ─────────────────────────────────────────────────────── -->
-    <div class="he-field">
-      <label class="he-label">Putts</label>
-      <div class="he-mini-row">
-        <button type="button" class="he-mini-btn" id="putts-down">−</button>
-        <span class="he-mini-val" id="putts-display">{{ init_putts }}</span>
-        <button type="button" class="he-mini-btn" id="putts-up">+</button>
-      </div>
-      <input type="hidden" name="putts" id="putts-input" value="{{ init_putts }}">
-    </div>
-
-    <!-- 8. First putt distance ───────────────────────────────────────── -->
-    <div class="he-field">
-      <label class="he-label">First putt distance (ft)</label>
-      <input type="number" id="first-putt-exact" class="he-exact"
-             placeholder="ft" min="1" max="200" inputmode="numeric" pattern="[0-9]*"
-             value="{{ existing.first_putt_distance if existing and existing.first_putt_distance else '' }}">
-      <input type="hidden" name="first_putt_distance" id="first-putt-input"
-             value="{{ existing.first_putt_distance or '' }}">
-    </div>
-
-    <!-- 9. Penalties (de-emphasised) ────────────────────────────────── -->
-    <div class="he-field he-field--muted">
-      <label class="he-label">Penalty strokes</label>
-      <div class="he-mini-row">
-        <button type="button" class="he-mini-btn" id="penalties-down">−</button>
-        <span class="he-mini-val" id="penalties-display">{{ init_penalties }}</span>
-        <button type="button" class="he-mini-btn" id="penalties-up">+</button>
-      </div>
-      <input type="hidden" name="penalties" id="penalties-input" value="{{ init_penalties }}">
-    </div>
-
+        data-autosave-url="{{ url_for('rounds.autosave_hole', round_id=round.id, hole_number=hole_number) }}">
+    <input type="hidden" name="par"                   id="par-input"                 value="{{ init_par }}">
+    <input type="hidden" name="score"                  id="score-input"               value="0">
+    <input type="hidden" name="tee_shot"               id="tee-shot-input"            value="">
+    <input type="hidden" name="approach_distance"      id="approach-distance-input"   value="">
+    <input type="hidden" name="approach_miss"          id="approach-miss-input"       value="">
+    <input type="hidden" name="lie_type"               id="lie-type-input"            value="">
+    <input type="hidden" name="scramble_distance"      id="scramble-distance-input"   value="">
+    <input type="hidden" name="second_shot_distance"   id="second-shot-distance-input" value="">
+    <input type="hidden" name="putts"                  id="putts-input"               value="0">
+    <input type="hidden" name="first_putt_distance"    id="first-putt-input"          value="">
+    <input type="hidden" name="sand_save_attempt"      id="sand-save-attempt-input"   value="">
+    <input type="hidden" name="penalties"              id="penalties-input"           value="{{ init_penalties }}">
+    <input type="hidden" name="shots_json"             id="shots-json-input"          value="">
+    <input type="hidden" name="atg_strokes"            id="atg-strokes-input"         value="0">
   </form>
 
-  <!-- ── Arithmetic validation modal ──────────────────────────────────── -->
-  <div id="he-validation-overlay" class="he-modal-overlay" style="display:none">
-    <div class="he-modal-box">
-      <p class="he-modal-title">Double-check your stats</p>
-      <p class="he-modal-par" id="he-modal-par"></p>
-      <ul class="he-modal-issues" id="he-modal-issues"></ul>
-      <div class="he-modal-actions">
-        <button type="button" id="he-modal-fix"     class="he-modal-btn he-modal-btn--ghost">Let me fix it</button>
-        <button type="button" id="he-modal-confirm" class="he-modal-btn he-modal-btn--gold">Yes, looks right</button>
-      </div>
+  <!-- Score display -->
+  <div class="he-score-wrap">
+    <div class="he-score-big" id="auto-score">0</div>
+    <div class="he-score-vs-par" id="score-vs-par"></div>
+  </div>
+
+  <!-- Shot list -->
+  <div class="he-section">
+    <div class="he-section-hdr">Shots</div>
+    <div id="shot-list">
+      <div class="he-no-shots">Tap a shot type below to begin</div>
     </div>
   </div>
 
-  <!-- ── Sticky next button ─────────────────────────────────────────── -->
-  <div class="he-next-wrap">
-    <div id="autosave-status" class="autosave-status"></div>
-    <a class="he-skip-btn"
-       href="{{ url_for('rounds.submit_round', round_id=round.id) }}">
-      {%- if is_edit %}Skip to Submit →{% else %}Submit Round Early →{% endif %}
-    </a>
-    <button type="submit" form="hole-form" class="he-next-btn">
-      {% if hole_number < total_holes %}Hole {{ (display_hole_number % 18) + 1 }} →{% else %}Review Round →{% endif %}
-    </button>
+  <!-- Add shot -->
+  <div class="he-section">
+    <div class="he-section-hdr">Add Shot</div>
+    <div class="he-type-btns">
+      <button type="button" class="he-type-btn" data-type="ott">OTT</button>
+      <button type="button" class="he-type-btn" data-type="app">App</button>
+      <button type="button" class="he-type-btn" data-type="atg">ATG</button>
+      <button type="button" class="he-type-btn" data-type="putt">Putt</button>
+      <button type="button" class="he-type-btn" data-type="gimme">Gimme</button>
+    </div>
+
+    <!-- OTT panel -->
+    <div class="he-shot-panel" id="panel-ott">
+      <div class="he-panel-lbl">Off the Tee</div>
+      <svg id="tee-shot-svg" viewBox="0 0 300 80" xmlns="http://www.w3.org/2000/svg"
+           style="width:100%;max-width:min(300px,100%);display:block;margin:0 auto 12px;border-radius:8px;overflow:hidden;pointer-events:none">
+        <rect id="ts-left"    x="0"   y="0" width="90"  height="80" fill="#c4a35a" style="pointer-events:all;cursor:pointer"/>
+        <rect id="ts-fairway" x="90"  y="0" width="120" height="80" fill="#2d5a27" style="pointer-events:all;cursor:pointer"/>
+        <rect id="ts-right"   x="210" y="0" width="90"  height="80" fill="#c4a35a" style="pointer-events:all;cursor:pointer"/>
+        <text x="45"  y="46" text-anchor="middle" fill="rgba(255,255,255,.8)" font-size="10" font-family="DM Mono,monospace" letter-spacing="1">LEFT</text>
+        <text x="150" y="43" text-anchor="middle" fill="rgba(255,255,255,.9)" font-size="10" font-family="DM Mono,monospace" letter-spacing="1">FAIRWAY</text>
+        <text x="255" y="46" text-anchor="middle" fill="rgba(255,255,255,.8)" font-size="10" font-family="DM Mono,monospace" letter-spacing="1">RIGHT</text>
+        <text id="ts-check" x="150" y="38" text-anchor="middle" fill="white" font-size="22" visibility="hidden">✓</text>
+      </svg>
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:4px">
+        <button type="button" class="he-pill he-pill--multi" data-group="tee-mod" data-value="bunker" id="ts-bunker-btn">Bunker</button>
+        <button type="button" class="he-pill he-pill--multi" data-group="tee-mod" data-value="penalty" id="ts-penalty-btn">Penalty</button>
+      </div>
+    </div>
+
+    <!-- App panel -->
+    <div class="he-shot-panel" id="panel-app">
+      <div class="he-panel-lbl">Approach</div>
+      <div class="he-panel-row">
+        <label class="he-label">Distance to hole <span class="he-label-hint">yds · from this position before the shot</span></label>
+        <input type="number" id="app-dist-exact" class="he-exact" placeholder="yds" min="1" max="600" inputmode="numeric">
+      </div>
+      <div class="he-panel-row">
+        <label class="he-label">Result</label>
+        <div class="he-pills">
+          <button type="button" class="he-pill is-active" id="app-hit-green">Hit green</button>
+          <button type="button" class="he-pill" id="app-missed-green">Missed green</button>
+        </div>
+      </div>
+      <div class="he-reveal" id="app-miss-reveal">
+        <div class="he-reveal-inner">
+          <div class="he-panel-row" style="padding-top:12px">
+            <label class="he-label">Miss direction</label>
+            <div class="he-pills" id="app-miss-dir-pills" data-target="app-miss-input">
+              <button type="button" class="he-pill he-pill--multi" data-group="app-miss-dir" data-value="left">Left</button>
+              <button type="button" class="he-pill he-pill--multi" data-group="app-miss-dir" data-value="right">Right</button>
+              <button type="button" class="he-pill he-pill--multi" data-group="app-miss-dir" data-value="long">Long</button>
+              <button type="button" class="he-pill he-pill--multi" data-group="app-miss-dir" data-value="short">Short</button>
+            </div>
+            <input type="hidden" id="app-miss-input" value="">
+          </div>
+          <div class="he-panel-row">
+            <label class="he-label">Lie <span class="he-label-hint">optional</span></label>
+            <div class="he-pills" id="app-lie-pills" data-target="app-lie-input">
+              <button type="button" class="he-pill he-pill--multi" data-group="app-lie" data-value="fairway">Fairway</button>
+              <button type="button" class="he-pill he-pill--multi" data-group="app-lie" data-value="rough">Rough</button>
+              <button type="button" class="he-pill he-pill--multi" data-group="app-lie" data-value="bunker">Bunker</button>
+              <button type="button" class="he-pill he-pill--multi" data-group="app-lie" data-value="trees">Trees</button>
+              <button type="button" class="he-pill he-pill--multi" data-group="app-lie" data-value="fringe">Fringe</button>
+            </div>
+            <input type="hidden" id="app-lie-input" value="">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ATG panel -->
+    <div class="he-shot-panel" id="panel-atg">
+      <div class="he-panel-lbl">Around the Green</div>
+      <div class="he-panel-row">
+        <label class="he-label">Distance to hole <span class="he-label-hint">yds</span></label>
+        <input type="number" id="atg-dist-exact" class="he-exact" placeholder="yds" min="1" max="60" inputmode="numeric">
+      </div>
+      <div class="he-panel-row">
+        <label class="he-label">Lie <span class="he-label-hint">optional</span></label>
+        <div class="he-pills" id="atg-lie-pills" data-target="atg-lie-input">
+          <button type="button" class="he-pill he-pill--multi" data-group="atg-lie" data-value="rough">Rough</button>
+          <button type="button" class="he-pill he-pill--multi" data-group="atg-lie" data-value="bunker">Bunker</button>
+          <button type="button" class="he-pill he-pill--multi" data-group="atg-lie" data-value="fringe">Fringe</button>
+        </div>
+        <input type="hidden" id="atg-lie-input" value="">
+      </div>
+    </div>
+
+    <!-- Putt panel -->
+    <div class="he-shot-panel" id="panel-putt">
+      <div class="he-panel-lbl">Putt</div>
+      <div class="he-panel-row">
+        <label class="he-label">Distance from hole <span class="he-label-hint">ft · optional</span></label>
+        <input type="number" id="putt-dist-exact" class="he-exact" placeholder="ft" min="1" max="120" inputmode="numeric">
+      </div>
+    </div>
+
+    <!-- Gimme: no panel needed (adds immediately) -->
+
+    <button type="button" id="panel-add-btn" class="he-panel-add-btn" style="display:none">Add Shot</button>
+  </div>
+
+  <!-- Penalties -->
+  <div class="he-penalties-row">
+    <label class="he-label">Penalty strokes</label>
+    <div class="he-mini-row">
+      <button type="button" class="he-mini-btn" id="pen-down">−</button>
+      <span class="he-mini-val" id="pen-display">0</span>
+      <button type="button" class="he-mini-btn" id="pen-up">+</button>
+    </div>
   </div>
 
 </div>
+
+<!-- Validation modal -->
+<div id="he-validation-overlay" class="he-modal-overlay" style="display:none">
+  <div class="he-modal-box">
+    <p class="he-modal-title">Double-check your stats</p>
+    <p class="he-modal-par" id="he-modal-par"></p>
+    <ul class="he-modal-issues" id="he-modal-issues"></ul>
+    <div class="he-modal-actions">
+      <button type="button" id="he-modal-fix"     class="he-modal-btn he-modal-btn--ghost">Let me fix it</button>
+      <button type="button" id="he-modal-confirm" class="he-modal-btn he-modal-btn--gold">Yes, looks right</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sticky next button -->
+<div class="he-next-wrap">
+  <div id="autosave-status" class="autosave-status"></div>
+  <a class="he-skip-btn"
+     href="{{ url_for('rounds.submit_round', round_id=round.id) }}">
+    {%- if is_edit %}Skip to Submit →{% else %}Submit Round Early →{% endif %}
+  </a>
+  <button type="submit" form="hole-form" class="he-next-btn">
+    {% if hole_number < total_holes %}Hole {{ (display_hole_number % 18) + 1 }} →{% else %}Review Round →{% endif %}
+  </button>
+</div>
+
 {% endblock %}
 
 {% block scripts %}

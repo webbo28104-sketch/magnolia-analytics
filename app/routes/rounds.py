@@ -211,6 +211,9 @@ def enter_hole(round_id, hole_number):
         hole.sand_save_attempt = bool(data.get('sand_save_attempt') == 'true') if data.get('sand_save_attempt') else None
         hole.sand_save_made    = data.get('sand_save_made') == 'true' if data.get('sand_save_made') else None
         hole.penalties         = int(data.get('penalties', 0))
+        hole.shots_json = data.get('shots_json') or None
+        if data.get('atg_strokes'):
+            hole.atg_strokes = int(data.get('atg_strokes', 1))
         db.session.commit()
 
         if hole_number < round_.holes_played:
@@ -233,6 +236,45 @@ def enter_hole(round_id, hole_number):
 
     completed_hole_numbers = {h.hole_number for h in round_.holes.all()}
 
+    import json as _json
+
+    def _reconstruct_shots(h):
+        """Build a shots_json-style list from legacy hole fields."""
+        shots = []
+        if h.tee_shot and h.par in (4, 5):
+            parts = (h.tee_shot or '').split(',')
+            direction = mod = None
+            if len(parts) == 1:
+                if parts[0] == 'fairway': direction = 'fairway'
+                elif parts[0] in ('left', 'right'): direction = parts[0]
+                elif parts[0] in ('bunker', 'penalty'): mod = parts[0]
+            elif len(parts) == 2:
+                mod, direction = parts[0], parts[1]
+            shots.append({'type': 'ott', 'direction': direction, 'mod': mod})
+        if h.approach_distance:
+            s = {'type': 'app', 'distance': h.approach_distance}
+            if h.approach_miss: s['miss'] = h.approach_miss
+            if h.lie_type: s['lie'] = h.lie_type.split(',')[0]
+            shots.append(s)
+        if h.approach_miss:  # missed green → had ATG
+            from app.utils.strokes_gained import _parse_yards
+            sdist = _parse_yards(h.scramble_distance) if h.scramble_distance else None
+            atg_lie = 'bunker' if 'bunker' in (h.lie_type or '') else 'rough'
+            shots.append({'type': 'atg', 'distance': sdist, 'lie': atg_lie})
+        for i in range(h.putts or 2):
+            s = {'type': 'putt'}
+            if i == 0 and h.first_putt_distance: s['putt_distance'] = h.first_putt_distance
+            shots.append(s)
+        return shots
+
+    if existing:
+        if existing.shots_json:
+            existing_shots_json = existing.shots_json
+        else:
+            existing_shots_json = _json.dumps(_reconstruct_shots(existing))
+    else:
+        existing_shots_json = '[]'
+
     return render_template(
         'rounds/hole.html',
         round=round_,
@@ -249,6 +291,7 @@ def enter_hole(round_id, hole_number):
         completed_hole_numbers=completed_hole_numbers,
         show_hole_prompt=show_hole_prompt,
         course_edit_url=course_edit_url,
+        existing_shots_json=existing_shots_json,
     )
 
 
@@ -292,6 +335,9 @@ def autosave_hole(round_id, hole_number):
     hole.sand_save_attempt = bool(data.get('sand_save_attempt') == 'true') if data.get('sand_save_attempt') else None
     hole.sand_save_made    = data.get('sand_save_made') == 'true' if data.get('sand_save_made') else None
     hole.penalties         = int(data.get('penalties', 0))
+    hole.shots_json = data.get('shots_json') or None
+    if data.get('atg_strokes'):
+        hole.atg_strokes = int(data.get('atg_strokes', 1))
     db.session.commit()
 
     return jsonify({'ok': True})

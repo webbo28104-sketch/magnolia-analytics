@@ -39,6 +39,9 @@ class Hole(db.Model):
     # Penalties
     penalties = db.Column(db.Integer, default=0)
 
+    shots_json = db.Column(db.Text, nullable=True)   # JSON array of shot objects
+    atg_strokes = db.Column(db.Integer, default=1, nullable=True)  # count of ATG shots taken
+
     @property
     def score_vs_par(self):
         return self.score - self.par
