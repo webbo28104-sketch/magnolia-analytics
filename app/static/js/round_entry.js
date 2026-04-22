@@ -8,14 +8,12 @@ var _tsMod = null;   // 'bunker' | 'penalty' | null
 var _tsSyncUI = null;
 
 // ── Shot list state ───────────────────────────────────────────────────────────
-var _shots    = [];
+var _shots     = [];
 var _penalties = 0;
-var _editIdx  = null;   // null = adding new, integer = editing existing
-var _activeType = null; // currently open panel type
-var _appMissed  = false;
+var _editIdx   = null;   // null = adding new, integer = editing existing
+var _activeType = null;
 
 // ── Global multi-pill delegated click handler ─────────────────────────────────
-// Handles groups: miss-dir, app-miss-dir, lie-type, app-lie, atg-lie, tee-mod
 document.addEventListener('click', function(e) {
   const pill = e.target.closest('.he-pill--multi');
   if (!pill) return;
@@ -34,10 +32,8 @@ document.addEventListener('click', function(e) {
       }
       pill.classList.add('is-active');
     }
-
   } else if (group === 'lie-type' || group === 'app-lie' || group === 'atg-lie') {
     pill.classList.toggle('is-active');
-
   } else if (group === 'tee-mod') {
     _tsMod = (_tsMod === value) ? null : value;
     if (_tsMod && _tsDir === 'fairway') _tsDir = null;
@@ -45,7 +41,6 @@ document.addEventListener('click', function(e) {
     return;
   }
 
-  // Sync hidden input via data-target on the container
   const container = pill.closest('[data-target]');
   if (container) {
     const input = document.getElementById(container.dataset.target);
@@ -81,6 +76,65 @@ function showPanelWarn(type, msg) {
   el.classList.add('is-visible');
 }
 function hidePanelWarn(type) { showPanelWarn(type, ''); }
+
+// ── Sequence-aware context warning rules ──────────────────────────────────────
+// Called when a panel opens. Returns nothing — directly updates the warn div.
+// Rules are positional (based on what shots already exist), not hard-coded scenarios.
+function applyPanelContextWarn(type) {
+  hidePanelWarn(type);
+  if (_editIdx !== null) return; // no warnings when editing an existing shot
+
+  const par      = getPar();
+  const count    = _shots.length;
+  const lastShot = count > 0 ? _shots[count - 1] : null;
+  const lastType = lastShot ? lastShot.type : null;
+  const hasOTT   = _shots.some(s => s.type === 'ott');
+  const hasPenalty = _shots.some(s => s.mod === 'penalty') || _penalties > 0;
+
+  if (type === 'ott') {
+    if (count === 0 && par === 3) {
+      showPanelWarn('ott',
+        'On a par 3, tee shots are classified as Approach in PGA Tour SG methodology. ' +
+        'Recording as OTT will count toward SG Off the Tee rather than SG Approach.');
+    } else if (count > 0 && !hasPenalty) {
+      showPanelWarn('ott',
+        `Shot #${count + 1}: Off the Tee is for your first shot from the tee box. ` +
+        'A second OTT only makes sense after a penalty stroke (OB/water re-tee). ' +
+        'Consider Approach or ATG instead.');
+    }
+
+  } else if (type === 'app') {
+    if (count === 0 && par !== 3) {
+      showPanelWarn('app',
+        `No tee shot recorded yet. On a par ${par}, the first shot is usually Off the Tee. ` +
+        'Use Approach for shots played from the fairway or rough after the tee shot.');
+    } else if (lastType === 'putt' || lastType === 'gimme') {
+      showPanelWarn('app',
+        'You\'re adding an Approach after a putting shot. This typically means you putted ' +
+        'past the hole and are left with a long approach back — confirm this is correct.');
+    }
+
+  } else if (type === 'atg') {
+    if (count === 0) {
+      showPanelWarn('atg',
+        'ATG is for short-game shots played close to the green. Starting with ATG is unusual — ' +
+        'are you sure you don\'t want to begin with Off the Tee or Approach?');
+    } else if (lastType === 'putt' || lastType === 'gimme') {
+      showPanelWarn('atg',
+        'Adding ATG after a putt means you putted past or off the green and need to chip back ' +
+        '(degreening). Only log this if that\'s what happened.');
+    }
+
+  } else if (type === 'putt') {
+    if (count === 0) {
+      showPanelWarn('putt',
+        'Putt as your first shot is unusual. Are you already on the green ' +
+        'without a tee shot or approach? (e.g. a short par 3 tee shot that landed on the green)');
+    } else if (lastType === 'atg') {
+      // Normal flow — no warning needed
+    }
+  }
+}
 
 // ── Shot rendering ────────────────────────────────────────────────────────────
 function shotTypeLabel(type) {
@@ -146,7 +200,11 @@ function updateScoreDisplay() {
   if (lbl) {
     const texts = { '-3': 'Albatross', '-2': 'Eagle', '-1': 'Birdie', '0': 'Par', '1': 'Bogey', '2': 'Double', '3': 'Triple' };
     lbl.textContent = texts[diff] ?? (diff > 0 ? `+${diff}` : String(diff));
-    lbl.className = 'he-score-vs-par' + (diff <= -1 ? ' he-score-vs-par--birdie' : diff === 0 ? ' he-score-vs-par--par' : diff === 1 ? ' he-score-vs-par--bogey' : ' he-score-vs-par--double');
+    lbl.className = 'he-score-vs-par' +
+      (diff <= -1 ? ' he-score-vs-par--birdie' :
+       diff === 0 ? ' he-score-vs-par--par' :
+       diff === 1 ? ' he-score-vs-par--bogey' :
+                   ' he-score-vs-par--double');
   }
 }
 
@@ -161,14 +219,12 @@ function saveState() {
   setHidden('score', getScore());
   setHidden('penalties', _penalties);
 
-  // Derive legacy fields from shots for SG calculations
   const ott   = _shots.find(s => s.type === 'ott');
   const apps  = _shots.filter(s => s.type === 'app');
   const atgs  = _shots.filter(s => s.type === 'atg');
   const putts = _shots.filter(s => s.type === 'putt' || s.type === 'gimme');
   const par   = getPar();
 
-  // tee_shot
   if (ott) {
     let val = '';
     if (ott.direction === 'fairway') val = 'fairway';
@@ -176,7 +232,6 @@ function saveState() {
     setHidden('tee_shot', val);
   }
 
-  // approach_distance, approach_miss, lie_type, second_shot_distance
   if (par === 5 && apps.length >= 2) {
     setHidden('second_shot_distance', apps[0].distance || '');
     const last = apps[apps.length - 1];
@@ -189,16 +244,13 @@ function saveState() {
     setHidden('lie_type',          apps[0].lie  || '');
   }
 
-  // scramble_distance (first ATG), atg_strokes, sand_save
   setHidden('atg_strokes', atgs.length || 0);
   if (atgs.length) {
-    setHidden('scramble_distance',  atgs[0].distance || '');
+    setHidden('scramble_distance', atgs[0].distance || '');
     const bunkerAtg = atgs.find(s => s.lie === 'bunker');
-    setHidden('sand_save_attempt',  bunkerAtg ? 'true' : '');
+    setHidden('sand_save_attempt', bunkerAtg ? 'true' : '');
   }
 
-  // GIR → sent via approach_miss being empty = GIR (server recalculates)
-  // putts, first_putt_distance
   setHidden('putts', putts.length);
   if (putts.length) setHidden('first_putt_distance', putts[0].putt_distance || '');
 }
@@ -212,28 +264,19 @@ function openPanel(type, editing) {
   if (panel) panel.classList.add('is-visible');
   const btn = document.getElementById('panel-add-btn');
   if (btn) { btn.style.display = 'block'; btn.textContent = editing ? 'Update Shot' : 'Add Shot'; }
-
-  // Context-aware OTT warning
-  if (type === 'ott' && !editing) {
-    const shotNum = _shots.length + 1;
-    const hasPrevPenalty = _shots.some(s => s.type === 'ott' && s.mod === 'penalty') || _penalties > 0;
-    const par = getPar();
-    if (shotNum > 1 && !hasPrevPenalty) {
-      showPanelWarn('ott', `You're adding a tee shot as shot #${shotNum}. Off the Tee is for your first shot from the tee box — a second OTT only makes sense after a penalty stroke (OB/water re-tee). Consider Approach or ATG instead.`);
-    } else if (par === 3 && shotNum === 1) {
-      showPanelWarn('ott', `On a par 3, tee shots are classified as Approach in PGA Tour SG methodology. Recording this as OTT will count toward SG Off the Tee rather than SG Approach.`);
-    }
-  }
+  applyPanelContextWarn(type);
 }
 
 function closePanel() {
   _activeType = null;
-  _editIdx = null;
+  _editIdx    = null;
   document.querySelectorAll('.he-type-btn').forEach(b => b.classList.remove('is-active'));
   document.querySelectorAll('.he-shot-panel').forEach(p => p.classList.remove('is-visible'));
   const btn = document.getElementById('panel-add-btn');
   if (btn) btn.style.display = 'none';
 }
+
+var _appMissed = false;
 
 function clearPanel(type) {
   hidePanelWarn(type);
@@ -261,6 +304,7 @@ function clearPanel(type) {
 
 function populatePanel(shot) {
   const type = shot.type;
+  hidePanelWarn(type);
   if (type === 'ott') {
     _tsDir = shot.direction || null;
     _tsMod = shot.mod || null;
@@ -271,13 +315,11 @@ function populatePanel(shot) {
     document.getElementById('app-hit-green')?.classList.toggle('is-active', !_appMissed);
     document.getElementById('app-missed-green')?.classList.toggle('is-active', _appMissed);
     reveal(document.getElementById('app-miss-reveal'), _appMissed);
-    // Set miss direction pills
     const missVals = new Set((shot.miss || '').split(',').filter(Boolean));
     document.querySelectorAll('#app-miss-dir-pills .he-pill--multi').forEach(p => {
       p.classList.toggle('is-active', missVals.has(p.dataset.value));
     });
     const mi = document.getElementById('app-miss-input'); if (mi) mi.value = shot.miss || '';
-    // Set lie pills
     const lieVal = shot.lie || '';
     document.querySelectorAll('#app-lie-pills .he-pill--multi').forEach(p => {
       p.classList.toggle('is-active', p.dataset.value === lieVal);
@@ -318,6 +360,7 @@ function collectPanelShot(type) {
 
 // ── Shot CRUD ─────────────────────────────────────────────────────────────────
 function _doCommitShot() {
+  if (!_activeType) return;
   const shot = collectPanelShot(_activeType);
   if (_editIdx !== null) {
     _shots[_editIdx] = shot;
@@ -332,59 +375,90 @@ function _doCommitShot() {
   if (navigator.vibrate) navigator.vibrate(10);
 }
 
+// ── Commit-time guards ─────────────────────────────────────────────────────────
+// Guards check PGA Tour SG distance thresholds and sequence rules.
+// Returns a guard object { msg, toType, dist } if a modal should fire, else null.
+function _getCommitGuard() {
+  const type = _activeType;
+  const isNew = _editIdx === null;
+
+  if (type === 'app') {
+    const dist = parseInt(document.getElementById('app-dist-exact')?.value);
+    if (dist > 0 && dist <= 30) {
+      // PGA Tour ATG boundary: ≤30y = Around the Green
+      return {
+        msg: `${dist} yards is within the PGA Tour's 30-yard ATG boundary. At this distance ` +
+             `you are likely chipping or pitching — "Around the Green" will produce more ` +
+             `accurate Strokes Gained data.`,
+        toType: 'atg', dist
+      };
+    }
+  }
+
+  if (type === 'atg') {
+    const dist = parseInt(document.getElementById('atg-dist-exact')?.value);
+    if (dist > 0 && dist > 50) {
+      // System ATG baselines only cover up to 50 yards
+      return {
+        msg: `${dist} yards exceeds the ATG baseline range (max 50 yards). The PGA Tour ATG ` +
+             `category covers shots within 30 yards. Beyond 50 yards, Approach will give ` +
+             `more accurate Strokes Gained data.`,
+        toType: 'app', dist
+      };
+    }
+    if (isNew && _shots.length === 0) {
+      // ATG as very first shot — unusual, confirm
+      return {
+        msg: `ATG is for short-game shots played close to the green. Adding it as your ` +
+             `first shot is unusual — on most holes you'd start with Off the Tee or Approach. ` +
+             `Are you sure this is correct?`,
+        toType: null, dist: null
+      };
+    }
+  }
+
+  if (type === 'ott' && isNew) {
+    const hasPenalty = _shots.some(s => s.mod === 'penalty') || _penalties > 0;
+    if (_shots.length > 0 && !hasPenalty) {
+      return {
+        msg: `You're logging a tee shot as shot #${_shots.length + 1} without a penalty ` +
+             `on the previous shot. Off the Tee is only for your first shot from the tee ` +
+             `box (or a re-tee after OB/water). Are you sure?`,
+        toType: null, dist: null
+      };
+    }
+  }
+
+  return null;
+}
+
 function commitShot() {
   if (!_activeType) return;
-
-  // Guard: App distance ≤ 30y → PGA Tour ATG boundary
-  if (_activeType === 'app') {
-    const dist = parseInt(document.getElementById('app-dist-exact')?.value);
-    if (dist && dist <= 30) {
-      showTypeSwitchModal('app', 'atg', dist,
-        `${dist} yards is within the PGA Tour's 30-yard ATG boundary. At this distance you are likely chipping or pitching — "Around the Green" will give more accurate SG data.`);
-      return;
-    }
+  const guard = _getCommitGuard();
+  if (guard) {
+    showTypeSwitchModal(_activeType, guard.toType, guard.dist, guard.msg);
+    return;
   }
-
-  // Guard: ATG distance > 50y → beyond system ATG baseline range
-  if (_activeType === 'atg') {
-    const dist = parseInt(document.getElementById('atg-dist-exact')?.value);
-    if (dist && dist > 50) {
-      showTypeSwitchModal('atg', 'app', dist,
-        `${dist} yards exceeds the ATG baseline range (max 50 yards). The PGA Tour's ATG category covers shots within 30 yards. Beyond 50 yards is Approach territory for accurate SG analysis.`);
-      return;
-    }
-  }
-
-  // Guard: OTT as shot 2+ with no penalty
-  if (_activeType === 'ott' && _editIdx === null) {
-    const shotNum = _shots.length + 1;
-    const hasPrevPenalty = _shots.some(s => s.type === 'ott' && s.mod === 'penalty') || _penalties > 0;
-    if (shotNum > 1 && !hasPrevPenalty) {
-      showTypeSwitchModal('ott', null, null,
-        `You're logging a tee shot as shot #${shotNum} without a penalty on the previous shot. Off the Tee is only used for your first tee shot — or a re-tee after OB/water. Are you sure?`);
-      return;
-    }
-  }
-
   _doCommitShot();
 }
 
-// ── Type-switch modal ─────────────────────────────────────────────────────────
+// ── Type-switch / confirm modal ───────────────────────────────────────────────
 function showTypeSwitchModal(fromType, toType, dist, msg) {
   const overlay   = document.getElementById('he-typeswitch-overlay');
   const msgEl     = document.getElementById('he-typeswitch-msg');
   const switchBtn = document.getElementById('he-typeswitch-switch');
   const keepBtn   = document.getElementById('he-typeswitch-keep');
-  if (!overlay) return;
+  if (!overlay) { _doCommitShot(); return; } // fallback if modal missing
   if (msgEl) msgEl.textContent = msg;
   const labels = { app: 'Approach', atg: 'ATG', ott: 'OTT', putt: 'Putt' };
-  if (toType && switchBtn) {
-    switchBtn.textContent = `Switch to ${labels[toType]}`;
-    switchBtn.style.display = '';
+  if (toType) {
+    if (switchBtn) { switchBtn.textContent = `Switch to ${labels[toType]}`; switchBtn.style.display = ''; }
     overlay.dataset.toType = toType;
-    overlay.dataset.dist   = dist || '';
-  } else if (switchBtn) {
-    switchBtn.style.display = 'none';
+    overlay.dataset.dist   = dist != null ? String(dist) : '';
+  } else {
+    if (switchBtn) switchBtn.style.display = 'none';
+    overlay.dataset.toType = '';
+    overlay.dataset.dist   = '';
   }
   if (keepBtn) keepBtn.textContent = `Keep as ${labels[fromType] || fromType}`;
   overlay.dataset.fromType = fromType;
@@ -416,7 +490,7 @@ function handleShotListClick(e) {
   }
 }
 
-// ── Validation ────────────────────────────────────────────────────────────────
+// ── Hole-level validation (submit time) ──────────────────────────────────────
 function getHoleIssues() {
   const score = getScore();
   const par   = getPar();
@@ -425,13 +499,14 @@ function getHoleIssues() {
   const issues = [];
 
   if (_shots.length === 0) {
-    issues.push('No shots recorded — add at least one shot before saving');
+    issues.push('No shots recorded — add at least one shot before saving.');
     return issues;
   }
-  if (score === 1) issues.push(`Score of 1 on par ${par} — confirming hole in one`);
-  if (score <= par - 2 && score > 1) issues.push(`Score of ${score} on par ${par} — that's an eagle or better. Please confirm.`);
-  if (putts === 0 && score > 1) issues.push(`No putts or gimmes recorded — did you hole out from off the green?`);
-  if (putts >= 4) issues.push(`${putts} putting shots is unusual — please confirm`);
+  if (score === 1)                           issues.push(`Score of 1 on par ${par} — confirming hole in one.`);
+  if (score <= par - 2 && score > 1)         issues.push(`Score of ${score} on par ${par} — that's an eagle or better. Please confirm.`);
+  if (putts === 0 && score > 1)              issues.push(`No putts or gimmes recorded — did you hole out from off the green?`);
+  if (putts >= 4)                            issues.push(`${putts} putting shots recorded — please confirm.`);
+  if (diff >= 5)                             issues.push(`Score of +${diff} on par ${par} — please confirm.`);
   return issues;
 }
 
@@ -440,7 +515,8 @@ function showValidationModal(issues) {
   const listEl  = document.getElementById('he-modal-issues');
   const parEl   = document.getElementById('he-modal-par');
   if (!overlay || !listEl) return;
-  if (parEl) parEl.textContent = `Par ${getPar()} · hole ${getScore() - getPar() >= 0 ? '+' : ''}${getScore() - getPar()} · double-check:`;
+  const d = getScore() - getPar();
+  if (parEl) parEl.textContent = `Par ${getPar()} · ${d >= 0 ? '+' : ''}${d} · double-check:`;
   listEl.innerHTML = issues.map(i => `<li>${i}</li>`).join('');
   overlay.style.display = 'flex';
 }
@@ -454,7 +530,7 @@ function hideValidationModal() {
 let _saveTimer = null;
 
 async function triggerAutosave() {
-  saveState(); // ensure hidden inputs are current
+  saveState();
   const form = document.getElementById('hole-form');
   const url  = form?.dataset.autosaveUrl;
   if (!form || !url) return;
@@ -478,15 +554,14 @@ function scheduleAutosave() {
 
 // ── OTT SVG ───────────────────────────────────────────────────────────────────
 function initTeeShotSVG() {
-  const input      = document.getElementById('tee-shot-svg-hidden');
-  const tsLeft     = document.getElementById('ts-left');
-  const tsFairway  = document.getElementById('ts-fairway');
-  const tsRight    = document.getElementById('ts-right');
-  const tsCheck    = document.getElementById('ts-check');
+  const tsLeft    = document.getElementById('ts-left');
+  const tsFairway = document.getElementById('ts-fairway');
+  const tsRight   = document.getElementById('ts-right');
+  const tsCheck   = document.getElementById('ts-check');
   if (!tsLeft || !tsFairway || !tsRight) return;
 
-  const ROUGH_BASE   = '#c4a35a', ROUGH_ACTIVE = '#c8860b';
-  const FW_BASE      = '#2d5a27', FW_ACTIVE    = '#4caf50';
+  const ROUGH_BASE = '#c4a35a', ROUGH_ACTIVE = '#c8860b';
+  const FW_BASE    = '#2d5a27', FW_ACTIVE    = '#4caf50';
 
   function syncUI(vibrate) {
     tsLeft.setAttribute('fill',    _tsDir === 'left'    ? ROUGH_ACTIVE : ROUGH_BASE);
@@ -499,26 +574,25 @@ function initTeeShotSVG() {
   }
   _tsSyncUI = syncUI;
 
-  tsLeft.addEventListener('click',    () => { _tsDir = (_tsDir === 'left')    ? null : 'left';    syncUI(true); });
+  tsLeft.addEventListener('click',    () => { _tsDir = (_tsDir === 'left')  ? null : 'left';    syncUI(true); });
   tsFairway.addEventListener('click', () => { _tsDir = 'fairway'; _tsMod = null; syncUI(true); });
-  tsRight.addEventListener('click',   () => { _tsDir = (_tsDir === 'right')   ? null : 'right';   syncUI(true); });
+  tsRight.addEventListener('click',   () => { _tsDir = (_tsDir === 'right') ? null : 'right';   syncUI(true); });
   syncUI(false);
 }
 
 // ── Main init ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
 
-  // Init shot state from server-rendered initial data
-  try { _shots    = JSON.parse(window.INITIAL_SHOTS || '[]'); } catch { _shots = []; }
+  let _validationOverride = false;
+
+  // Init shot state from server-rendered data
+  try { _shots = JSON.parse(window.INITIAL_SHOTS || '[]'); } catch { _shots = []; }
   _penalties = parseInt(window.INITIAL_PENALTIES) || 0;
   renderShotList();
   updateScoreDisplay();
-
-  // Update penalties display
   const penDisplay = document.getElementById('pen-display');
   if (penDisplay) penDisplay.textContent = _penalties;
 
-  // Init OTT SVG
   initTeeShotSVG();
 
   // Shot type buttons
@@ -538,7 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Shot list delegation (edit + delete)
+  // Shot list delegation
   document.getElementById('shot-list')?.addEventListener('click', handleShotListClick);
 
   // Panel add/update button
@@ -587,10 +661,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.href = href;
   });
 
-  // Distance-based inline hints
+  // Distance inline hints (real-time, non-blocking)
   document.getElementById('app-dist-exact')?.addEventListener('input', function() {
     const val = parseInt(this.value);
-    if (!val || val <= 0) { hidePanelWarn('app'); return; }
+    if (!val || val <= 0) { hidePanelWarn('app'); applyPanelContextWarn('app'); return; }
     if (val <= 30) {
       showPanelWarn('app', `${val} yards — PGA Tour classifies shots within 30 yards as Around the Green (ATG). Consider switching type.`);
     } else if (val <= 50) {
@@ -602,7 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('atg-dist-exact')?.addEventListener('input', function() {
     const val = parseInt(this.value);
-    if (!val || val <= 0) { hidePanelWarn('atg'); return; }
+    if (!val || val <= 0) { hidePanelWarn('atg'); applyPanelContextWarn('atg'); return; }
     if (val > 50) {
       showPanelWarn('atg', `${val} yards exceeds the ATG baseline range (50 yards max). PGA Tour ATG threshold is 30 yards — beyond 50 yards is Approach territory.`);
     } else if (val > 30) {
@@ -612,11 +686,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Type-switch modal handlers
+  // Type-switch modal — "Keep as [type]" commits as-is
   document.getElementById('he-typeswitch-keep')?.addEventListener('click', () => {
     hideTypeSwitchModal();
     _doCommitShot();
   });
+
+  // Type-switch modal — "Switch to [type]" clears and opens new panel with distance pre-filled
   document.getElementById('he-typeswitch-switch')?.addEventListener('click', () => {
     const overlay  = document.getElementById('he-typeswitch-overlay');
     const fromType = overlay?.dataset.fromType;
@@ -643,8 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('hole-form')?.requestSubmit();
   });
 
-  // Form submit
-  let _validationOverride = false;
+  // Form submit with validation
   document.getElementById('hole-form')?.addEventListener('submit', e => {
     saveState();
     if (!_validationOverride) {
