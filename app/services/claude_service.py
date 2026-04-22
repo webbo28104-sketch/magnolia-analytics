@@ -270,6 +270,22 @@ def _build_narrative_prompt(round_, sg_data: dict, historical_ctx: dict) -> str:
     holes_played  = round_.holes_played or len(holes)
     gir_pct       = round(round_.gir_count / holes_played * 100) if holes_played else 0
 
+    # Handicap-relative performance
+    hc_index = float(user.handicap_index) if user.handicap_index is not None else 18.0
+    # Scale handicap for 9-hole rounds
+    hc_expected = hc_index if holes_played >= 14 else round(hc_index * holes_played / 18, 1)
+    perf_vs_expected = (score_vs_par or 0) - hc_expected
+    if perf_vs_expected <= -5:
+        hc_sentiment = 'significantly better than expected for this handicap'
+    elif perf_vs_expected <= -2:
+        hc_sentiment = 'better than expected for this handicap'
+    elif perf_vs_expected <= 2:
+        hc_sentiment = 'in line with expectation for this handicap'
+    elif perf_vs_expected <= 5:
+        hc_sentiment = 'slightly below expectation for this handicap'
+    else:
+        hc_sentiment = f'{perf_vs_expected:+.0f} strokes below expectation for this handicap'
+
     round_count = historical_ctx.get('round_count', 1)
 
     # Historical baseline section — only included when >= 20 rounds
@@ -332,6 +348,15 @@ FIR:       {round_.fairways_hit}/{round_.fairways_available} ({fw_pct}%)
 GIR:       {round_.gir_count}/{holes_played} ({gir_pct}%)
 Penalties: {round_.penalties}
 
+HANDICAP-RELATIVE PERFORMANCE
+------------------------------
+Handicap Index:               {user.handicap_index}
+Expected score vs par (HC):   {hc_expected:+.1f}
+Actual score vs par:          {score_label}
+Performance vs expectation:   {perf_vs_expected:+.1f} strokes ({hc_sentiment})
+NOTE: A score BETTER than the HC-expected score is a strong round for this player.
+      A score WORSE than the HC-expected score indicates underperformance.
+
 STROKES GAINED  (0 = scratch handicap baseline)
 ------------------------------------------------
 SG Off Tee:      {sg_off_tee:+.2f}
@@ -381,20 +406,25 @@ ANALYTICAL INSTRUCTIONS — follow all sections:
 - Write as a coach speaking directly to the player, not as a data summary
 
 TONE RULES
-- Knowledgeable, direct, honest — encouraging only when the data genuinely warrants it
-- No filler praise ("great round", "well done on your GIR") unless this round is objectively strong by the numbers
+- Evaluate all performance RELATIVE TO THE PLAYER'S HANDICAP, not against scratch or PGA Tour standards
+- A high-handicap player shooting well above par can still be performing excellently relative to their level — acknowledge this
+- If performance vs expectation is positive (better than expected): open with genuine praise before the analytical breakdown
+- If performance vs expectation is negative (worse than expected): be honest and constructive, not harsh
+- Never frame a 20-handicapper's round as "poor" because they shot +18 — that may be exactly what they're expected to shoot
+- Knowledgeable, direct, honest — encouraging when the handicap-relative data genuinely warrants it
+- No filler praise ("great round", "well done on your GIR") unless the round is genuinely strong relative to this player's handicap
 - Never repeat the same observation across paragraphs
 - Vary sentence structure; avoid chains of "your X was Y" constructions
 - Write as if you watched the round, not as if you scanned a scorecard
 - Do not reference weather, temperature, wind, or external conditions unless the user has explicitly noted them in the round data
-- Do not compare score to handicap as a primary metric; use strokes gained as the primary analytical lens
+- Use strokes gained as the primary analytical lens; handicap context frames the overall tone and round assessment
 - If fewer than 20 rounds of history exist, focus analysis on the current round's shot data only; do not draw handicap trend conclusions
 - Write in direct, plain sentences; do not use hedging language or qualify every observation with uncertainty
 
 OUTPUT
 Write 4–5 paragraphs of plain text, separated by blank lines. No markdown, no HTML, no bullet points, no section headers.
 
-Para 1 — Round character and SG overview: what defined this round and how did each SG category perform vs scratch baseline?
+Para 1 — Round character: open with a handicap-relative assessment of the round (was this a good, average, or poor round FOR THIS PLAYER given their HC index?), then summarise which SG category had the biggest impact.
 Para 2 — Shot pattern and miss analysis: directional tendencies, lie context, any par-type differences
 Para 3 — Par 5 performance (if applicable) and round consistency / flow
 Para 4 — Historical context: {'compare to established baseline and comment on trend' if round_count >= 20 else 'one sentence acknowledging early-stage observations; do not pad'}
@@ -442,6 +472,21 @@ def generate_context_summary(round_, weather, calendar_ctx: dict) -> str:
         ctx_parts.append(calendar_ctx['notable'])
     calendar_str = '; '.join(ctx_parts) if ctx_parts else 'No notable calendar context'
 
+    # Calculate how score compares to what this handicap would normally produce
+    hc_val = float(user.handicap_index) if user.handicap_index is not None else 18.0
+    svp = round_.score_vs_par() or 0
+    perf_vs_hc = svp - hc_val
+    if perf_vs_hc <= -4:
+        hc_context = f"significantly better than your {user.handicap_index} handicap would typically produce — this is a strong round for you"
+    elif perf_vs_hc <= -1:
+        hc_context = f"better than your {user.handicap_index} handicap would typically produce"
+    elif perf_vs_hc <= 1:
+        hc_context = f"about what your {user.handicap_index} handicap would typically produce"
+    elif perf_vs_hc <= 4:
+        hc_context = f"slightly tougher than your {user.handicap_index} handicap would typically produce"
+    else:
+        hc_context = f"below what your {user.handicap_index} handicap would typically produce"
+
     prompt = f"""You are writing a brief round context for a golfer's performance report.
 
 Write exactly 2-3 sentences of context. Use second person ("Your round at...").
@@ -451,6 +496,7 @@ Course: {course_name}
 Date: {round_.date_played.strftime('%d %B %Y')}
 Score: {score_label} vs par ({round_.total_score} gross)
 Handicap Index: {user.handicap_index}
+HC-relative performance: {hc_context}
 Season: {calendar_ctx.get('season', 'Unknown')}
 Calendar: {calendar_str}
 Conditions: {weather_str}
@@ -458,6 +504,7 @@ Conditions: {weather_str}
 Rules:
 - Exactly 2-3 sentences. No lists, no headers, no markdown.
 - Second person throughout.
+- IMPORTANT: Frame the score relative to the player's handicap — a score better than their handicap warrants positive framing; worse warrants honest but encouraging framing.
 - If weather is available, comment specifically on how it affected play (temperature, wind).
 - Reference the season, course, and how the score sits relative to the golfer's handicap.
 - Tone: warm and direct, like a knowledgeable friend after the round. No clichés.

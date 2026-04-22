@@ -388,8 +388,9 @@ body::before {
 .sm-pdf-btn:hover{background:#c9a84c;color:#1a2e1a}
 .sm-pdf-hint{color:#8a9e8a;font-size:.75rem;text-align:center}
 
-/* ── Hole score badges (Change 4 visual row) ───────────────────── */
-.sb-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 20px; }
+/* ── Hole score badges — single horizontal row ──────────────────── */
+.sb-row { display: flex; gap: 5px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 4px; margin-bottom: 20px; }
+.sb-row::-webkit-scrollbar { display: none; }
 .score-badge { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 50%; gap: 1px; }
 .score-badge .sb-h { font-size: 7px; letter-spacing: .06em; opacity: .6; }
 .score-badge .sb-s { font-size: 14px; font-weight: 600; line-height: 1; }
@@ -587,6 +588,46 @@ body::before {
 .sr-icon-save { background:rgba(126,207,158,0.18); color:var(--green-soft); border:1px solid rgba(126,207,158,0.3); }
 .sr-icon-miss { background:rgba(220,80,80,0.12); color:var(--red-soft); border:1px solid rgba(220,80,80,0.2); }
 .sr-detail { flex:1; color:var(--cream-faint); }
+
+/* ── SG Shot-by-Shot Breakdown ──────────────────────────────────── */
+.sg-hbyh-wrap { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:16px 18px; }
+.sg-hbyh-row { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid rgba(201,168,76,0.065); }
+.sg-hbyh-row:last-child { border-bottom:none; }
+.sg-hbyh-meta { display:flex; align-items:center; gap:7px; width:110px; flex-shrink:0; }
+.sg-hbyh-num  { font-size:11px; font-weight:600; color:var(--cream); width:26px; }
+.sg-hbyh-par  { font-size:9px; color:var(--cream-faint); letter-spacing:.04em; }
+.sg-hbyh-score { font-size:10px; font-weight:500; margin-left:auto; }
+.sg-dots-row { display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
+.sg-dot-wrap { position:relative; }
+.sg-dot {
+  width:38px; height:38px; border-radius:50%; border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:1px;
+  transition:transform .15s, box-shadow .15s; -webkit-tap-highlight-color:transparent;
+  padding:0; outline:none;
+}
+.sg-dot:hover { transform:scale(1.12); box-shadow:0 2px 10px rgba(0,0,0,0.4); }
+.sg-dot:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
+.sg-dot-pos { background:rgba(74,158,107,0.28); border:1.5px solid rgba(74,158,107,0.55); }
+.sg-dot-neg { background:rgba(232,160,144,0.28); border:1.5px solid rgba(232,160,144,0.55); }
+.sg-dot-label { font-size:7px; letter-spacing:.05em; text-transform:uppercase; line-height:1; }
+.sg-dot-pos .sg-dot-label { color:var(--green-soft); }
+.sg-dot-neg .sg-dot-label { color:var(--red-soft); }
+.sg-dot-val { font-family:'Inter',system-ui,sans-serif; font-size:9px; font-weight:700; line-height:1; }
+.sg-dot-pos .sg-dot-val { color:var(--green-soft); }
+.sg-dot-neg .sg-dot-val { color:var(--red-soft); }
+.sg-det-panel {
+  display:none; position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%);
+  background:var(--forest-light); border:1px solid var(--border-mid); border-radius:5px;
+  padding:11px 13px; z-index:200; min-width:168px; max-width:220px; white-space:nowrap;
+  box-shadow:0 6px 24px rgba(0,0,0,0.5);
+}
+.sg-det-panel.open { display:block; }
+.sg-det-head { font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); margin-bottom:7px; }
+.sg-det-val { font-family:'Inter',system-ui,sans-serif; font-size:20px; font-weight:700; line-height:1; margin-bottom:8px; }
+.sg-det-row { display:flex; justify-content:space-between; gap:12px; padding:2px 0; font-size:9px; border-bottom:1px solid rgba(201,168,76,0.07); }
+.sg-det-row:last-child { border-bottom:none; }
+.sg-det-k { color:var(--cream-faint); }
+.sg-det-v { color:var(--cream); font-weight:500; text-align:right; }
 
 </style>
 {# Dynamic watermark text for hero::before #}
@@ -1389,61 +1430,158 @@ body::before {
   <div class="{% if not user_is_pro %}pro-gate{% endif %}">
   <div class="{% if not user_is_pro %}pro-blur{% endif %}">
 
+  {# Compute ATG stats for this tab #}
+  {% set _atg_misses = holes_data | selectattr('gir','equalto',false) | list %}
+  {% set _sand_holes = holes_data | selectattr('sand_save_attempt') | list %}
+  {% set _sand_saves = _sand_holes | selectattr('sand_save_made') | list | length %}
+  {% set _atg_sdists = _atg_misses | selectattr('scramble_distance') | map(attribute='scramble_distance') | list %}
+  {% set _avg_sdist  = (_atg_sdists | sum / _atg_sdists | length) | round | int if _atg_sdists else none %}
+  {% set _atg_saves  = _atg_misses | selectattr('score_vs_par','le',0) | list | length %}
+  {% set _atg_bogeys = _atg_misses | selectattr('score_vs_par','equalto',1) | list | length %}
+  {% set _atg_doubles = _atg_misses | selectattr('score_vs_par','ge',2) | list | length %}
+  {% set _atg_pars   = _atg_misses | selectattr('score_vs_par','equalto',0) | list | length %}
+  {% set _atg_birdies = _atg_misses | selectattr('score_vs_par','le',-1) | list | length %}
+
   <div class="sec-divider"></div>
   <div class="sec-label fu d6">Around the Green</div>
+
+  {# ── Header: SG ATG focal card + summary tiles ── #}
+  <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;" class="fu d6">
+    <div style="width:160px;flex-shrink:0;">
+      <div class="a-card" style="text-align:center;padding:20px 14px;">
+        <div class="a-card-title" style="margin-bottom:10px;">SG: Around Green</div>
+        <div style="font-family:'Inter',system-ui,sans-serif;font-size:clamp(28px,4vw,44px);font-weight:700;line-height:1;" class="{{ sgcol(sg_data.sg_atg) if sg_atg_ok else 'sg-neutral' }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</div>
+        <div style="font-size:9px;color:var(--cream-faint);margin-top:8px;letter-spacing:.1em;text-transform:uppercase;">vs scratch</div>
+        <div style="font-size:10px;color:var(--cream-faint);margin-top:6px;">{{ scramble.attempts }} missed green{{ 's' if scramble.attempts != 1 }}</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div class="sum-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:0;">
+        <div class="sum-card">
+          <div class="sum-card-lbl">Scramble Rate</div>
+          <div class="sum-card-val {{ 'c-grn' if scramble.save_pct and scramble.save_pct >= 50 else 'c-red' if scramble.save_pct and scramble.save_pct < 30 }}">
+            {{ scramble.save_pct ~ '%' if scramble.save_pct is not none else '—' }}
+          </div>
+          <div class="sum-card-sub">{{ scramble.saves }}/{{ scramble.attempts }} up-and-downs</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-card-lbl">Sand Saves</div>
+          <div class="sum-card-val {{ 'c-grn' if _sand_saves > 0 else '' }}">
+            {{ _sand_saves }}/{{ _sand_holes | length }}{% if not _sand_holes %}<span style="font-size:14px;">—</span>{% endif %}
+          </div>
+          <div class="sum-card-sub">{{ 'bunker' ~ (' saves' if _sand_saves != 1 else ' save') if _sand_holes else 'no bunker attempts' }}</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-card-lbl">Avg Scramble Dist</div>
+          <div class="sum-card-val">{{ _avg_sdist ~ 'y' if _avg_sdist is not none else '—' }}</div>
+          <div class="sum-card-sub">from the green edge</div>
+        </div>
+        <div class="sum-card">
+          <div class="sum-card-lbl">Missed Greens</div>
+          <div class="sum-card-val">{{ scramble.attempts }}</div>
+          <div class="sum-card-sub">{{ (scramble.attempts / holes_data | length * 100) | round | int }}% of holes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Score from missed greens breakdown ── #}
+  {% if _atg_misses %}
   <div class="two-col fu d6">
     <div class="a-card">
-      <div class="a-card-title">Scramble · {{ scramble.attempts }} Missed Greens</div>
-      {% set sand_attempt_holes = holes_data | selectattr('sand_save_attempt') | list %}
-      {% set sand_saves = sand_attempt_holes | selectattr('sand_save_made') | list | length %}
-      <div class="stat-row"><span class="sk">Up-and-downs made</span>
-        <span class="sv {{ 'c-grn' if scramble.save_pct and scramble.save_pct >= 50 else 'c-red' if scramble.save_pct and scramble.save_pct < 30 }}">
-          {{ scramble.saves }}/{{ scramble.attempts }}{% if scramble.save_pct is not none %} ({{ scramble.save_pct }}%){% endif %}
-        </span>
-      </div>
-      {% if sand_attempt_holes %}
-      <div class="stat-row"><span class="sk">Sand saves</span>
-        <span class="sv {{ 'c-grn' if sand_saves > 0 else 'c-red' }}">{{ sand_saves }}/{{ sand_attempt_holes | length }}</span>
-      </div>
-      {% else %}
-      <div class="stat-row"><span class="sk">Sand save attempts</span><span class="sv">0</span></div>
+      <div class="a-card-title">Score from Missed Greens · {{ scramble.attempts }} holes</div>
+      {% if _atg_birdies %}
+      <div class="stat-row"><span class="sk">Birdies / Eagles</span><span class="sv c-grn">{{ _atg_birdies }}</span></div>
       {% endif %}
-      {% set double_plus = holes_data | selectattr('gir','equalto',false) | selectattr('score_vs_par','ge',2) | map(attribute='hole_number') | list %}
-      {% if double_plus %}
-      <div class="stat-row"><span class="sk">Doubles+ from GIR miss</span><span class="sv c-red">H{{ double_plus | join(', H') }}</span></div>
+      <div class="stat-row"><span class="sk">Pars (scramble made)</span><span class="sv c-grn">{{ _atg_pars }}</span></div>
+      <div class="stat-row"><span class="sk">Bogeys</span><span class="sv {{ 'c-red' if _atg_bogeys > 0 else '' }}">{{ _atg_bogeys }}</span></div>
+      {% if _atg_doubles %}
+      <div class="stat-row"><span class="sk">Doubles or worse</span><span class="sv c-red">{{ _atg_doubles }}</span></div>
       {% endif %}
       <div class="stat-row">
-        <span class="sk">
-          <span class="mg-tip">SG Around Green<span class="mg-tip-icon">ⓘ</span>
-            <span class="mg-pop">Strokes Gained: Around the Green — measures performance on shots within ~30 yards of the green (chips, pitches, bunker shots) versus the PGA Tour average.</span>
-          </span>
-        </span>
+        <span class="sk"><span class="mg-tip">SG Around Green<span class="mg-tip-icon">ⓘ</span><span class="mg-pop">Strokes Gained: Around the Green — measures performance on chips, pitches, and bunker shots within ~30 yards of the green versus the PGA Tour average.</span></span></span>
         <span class="sv" style="color:{{ rankclr(sg_data.sg_atg, sg_atg_ok) }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</span>
       </div>
       {% if scramble.save_pct is not none %}
       <div class="insight">
-        {% if scramble.save_pct >= 50 %}
-        <strong>Good scrambling</strong> — {{ scramble.save_pct }}% conversion rate (PGA Tour average ~55%).
+        {% if scramble.save_pct >= 55 %}
+        <strong>Exceptional scrambling</strong> — {{ scramble.save_pct }}% conversion is above the PGA Tour average (~55%). Your short game saved shots this round.
+        {% elif scramble.save_pct >= 40 %}
+        <strong>Solid scrambling</strong> — {{ scramble.save_pct }}% from {{ scramble.attempts }} attempts. PGA Tour average is ~55%; closing this gap over time is worth multiple strokes per round.
         {% else %}
-        Scramble rate at {{ scramble.save_pct }}%. With {{ scramble.attempts }} opportunities, converting one more per round would be worth roughly one stroke.
+        Scramble rate at {{ scramble.save_pct }}% from {{ scramble.attempts }} attempts. Each additional conversion per round saves roughly one stroke — short-game practice has the highest ROI here.
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="a-card">
+      <div class="a-card-title">Short-Game Quality Indicators</div>
+      {% set _1putt_from_miss = _atg_misses | selectattr('putts','equalto',1) | list | length %}
+      {% set _3putt_from_miss = _atg_misses | selectattr('putts','ge',3) | list | length %}
+      <div class="stat-row"><span class="sk">1-putt conversions</span>
+        <span class="sv c-grn">{{ _1putt_from_miss }}/{{ scramble.attempts }}{% if scramble.attempts %} ({{ (_1putt_from_miss / scramble.attempts * 100) | round | int }}%){% endif %}</span>
+      </div>
+      <div class="stat-row"><span class="sk">2-putt completions</span>
+        {% set _2p = _atg_misses | selectattr('putts','equalto',2) | list | length %}
+        <span class="sv">{{ _2p }}</span>
+      </div>
+      {% if _3putt_from_miss %}
+      <div class="stat-row"><span class="sk">3-putt after miss</span><span class="sv c-red">{{ _3putt_from_miss }}</span></div>
+      {% endif %}
+      {% if _sand_holes %}
+      <div class="stat-row"><span class="sk">Sand save rate</span>
+        <span class="sv {{ 'c-grn' if _sand_saves > 0 and _sand_holes else '' }}">
+          {{ _sand_saves }}/{{ _sand_holes | length }} ({{ (_sand_saves / _sand_holes | length * 100) | round | int }}%)
+        </span>
+      </div>
+      {% endif %}
+      {% set _double_holes = _atg_misses | selectattr('score_vs_par','ge',2) | map(attribute='hole_number') | list %}
+      {% if _double_holes %}
+      <div class="stat-row"><span class="sk">Doubles+ from miss</span><span class="sv c-red">H{{ _double_holes | join(', H') }}</span></div>
+      {% endif %}
+      {% if _avg_sdist is not none %}
+      <div class="insight">
+        {% if _avg_sdist <= 15 %}
+        Average scramble distance of <strong>{{ _avg_sdist }}y</strong> — tight approach misses mean you're leaving short chips. Prioritise getting up-and-down from under 15y.
+        {% elif _avg_sdist <= 30 %}
+        Average scramble distance of <strong>{{ _avg_sdist }}y</strong> — mid-range chips and pitches. Focus on consistent landing-zone control from 15–30y.
+        {% else %}
+        Average scramble distance of <strong>{{ _avg_sdist }}y</strong> — longer pitches suggest approach misses are missing by a wider margin.
         {% endif %}
       </div>
       {% endif %}
     </div>
   </div>
+  {% endif %}
 
-  {# Scramble timeline #}
-  <div class="rp-viz fu d6">
-    <div class="rp-viz-title">Hole by Hole · GIR Misses</div>
-    {% for h in holes_data | selectattr('gir','equalto',false) | list %}
+  {# ── Hole-by-hole GIR miss detail ── #}
+  <div class="sec-divider"></div>
+  <div class="sec-label">Hole by Hole · GIR Misses</div>
+  <div class="a-card fu d6">
+    <div style="display:grid;grid-template-columns:30px 22px 1fr auto auto auto;gap:0 10px;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">
+      <span style="font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-faint);">Hole</span>
+      <span style="font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-faint);">Res</span>
+      <span style="font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-faint);">Detail</span>
+      <span style="font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-faint);text-align:right;">Dist</span>
+      <span style="font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-faint);text-align:right;">Putts</span>
+      <span style="font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-faint);text-align:right;">SG ATG</span>
+    </div>
+    {% for h in _atg_misses %}
     {% set _saved = h.score_vs_par <= 0 %}
-    <div class="scramble-row">
-      <span class="sr-hole">H{{ h.hole_number }}</span>
+    {% set _hsg_atg = hole_sg_by_num.get(h.hole_number, {}).get('sg_atg') %}
+    <div style="display:grid;grid-template-columns:30px 22px 1fr auto auto auto;gap:0 10px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(201,168,76,0.065);">
+      <span style="font-size:11px;font-weight:600;color:var(--cream);">H{{ h.hole_number }}</span>
       <span class="sr-icon {{ 'sr-icon-save' if _saved else 'sr-icon-miss' }}">{{ '✓' if _saved else '✕' }}</span>
-      <span class="sr-detail">
-        Par {{ h.par }} · {{ h.score_label }}
-        {% if h.lie_type %} · {{ h.lie_type }}{% endif %}
-        {% if h.putts is not none %} · {{ h.putts }} putt{{ 's' if h.putts != 1 }}{% endif %}
+      <span style="font-size:10px;color:var(--cream-faint);">
+        Par {{ h.par }} · <span class="{{ 'c-grn' if h.score_vs_par <= -1 else 'c-red' if h.score_vs_par >= 2 else '' }}">{{ h.score_label }}</span>
+        {% if h.lie_type %} · <span style="text-transform:capitalize;">{{ h.lie_type }}</span>{% endif %}
+        {% if h.approach_miss %} · <span style="text-transform:capitalize;color:var(--red-soft);opacity:.8;">{{ h.approach_miss }}</span>{% endif %}
+      </span>
+      <span style="font-size:10px;color:var(--cream-faint);text-align:right;">{{ h.scramble_distance ~ 'y' if h.scramble_distance else '—' }}</span>
+      <span style="font-size:10px;color:var(--cream-faint);text-align:right;">{{ h.putts if h.putts is not none else '—' }}</span>
+      <span style="font-size:10px;font-weight:600;text-align:right;color:{{ 'var(--green-soft)' if _hsg_atg is not none and _hsg_atg >= 0 else 'var(--red-soft)' if _hsg_atg is not none and _hsg_atg < 0 else 'var(--cream-faint)' }};">
+        {% if _hsg_atg is not none %}{{ '+' if _hsg_atg >= 0 }}{{ '%.2f'|format(_hsg_atg) }}{% else %}—{% endif %}
       </span>
     </div>
     {% else %}
@@ -1451,12 +1589,73 @@ body::before {
     {% endfor %}
   </div>
 
+  {# ── Lie Type Breakdown ── #}
+  {% if lie_types %}
+  <div class="sec-divider"></div>
+  <div class="sec-label">Lie Types from Missed Greens</div>
+  <div class="a-card fu d6">
+    <div class="a-card-title">Where the Ball Finished · {{ scramble.attempts }} Missed Greens</div>
+    {% set lt_total = lie_types.values() | sum %}
+    {% for lt, cnt in lie_types.items() | sort(attribute='1', reverse=True) %}
+    {% set lt_pct = (cnt / lt_total * 100) | round | int %}
+    <div class="bar-row">
+      <span class="bar-lbl" style="width:76px;text-transform:capitalize;">{{ lt }}</span>
+      <div class="bar-track"><div class="bar-fill bf-gld" style="--w:{{ lt_pct }}%;"></div></div>
+      <span class="bar-pct" style="width:60px;text-align:right;">{{ cnt }} ({{ lt_pct }}%)</span>
+    </div>
+    {% endfor %}
+    <div class="insight" style="margin-top:10px;">
+      {% set _dom_lie = lie_types | dictsort(by='value', reverse=True) | first %}
+      {% if _dom_lie %}
+      <strong style="text-transform:capitalize;">{{ _dom_lie[0] }}</strong> is your most common lie from missed greens ({{ _dom_lie[1] }} time{{ 's' if _dom_lie[1] != 1 }}).
+      {% if _dom_lie[0] == 'bunker' %}Sand play from these positions is where your SG around green is most influenced — focused bunker practice is high value.
+      {% elif _dom_lie[0] == 'rough' %}Chip technique from rough is the priority area — the lie adds unpredictability to contact.
+      {% else %}Consistent landing-zone control from this lie type will have the greatest impact on your scramble rate.
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Per-hole SG ATG sparkline summary ── #}
+  {% set _atg_sg_holes = [] %}
+  {% for h in _atg_misses %}
+    {% set _v = hole_sg_by_num.get(h.hole_number, {}).get('sg_atg') %}
+    {% if _v is not none %}{% set _atg_sg_holes = _atg_sg_holes + [_v] %}{% endif %}
+  {% endfor %}
+  {% if _atg_sg_holes | length >= 2 %}
+  <div class="sec-divider"></div>
+  <div class="sec-label">SG Around Green · Distribution</div>
+  <div class="a-card fu d6">
+    <div class="a-card-title">Strokes Gained per Missed-Green Hole</div>
+    {% set _atg_pos = _atg_sg_holes | select('ge', 0) | list | length %}
+    {% set _atg_neg = _atg_sg_holes | select('lt', 0) | list | length %}
+    {% set _atg_sum = _atg_sg_holes | sum | round(2) %}
+    <div class="stat-row"><span class="sk">Holes with positive ATG SG</span><span class="sv c-grn">{{ _atg_pos }}/{{ _atg_sg_holes | length }}</span></div>
+    <div class="stat-row"><span class="sk">Holes with negative ATG SG</span><span class="sv c-red">{{ _atg_neg }}/{{ _atg_sg_holes | length }}</span></div>
+    <div class="stat-row"><span class="sk">Total SG Around Green</span><span class="sv" style="color:{{ rankclr(sg_data.sg_atg, sg_atg_ok) }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</span></div>
+    {% set _hist_atg = historical_ctx.get('avg_sg_atg') %}
+    {% if _hist_atg is not none %}
+    <div class="stat-row"><span class="sk">Historical avg SG ATG</span>
+      <span class="sv">
+        {{ sgfmt(_hist_atg) }}
+        {% set _atg_diff = (sg_data.sg_atg or 0) - _hist_atg %}
+        {% if _atg_diff > 0 %}<span class="c-grn" style="margin-left:6px;">+{{ '%.2f'|format(_atg_diff) }} above avg</span>
+        {% elif _atg_diff < 0 %}<span class="c-red" style="margin-left:6px;">{{ '%.2f'|format(_atg_diff) }} below avg</span>
+        {% endif %}
+      </span>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {# ── Best ATG Shot ── #}
   {% set _best_atg = best_sg_by_cat.get('sg_atg') %}
   {% if _best_atg %}
-  <div class="rp-insight" style="display:flex;align-items:center;gap:14px;margin-top:14px;">
+  <div class="sec-divider"></div>
+  <div class="rp-insight" style="display:flex;align-items:center;gap:14px;margin-top:4px;">
     <div style="font-size:22px;font-weight:900;color:var(--green-soft);letter-spacing:-.02em;flex-shrink:0;">{{ '+' if _best_atg.sg > 0 }}{{ '%.2f'|format(_best_atg.sg) }}</div>
-    <div><strong>Best scramble shot — Hole {{ _best_atg.hole_number }} (Par {{ _best_atg.par }})</strong>. Most strokes gained around the green this round.</div>
+    <div><strong>Best scramble hole — Hole {{ _best_atg.hole_number }} (Par {{ _best_atg.par }})</strong>. Most strokes gained around the green in this round — your strongest short-game moment.</div>
   </div>
   {% endif %}
 
@@ -1465,7 +1664,7 @@ body::before {
   <div class="pro-lock-card">
     <span class="plc-icon">🔒</span>
     <h3>Unlock your full game picture</h3>
-    <p style="color:rgba(245,240,232,0.7);font-size:13px;margin-bottom:20px;line-height:1.5;">Upgrade to see SG: Around the Green — scramble rate analysis, hole-by-hole up-and-down detail, and sand save tracking.</p>
+    <p style="color:rgba(245,240,232,0.7);font-size:13px;margin-bottom:20px;line-height:1.5;">Upgrade to see SG: Around the Green — scramble rate analysis, hole-by-hole up-and-down detail, lie type breakdown, and sand save tracking.</p>
     <a href="{{ url_for('main.upgrade') }}" class="plc-btn">Upgrade</a>
   </div>
   {% endif %}
@@ -1719,6 +1918,112 @@ body::before {
     {% endif %}
   </div>
   {% endif %}
+
+  <!-- SG SHOT-BY-SHOT BREAKDOWN -->
+  <div class="sec-divider"></div>
+  <div class="sec-label fu d7">Shot-by-Shot Strokes Gained</div>
+  <div style="font-size:10px;color:var(--cream-faint);margin-bottom:12px;line-height:1.5;" class="fu d7">
+    Each dot represents a shot category. <span style="color:var(--green-soft);">Green = strokes gained</span>, <span style="color:var(--red-soft);">red = strokes lost</span> vs scratch. Click any dot for details.
+  </div>
+  <div class="sg-hbyh-wrap fu d7">
+    {% for h in holes_data %}
+    {% set _hsg = hole_sg_by_num.get(h.hole_number, {}) %}
+    {% set _has_any = _hsg.get('sg_ott') is not none or _hsg.get('sg_approach') is not none or _hsg.get('sg_atg') is not none or _hsg.get('sg_putt') is not none %}
+    {% if _has_any %}
+    <div class="sg-hbyh-row">
+      <div class="sg-hbyh-meta">
+        <span class="sg-hbyh-num">H{{ h.hole_number }}</span>
+        <span class="sg-hbyh-par">Par {{ h.par }}</span>
+        <span class="sg-hbyh-score {{ 'c-grn' if h.score_vs_par <= -1 else 'c-red' if h.score_vs_par >= 2 else '' }}">{{ h.score_label }}</span>
+      </div>
+      <div class="sg-dots-row">
+
+        {# OTT dot — par 4/5 only #}
+        {% if _hsg.get('sg_ott') is not none %}
+        {% set _sv = _hsg['sg_ott'] %}
+        <div class="sg-dot-wrap">
+          <button class="sg-dot {{ 'sg-dot-pos' if _sv >= 0 else 'sg-dot-neg' }}"
+                  onclick="toggleSgDet('sgd-{{ h.hole_number }}-ott',this)"
+                  aria-label="Off the Tee: {{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}">
+            <span class="sg-dot-label">OTT</span>
+            <span class="sg-dot-val">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</span>
+          </button>
+          <div class="sg-det-panel" id="sgd-{{ h.hole_number }}-ott">
+            <div class="sg-det-head">Off the Tee</div>
+            <div class="sg-det-val {{ 'c-grn' if _sv >= 0 else 'c-red' }}">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</div>
+            {% if h.tee_shot %}<div class="sg-det-row"><span class="sg-det-k">Outcome</span><span class="sg-det-v" style="text-transform:capitalize;">{{ h.tee_shot }}</span></div>{% endif %}
+            {% if h.yardage %}<div class="sg-det-row"><span class="sg-det-k">Hole yardage</span><span class="sg-det-v">{{ h.yardage }}y</span></div>{% endif %}
+            {% if h.approach_distance and h.par == 4 %}<div class="sg-det-row"><span class="sg-det-k">Approach left</span><span class="sg-det-v">{{ h.approach_distance }}y to pin</span></div>{% endif %}
+            {% if h.second_shot_distance and h.par == 5 %}<div class="sg-det-row"><span class="sg-det-k">2nd shot dist</span><span class="sg-det-v">{{ h.second_shot_distance }}y to pin</span></div>{% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        {# Approach dot #}
+        {% if _hsg.get('sg_approach') is not none %}
+        {% set _sv = _hsg['sg_approach'] %}
+        <div class="sg-dot-wrap">
+          <button class="sg-dot {{ 'sg-dot-pos' if _sv >= 0 else 'sg-dot-neg' }}"
+                  onclick="toggleSgDet('sgd-{{ h.hole_number }}-app',this)"
+                  aria-label="Approach: {{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}">
+            <span class="sg-dot-label">App</span>
+            <span class="sg-dot-val">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</span>
+          </button>
+          <div class="sg-det-panel" id="sgd-{{ h.hole_number }}-app">
+            <div class="sg-det-head">Approach</div>
+            <div class="sg-det-val {{ 'c-grn' if _sv >= 0 else 'c-red' }}">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</div>
+            {% if h.approach_distance %}<div class="sg-det-row"><span class="sg-det-k">Distance to pin</span><span class="sg-det-v">{{ h.approach_distance }}y</span></div>{% endif %}
+            <div class="sg-det-row"><span class="sg-det-k">Result</span><span class="sg-det-v {{ 'c-grn' if h.gir else 'c-red' }}">{{ 'GIR ✓' if h.gir else 'Missed GIR' }}{% if h.first_putt_distance and h.gir %} · {{ h.first_putt_distance }}ft{% endif %}</span></div>
+            {% if h.approach_miss %}<div class="sg-det-row"><span class="sg-det-k">Miss direction</span><span class="sg-det-v" style="text-transform:capitalize;">{{ h.approach_miss }}</span></div>{% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        {# ATG dot — GIR miss only #}
+        {% if _hsg.get('sg_atg') is not none %}
+        {% set _sv = _hsg['sg_atg'] %}
+        <div class="sg-dot-wrap">
+          <button class="sg-dot {{ 'sg-dot-pos' if _sv >= 0 else 'sg-dot-neg' }}"
+                  onclick="toggleSgDet('sgd-{{ h.hole_number }}-atg',this)"
+                  aria-label="Around Green: {{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}">
+            <span class="sg-dot-label">ATG</span>
+            <span class="sg-dot-val">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</span>
+          </button>
+          <div class="sg-det-panel" id="sgd-{{ h.hole_number }}-atg">
+            <div class="sg-det-head">Around the Green</div>
+            <div class="sg-det-val {{ 'c-grn' if _sv >= 0 else 'c-red' }}">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</div>
+            {% if h.scramble_distance %}<div class="sg-det-row"><span class="sg-det-k">Scramble dist</span><span class="sg-det-v">{{ h.scramble_distance }}y</span></div>{% endif %}
+            {% if h.lie_type %}<div class="sg-det-row"><span class="sg-det-k">Lie</span><span class="sg-det-v" style="text-transform:capitalize;">{{ h.lie_type }}</span></div>{% endif %}
+            {% if h.first_putt_distance %}<div class="sg-det-row"><span class="sg-det-k">Left for putt</span><span class="sg-det-v">{{ h.first_putt_distance }}ft</span></div>{% endif %}
+            <div class="sg-det-row"><span class="sg-det-k">Hole result</span><span class="sg-det-v {{ 'c-grn' if h.score_vs_par <= 0 else 'c-red' }}">{{ h.score_label }}</span></div>
+          </div>
+        </div>
+        {% endif %}
+
+        {# Putting dot #}
+        {% if _hsg.get('sg_putt') is not none %}
+        {% set _sv = _hsg['sg_putt'] %}
+        <div class="sg-dot-wrap">
+          <button class="sg-dot {{ 'sg-dot-pos' if _sv >= 0 else 'sg-dot-neg' }}"
+                  onclick="toggleSgDet('sgd-{{ h.hole_number }}-putt',this)"
+                  aria-label="Putting: {{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}">
+            <span class="sg-dot-label">Putt</span>
+            <span class="sg-dot-val">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</span>
+          </button>
+          <div class="sg-det-panel" id="sgd-{{ h.hole_number }}-putt">
+            <div class="sg-det-head">Putting</div>
+            <div class="sg-det-val {{ 'c-grn' if _sv >= 0 else 'c-red' }}">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</div>
+            {% if h.first_putt_distance %}<div class="sg-det-row"><span class="sg-det-k">First putt dist</span><span class="sg-det-v">{{ h.first_putt_distance }}ft</span></div>{% endif %}
+            {% if h.putts is not none %}<div class="sg-det-row"><span class="sg-det-k">Putts taken</span><span class="sg-det-v">{{ h.putts }}</span></div>{% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
 
   <!-- COACHING NARRATIVE -->
   <div class="sec-divider"></div>
@@ -2119,6 +2424,23 @@ document.addEventListener('DOMContentLoaded', function() {
     drawAppChart(document.getElementById('app-chart'), APP_MISSES, APP_GIR_HITS);
   if (typeof PUTT_DATA !== 'undefined' && document.getElementById('putt-chart'))
     drawPuttChart(document.getElementById('putt-chart'), PUTT_DATA);
+});
+</script>
+
+<script>
+// ── SG Shot-by-Shot dot expand/collapse ──────────────────────────
+function toggleSgDet(id, btn) {
+  var panel = document.getElementById(id);
+  if (!panel) return;
+  var isOpen = panel.classList.contains('open');
+  // Close all open panels
+  document.querySelectorAll('.sg-det-panel.open').forEach(function(el) { el.classList.remove('open'); });
+  if (!isOpen) panel.classList.add('open');
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.sg-dot-wrap')) {
+    document.querySelectorAll('.sg-det-panel.open').forEach(function(el) { el.classList.remove('open'); });
+  }
 });
 </script>
 

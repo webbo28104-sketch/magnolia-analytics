@@ -781,9 +781,10 @@ def view_report(round_id):
         # Personal best
         pb_banner    = pb_banner,
 
-        # Per-hole SG (top moments + best-shot callouts)
+        # Per-hole SG (top moments + best-shot callouts + shot-by-shot breakdown)
         top_sg_moments  = top_sg_moments,
         best_sg_by_cat  = best_sg_by_cat,
+        hole_sg_by_num  = hole_sg_by_num,
     )
 
 
