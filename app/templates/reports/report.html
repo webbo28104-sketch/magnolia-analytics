@@ -1434,8 +1434,7 @@ body::before {
   {% set _atg_misses = holes_data | selectattr('gir','equalto',false) | list %}
   {% set _sand_holes = holes_data | selectattr('sand_save_attempt') | list %}
   {% set _sand_saves = _sand_holes | selectattr('sand_save_made') | list | length %}
-  {% set _atg_sdists = _atg_misses | selectattr('scramble_distance') | map(attribute='scramble_distance') | list %}
-  {% set _avg_sdist  = (_atg_sdists | sum / _atg_sdists | length) | round | int if _atg_sdists else none %}
+  {% set _avg_sdist  = avg_scramble_dist %}
   {% set _atg_saves  = _atg_misses | selectattr('score_vs_par','le',0) | list | length %}
   {% set _atg_bogeys = _atg_misses | selectattr('score_vs_par','equalto',1) | list | length %}
   {% set _atg_doubles = _atg_misses | selectattr('score_vs_par','ge',2) | list | length %}

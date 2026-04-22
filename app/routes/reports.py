@@ -650,6 +650,11 @@ def view_report(round_id):
     approach_bds = _approach_distance_breakdown(holes_data, hole_sg_by_num) if user_is_pro else []
     miss_dirs    = _miss_direction_counts(holes_data) if user_is_pro else {}
     scramble     = _scramble_stats(holes_data)
+    # Average scramble distance (GIR-miss holes only), parsed via _parse_yards to handle band keys
+    _sdist_vals  = [_parse_yards(h['scramble_distance']) for h in holes_data
+                    if not h['gir'] and h['scramble_distance'] is not None]
+    _sdist_vals  = [v for v in _sdist_vals if v is not None]
+    avg_scramble_dist = round(sum(_sdist_vals) / len(_sdist_vals)) if _sdist_vals else None
     putt_dist    = _putting_distribution(holes_data)
     first_putt   = _first_putt_profile(holes_data) if user_is_pro else []
     weakest_sg   = _weakest_sg_category(sg_data)
@@ -768,6 +773,7 @@ def view_report(round_id):
         scoring_by_par        = scoring_by_par,
         avg_drive_dist        = avg_drive_dist,
         avg_approach_after_tee = avg_approach_after_tee,
+        avg_scramble_dist     = avg_scramble_dist,
 
         # Context
         weather      = weather,
