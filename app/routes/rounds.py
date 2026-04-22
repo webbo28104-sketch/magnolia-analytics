@@ -252,6 +252,51 @@ def enter_hole(round_id, hole_number):
     )
 
 
+@rounds_bp.route('/<int:round_id>/hole/<int:hole_number>/autosave', methods=['POST'])
+@login_required
+def autosave_hole(round_id, hole_number):
+    """AJAX save for hole data — identical logic to enter_hole POST but returns JSON."""
+    round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
+
+    starting = round_.starting_hole or 1
+    actual_hole_number = ((starting - 1 + hole_number - 1) % 18) + 1
+
+    existing = Hole.query.filter_by(round_id=round_id, hole_number=actual_hole_number).first()
+    data = request.form
+
+    if not existing:
+        hole = Hole(round_id=round_id, hole_number=actual_hole_number)
+        db.session.add(hole)
+    else:
+        hole = existing
+
+    hole.par               = int(data.get('par', 4))
+    hole.score             = int(data.get('score', hole.par))
+    hole.tee_shot          = data.get('tee_shot') or None
+    hole.approach_distance = int(data['approach_distance']) if data.get('approach_distance') else None
+    approach_miss = data.get('approach_miss') or None
+    if approach_miss:
+        vals = [v.strip() for v in approach_miss.split(',') if v.strip()]
+        if 'left' in vals and 'right' in vals:
+            vals = [v for v in vals if v != 'right']
+        if 'long' in vals and 'short' in vals:
+            vals = [v for v in vals if v != 'short']
+        approach_miss = ','.join(vals) or None
+    hole.approach_miss     = approach_miss
+    hole.lie_type          = data.get('lie_type') or None
+    hole.scramble_distance = data.get('scramble_distance') or None
+    hole.gir               = not bool(hole.approach_miss or hole.scramble_distance)
+    hole.second_shot_distance = int(data['second_shot_distance']) if data.get('second_shot_distance') else None
+    hole.putts             = int(data.get('putts', 2))
+    hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
+    hole.sand_save_attempt = bool(data.get('sand_save_attempt') == 'true') if data.get('sand_save_attempt') else None
+    hole.sand_save_made    = data.get('sand_save_made') == 'true' if data.get('sand_save_made') else None
+    hole.penalties         = int(data.get('penalties', 0))
+    db.session.commit()
+
+    return jsonify({'ok': True})
+
+
 @rounds_bp.route('/<int:round_id>/submit', methods=['GET', 'POST'])
 @login_required
 def submit_round(round_id):

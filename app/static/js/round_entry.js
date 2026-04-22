@@ -396,6 +396,21 @@ document.addEventListener('DOMContentLoaded', () => {
       issues.push(`Score of 1 on a par ${par} — confirming this as a hole in one`);
     }
 
+    // Missed-green arithmetic: check minimum shots needed to reach green
+    // Par 3/4: need tee + approach-miss + chip = par-1 shots minimum before putting
+    // Par 5: can miss in 3 shots (tee + approach-miss + chip), so par-2 minimum
+    if (!gir && putts < score) {
+      const shotsBeforePutts = score - putts;
+      const minBeforePutts   = par === 5 ? par - 2 : par - 1;
+      if (shotsBeforePutts < minBeforePutts) {
+        issues.push(
+          `Score of ${score} with ${putts} putt${putts !== 1 ? 's' : ''} after missing the green on ` +
+          `par ${par} — that leaves only ${shotsBeforePutts} shot${shotsBeforePutts !== 1 ? 's' : ''} ` +
+          `to reach the green, but a missed par ${par} needs at least ${minBeforePutts}`
+        );
+      }
+    }
+
     return issues;
   }
 
@@ -460,6 +475,71 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       validationOverride = false; // reset after each submit attempt
+    });
+  }
+
+
+  // ── Autosave ───────────────────────────────────────────────────────────────
+  // Persists current hole data via AJAX so navigating away never loses changes.
+  // Triggered on any form interaction (debounced) and always awaited before
+  // navigating via the hole grid or the "Submit Round Early" skip link.
+
+  let _saveTimer = null;
+
+  async function triggerAutosave() {
+    const form = document.getElementById('hole-form');
+    const url  = form?.dataset.autosaveUrl;
+    if (!form || !url) return;
+    const statusEl = document.getElementById('autosave-status');
+    if (statusEl) { statusEl.textContent = 'Saving…'; statusEl.className = 'autosave-status autosave-saving'; }
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      if (statusEl) {
+        if (resp.ok) { statusEl.textContent = 'Saved'; statusEl.className = 'autosave-status autosave-saved'; }
+        else         { statusEl.textContent = 'Save failed'; statusEl.className = 'autosave-status autosave-error'; }
+      }
+    } catch {
+      if (statusEl) { statusEl.textContent = 'Save failed'; statusEl.className = 'autosave-status autosave-error'; }
+    }
+  }
+
+  function scheduleAutosave() {
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(triggerAutosave, 1500);
+  }
+
+  // Schedule save on any click or input within the form
+  const _holeForm = document.getElementById('hole-form');
+  if (_holeForm) {
+    _holeForm.addEventListener('click',  scheduleAutosave);
+    _holeForm.addEventListener('input',  scheduleAutosave);
+    _holeForm.addEventListener('change', scheduleAutosave);
+  }
+
+  // Intercept hole navigation grid — save before navigating
+  document.querySelectorAll('.he-nav-dot').forEach(a => {
+    a.addEventListener('click', async e => {
+      const href = a.getAttribute('href');
+      // Don't intercept current hole (no-op navigation)
+      if (a.classList.contains('he-nav-dot--current')) return;
+      e.preventDefault();
+      await triggerAutosave();
+      window.location.href = href;
+    });
+  });
+
+  // Intercept "Submit Round Early" skip link — save before navigating
+  const skipBtn = document.querySelector('.he-skip-btn');
+  if (skipBtn) {
+    skipBtn.addEventListener('click', async e => {
+      e.preventDefault();
+      const href = skipBtn.getAttribute('href');
+      await triggerAutosave();
+      window.location.href = href;
     });
   }
 

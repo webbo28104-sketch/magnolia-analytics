@@ -470,6 +470,15 @@
   .he-next-btn:hover { opacity: .9; }
   .he-next-btn:active { opacity: .75; }
 
+  .autosave-status {
+    display: block; text-align: center; height: 14px; margin-bottom: 4px;
+    font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+    pointer-events: none; transition: opacity .4s;
+  }
+  .autosave-saving { color: rgba(201,168,76,.45); }
+  .autosave-saved  { color: rgba(201,168,76,.7); }
+  .autosave-error  { color: #e05c5c; }
+
   /* ── Hole navigation grid ───────────────────────────────────────────────── */
   .he-nav-grid {
     display: grid;
@@ -581,6 +590,7 @@
   <form method="POST"
         action="{{ url_for('rounds.enter_hole', round_id=round.id, hole_number=hole_number) }}"
         id="hole-form"
+        data-autosave-url="{{ url_for('rounds.autosave_hole', round_id=round.id, hole_number=hole_number) }}"
         class="he-form">
 
     <!-- par comes from server only — not user-selectable -->
@@ -760,6 +770,7 @@
 
   <!-- ── Sticky next button ─────────────────────────────────────────── -->
   <div class="he-next-wrap">
+    <div id="autosave-status" class="autosave-status"></div>
     <a class="he-skip-btn"
        href="{{ url_for('rounds.submit_round', round_id=round.id) }}">
       {%- if is_edit %}Skip to Submit →{% else %}Submit Round Early →{% endif %}
