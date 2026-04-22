@@ -1432,8 +1432,7 @@ body::before {
 
   {# Compute ATG stats for this tab #}
   {% set _atg_misses = holes_data | selectattr('gir','equalto',false) | list %}
-  {% set _sand_holes = holes_data | selectattr('sand_save_attempt') | list %}
-  {% set _sand_saves = _sand_holes | selectattr('sand_save_made') | list | length %}
+  {# Use server-computed sand_stats which detects bunkers via lie_type fallback #}
   {% set _avg_sdist  = avg_scramble_dist %}
   {% set _atg_saves  = _atg_misses | selectattr('score_vs_par','le',0) | list | length %}
   {% set _atg_bogeys = _atg_misses | selectattr('score_vs_par','equalto',1) | list | length %}
@@ -1465,10 +1464,10 @@ body::before {
         </div>
         <div class="sum-card">
           <div class="sum-card-lbl">Sand Saves</div>
-          <div class="sum-card-val {{ 'c-grn' if _sand_saves > 0 else '' }}">
-            {{ _sand_saves }}/{{ _sand_holes | length }}{% if not _sand_holes %}<span style="font-size:14px;">—</span>{% endif %}
+          <div class="sum-card-val {{ 'c-grn' if sand_stats.saves > 0 else '' }}">
+            {% if sand_stats.attempts %}{{ sand_stats.saves }}/{{ sand_stats.attempts }}{% else %}—{% endif %}
           </div>
-          <div class="sum-card-sub">{{ 'bunker' ~ (' saves' if _sand_saves != 1 else ' save') if _sand_holes else 'no bunker attempts' }}</div>
+          <div class="sum-card-sub">{{ 'bunker' ~ (' saves' if sand_stats.saves != 1 else ' save') if sand_stats.attempts else 'no bunker attempts' }}</div>
         </div>
         <div class="sum-card">
           <div class="sum-card-lbl">Avg Scramble Dist</div>
@@ -1528,10 +1527,10 @@ body::before {
       {% if _3putt_from_miss %}
       <div class="stat-row"><span class="sk">3-putt after miss</span><span class="sv c-red">{{ _3putt_from_miss }}</span></div>
       {% endif %}
-      {% if _sand_holes %}
+      {% if sand_stats.attempts %}
       <div class="stat-row"><span class="sk">Sand save rate</span>
-        <span class="sv {{ 'c-grn' if _sand_saves > 0 and _sand_holes else '' }}">
-          {{ _sand_saves }}/{{ _sand_holes | length }} ({{ (_sand_saves / _sand_holes | length * 100) | round | int }}%)
+        <span class="sv {{ 'c-grn' if sand_stats.saves > 0 else '' }}">
+          {{ sand_stats.saves }}/{{ sand_stats.attempts }}{% if sand_stats.save_pct is not none %} ({{ sand_stats.save_pct }}%){% endif %}
         </span>
       </div>
       {% endif %}
@@ -1929,11 +1928,19 @@ body::before {
     {% set _hsg = hole_sg_by_num.get(h.hole_number, {}) %}
     {% set _has_any = _hsg.get('sg_ott') is not none or _hsg.get('sg_approach') is not none or _hsg.get('sg_atg') is not none or _hsg.get('sg_putt') is not none %}
     {% if _has_any %}
+    {% set _htot = _hsg.get('sg_hole_total') %}
+    {% set _hhist = historical_hole_sg.get(h.hole_number) %}
     <div class="sg-hbyh-row">
       <div class="sg-hbyh-meta">
         <span class="sg-hbyh-num">H{{ h.hole_number }}</span>
         <span class="sg-hbyh-par">Par {{ h.par }}</span>
         <span class="sg-hbyh-score {{ 'c-grn' if h.score_vs_par <= -1 else 'c-red' if h.score_vs_par >= 2 else '' }}">{{ h.score_label }}</span>
+        {% if _htot is not none %}
+        <span style="margin-left:auto;font-size:10px;font-weight:700;color:{{ 'var(--green-soft)' if _htot >= 0 else 'var(--red-soft)' }};">{{ '+' if _htot >= 0 }}{{ '%.2f'|format(_htot) }}</span>
+        {% endif %}
+        {% if _hhist %}
+        <span style="font-size:8px;color:var(--cream-faint);margin-left:4px;" title="Avg SG on this hole at this course ({{ _hhist.count }} round{{ 's' if _hhist.count != 1 }})">avg {{ '+' if _hhist.sg_avg >= 0 }}{{ '%.2f'|format(_hhist.sg_avg) }}</span>
+        {% endif %}
       </div>
       <div class="sg-dots-row">
 

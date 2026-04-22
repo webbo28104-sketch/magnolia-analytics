@@ -288,6 +288,43 @@ def _build_narrative_prompt(round_, sg_data: dict, historical_ctx: dict) -> str:
 
     round_count = historical_ctx.get('round_count', 1)
 
+    # Per-category SG vs player's own historical average (shown when 5+ rounds per category)
+    _cat_defs = [
+        ('sg_off_tee',  'SG Off Tee',      sg_off_tee),
+        ('sg_approach', 'SG Approach',     sg_approach),
+        ('sg_atg',      'SG Around Green', sg_atg),
+        ('sg_putting',  'SG Putting',      sg_put_total),
+    ]
+    per_cat_lines = []
+    for cat_key, cat_label, curr_val in _cat_defs:
+        avg = historical_ctx.get(f'avg_{cat_key}')
+        count = historical_ctx.get(f'{cat_key}_count', 0)
+        if avg is not None and curr_val is not None and count >= 5:
+            diff = round(curr_val - avg, 2)
+            if diff > 0.15:
+                rel = 'above your baseline'
+            elif diff < -0.15:
+                rel = 'below your baseline'
+            else:
+                rel = 'at your baseline'
+            per_cat_lines.append(
+                f"  {cat_label:<20s}  this round: {curr_val:+.2f}   your avg: {avg:+.2f}   diff: {diff:+.2f}  ({rel})"
+            )
+
+    per_cat_section = ''
+    if per_cat_lines:
+        per_cat_section = f"""
+PER-CATEGORY SG vs YOUR PERSONAL BASELINE  ({round_count} rounds of history)
+------------------------------------------------------------------------------
+{chr(10).join(per_cat_lines)}
+
+CRITICAL TONE RULE: Use these personal baselines — not the scratch (0) baseline — to set the emotional
+tone for each category. A player who typically loses -1.0 Off Tee and lost -0.9 this round is performing
+NORMALLY in that area, not poorly. Only flag a category as a concern if it is meaningfully BELOW their own
+average. Praise improvement when a category is meaningfully ABOVE their average. This is more important
+than whether the absolute SG value is positive or negative.
+"""
+
     # Historical baseline section — only included when >= 20 rounds
     historical_section = ''
     if round_count >= 20:
@@ -371,7 +408,7 @@ Key: Tee=tee shot | GIR=green in regulation | FPD=first putt distance |
 ApprDist=approach dist-to-hole | Miss=approach miss direction(s) | Lie=lie type at miss |
 2ndDist=2nd shot dist-to-hole (par 5s) | Pen=penalty strokes
 {chr(10).join(hole_lines)}
-{historical_section}
+{per_cat_section}{historical_section}
 {sample_guidance}
 
 ANALYTICAL INSTRUCTIONS — follow all sections:

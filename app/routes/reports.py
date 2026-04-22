@@ -241,6 +241,35 @@ def _scramble_stats(holes_data: list) -> dict:
     }
 
 
+def _sand_save_stats(holes_data: list) -> dict:
+    """
+    Sand save stats from explicit sand_save fields OR bunker lie_type detection.
+    Uses score_vs_par <= 0 as save proxy when sand_save_made is not recorded.
+    """
+    attempts = []
+    for h in holes_data:
+        is_bunker = h.get('sand_save_attempt') or (
+            not h.get('gir')
+            and h.get('lie_type')
+            and 'bunker' in h['lie_type'].lower()
+        )
+        if is_bunker:
+            attempts.append(h)
+    if not attempts:
+        return {'attempts': 0, 'saves': 0, 'save_pct': None}
+    saves = 0
+    for h in attempts:
+        if h.get('sand_save_made') is not None:
+            saves += 1 if h['sand_save_made'] else 0
+        else:
+            saves += 1 if h.get('score_vs_par', 1) <= 0 else 0
+    return {
+        'attempts': len(attempts),
+        'saves':    saves,
+        'save_pct': round(saves / len(attempts) * 100) if attempts else None,
+    }
+
+
 def _putting_distribution(holes_data: list) -> dict:
     """Count of holes by putts (1, 2, 3, 4+)."""
     dist = {1: 0, 2: 0, 3: 0, '4+': 0}
@@ -415,6 +444,38 @@ def _per_hole_sg(holes, course_hole_map: dict) -> list:
 
         result.append(row)
     return result
+
+
+def _historical_hole_sg_at_course(round_, prev_rounds: list, course_hole_map: dict) -> dict:
+    """
+    For each hole number, compute average SG total across previous rounds at the
+    same course (up to last 10). Reuses the current course_hole_map since the
+    course layout is the same.
+
+    Returns {hole_number: {'sg_avg': float, 'count': int}}.
+    """
+    if not round_.course_id:
+        return {}
+    same_course = [r for r in prev_rounds if r.course_id == round_.course_id][:10]
+    if not same_course:
+        return {}
+
+    accumulator: dict = {}
+    for prev_round in same_course:
+        prev_holes = prev_round.holes.order_by('hole_number').all()
+        if not prev_holes:
+            continue
+        for row in _per_hole_sg(prev_holes, course_hole_map):
+            sg_vals = [row[k] for k in ('sg_putt', 'sg_ott', 'sg_approach', 'sg_atg')
+                       if row.get(k) is not None]
+            if sg_vals:
+                accumulator.setdefault(row['hole_number'], []).append(round(sum(sg_vals), 2))
+
+    return {
+        hn: {'sg_avg': round(sum(vals) / len(vals), 2), 'count': len(vals)}
+        for hn, vals in accumulator.items()
+        if vals
+    }
 
 
 def _top_sg_moments(hole_sg: list, n: int = 3) -> list:
@@ -631,6 +692,11 @@ def view_report(round_id):
 
     # ---- Per-hole SG (used for top moments, best-shot callouts, band SG) ----
     hole_sg         = _per_hole_sg(holes, course_hole_map)
+    # Enrich each row with a hole-level SG total (sum of available categories)
+    for row in hole_sg:
+        sg_vals = [row[k] for k in ('sg_putt', 'sg_ott', 'sg_approach', 'sg_atg')
+                   if row.get(k) is not None]
+        row['sg_hole_total'] = round(sum(sg_vals), 2) if sg_vals else None
     hole_sg_by_num  = {h['hole_number']: h for h in hole_sg}
     top_sg_moments  = _top_sg_moments(hole_sg, n=3)
 
@@ -650,6 +716,7 @@ def view_report(round_id):
     approach_bds = _approach_distance_breakdown(holes_data, hole_sg_by_num) if user_is_pro else []
     miss_dirs    = _miss_direction_counts(holes_data) if user_is_pro else {}
     scramble     = _scramble_stats(holes_data)
+    sand_stats   = _sand_save_stats(holes_data)
     # Average scramble distance (GIR-miss holes only), parsed via _parse_yards to handle band keys
     _sdist_vals  = [_parse_yards(h['scramble_distance']) for h in holes_data
                     if not h['gir'] and h['scramble_distance'] is not None]
@@ -696,6 +763,11 @@ def view_report(round_id):
         .all()
     )
     historical_ctx = _build_historical_context(round_, prev_rounds)
+    # Per-hole historical SG at this course (Pro only — requires hole queries for prev rounds)
+    historical_hole_sg = (
+        _historical_hole_sg_at_course(round_, prev_rounds, course_hole_map)
+        if user_is_pro else {}
+    )
 
     # ---- Claude-generated text (Pro-only; lazy-generate on first view, cached after) ----
     # Free users receive None for both fields — no API call is made, no cached
@@ -774,6 +846,8 @@ def view_report(round_id):
         avg_drive_dist        = avg_drive_dist,
         avg_approach_after_tee = avg_approach_after_tee,
         avg_scramble_dist     = avg_scramble_dist,
+        sand_stats            = sand_stats,
+        historical_hole_sg    = historical_hole_sg,
 
         # Context
         weather      = weather,
