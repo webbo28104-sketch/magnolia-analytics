@@ -1554,6 +1554,16 @@ h1, h2, h3, h4 {
   .form-row { grid-template-columns: 1fr; }
   .hero { padding: 60px 20px; }
 }
+@media (max-width: 480px) {
+  .round-row {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    padding: 12px 14px;
+    gap: 4px;
+  }
+  .round-actions { flex-wrap: wrap; gap: 6px; }
+  .round-putts, .round-gir { display: none; }
+}
 
 /* ── In-progress rounds (Continue Round — Task 11) ── */
 .in-progress-section {

@@ -259,6 +259,16 @@ body::before {
   .hero-right{text-align:left;}
   .context-banner{grid-template-columns:1fr;}
   .pd-grid{grid-template-columns:repeat(3,1fr);}
+  /* ── Mobile fixes ── */
+  .page{padding:0 12px 60px;}
+  .tab-nav{margin:20px -12px 0;padding:0 12px;}
+  .rp-tiles-4{grid-template-columns:repeat(2,1fr);}
+  .sg-bc{width:62px;}
+  .ai-block{padding:16px 12px;}
+  .sg-stat-flex{flex-direction:column !important;}
+  .sg-stat-sidebar{width:100% !important;}
+  .sg-hbyh-meta{width:72px;}
+  .par5-2col{grid-template-columns:1fr !important;}
 }
 .share-btn {
   display: inline-flex;
@@ -1016,8 +1026,8 @@ body::before {
   {% set _rough_girs = tee_gir.get('left',{}).get('girs',0) + tee_gir.get('right',{}).get('girs',0) %}
   {% set _rough_att  = tee_gir.get('left',{}).get('attempts',0) + tee_gir.get('right',{}).get('attempts',0) %}
   {% set _bogeys_rough = holes_data | selectattr('tee_shot','in',['left','right']) | selectattr('score_vs_par','gt',0) | list | length %}
-  <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;" class="fu d5">
-    <div style="width:180px;flex-shrink:0;">
+  <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;" class="fu d5 sg-stat-flex">
+    <div style="width:180px;flex-shrink:0;" class="sg-stat-sidebar">
       <div class="a-card" style="text-align:center;padding:20px 14px;">
         <div class="a-card-title" style="margin-bottom:10px;">SG: Off the Tee</div>
         <div style="font-family:'Inter',system-ui,sans-serif;font-size:clamp(30px,4vw,46px);font-weight:700;line-height:1;" class="{{ sgcol(sg_data.sg_off_tee) if sg_ott_ok else 'sg-neutral' }}">{{ sgfmt(sg_data.sg_off_tee) if sg_ott_ok else '—' }}</div>
@@ -1133,7 +1143,7 @@ body::before {
   {% if par5_stats.count > 0 %}
   <div class="sec-divider"></div>
   <div class="sec-label">Par 5 Analysis</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" class="par5-2col">
     <div class="a-card">
       <div class="a-card-title">Par 5 Second Shot Detail · {{ par5_stats.count }} Hole{{ 's' if par5_stats.count != 1 }}</div>
       {% for h in par5_stats.holes %}
@@ -1244,8 +1254,8 @@ body::before {
   {% set _best_band  = approach_bds | sort(attribute='gir_pct', reverse=True) | first if approach_bds else none %}
   {% set _worst_band = approach_bds | sort(attribute='gir_pct') | first if approach_bds else none %}
   {% set _dom_miss   = miss_dirs | dictsort(by='value', reverse=True) | first if miss_dirs else none %}
-  <div style="display:flex;gap:20px;align-items:center;margin-bottom:20px;" class="fu d5">
-    <div style="width:180px;flex-shrink:0;">
+  <div style="display:flex;gap:20px;align-items:center;margin-bottom:20px;" class="fu d5 sg-stat-flex">
+    <div style="width:180px;flex-shrink:0;" class="sg-stat-sidebar">
       <div class="a-card" style="text-align:center;padding:20px 14px;">
         <div class="a-card-title" style="margin-bottom:10px;">SG: Approach</div>
         <div style="font-family:'Inter',system-ui,sans-serif;font-size:clamp(30px,4vw,46px);font-weight:700;line-height:1;" class="{{ sgcol(sg_data.sg_approach) if sg_app_ok else 'sg-neutral' }}">{{ sgfmt(sg_data.sg_approach) if sg_app_ok else '—' }}</div>
@@ -1447,8 +1457,8 @@ body::before {
   <div class="sec-label fu d6">Around the Green</div>
 
   {# ── Header: SG ATG focal card + summary tiles ── #}
-  <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;" class="fu d6">
-    <div style="width:160px;flex-shrink:0;">
+  <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;" class="fu d6 sg-stat-flex">
+    <div style="width:160px;flex-shrink:0;" class="sg-stat-sidebar">
       <div class="a-card" style="text-align:center;padding:20px 14px;">
         <div class="a-card-title" style="margin-bottom:10px;">SG: Around Green</div>
         <div style="font-family:'Inter',system-ui,sans-serif;font-size:clamp(28px,4vw,44px);font-weight:700;line-height:1;" class="{{ sgcol(sg_data.sg_atg) if sg_atg_ok else 'sg-neutral' }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</div>
@@ -2513,6 +2523,23 @@ document.addEventListener('click', function(e) {
   window.addEventListener('hashchange', function () {
     var h = window.location.hash.replace('#', '');
     if (TABS.indexOf(h) !== -1) activateTab(h, false);
+  });
+
+  // Redraw charts on resize/orientation change
+  var _resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(function () {
+      var active = document.querySelector('.tab-panel.active');
+      if (!active) return;
+      var id = active.id.replace('tab-', '');
+      if (id === 'off-the-tee' && typeof TEE_DRIVES !== 'undefined' && document.getElementById('tee-chart'))
+        drawTeeChart(document.getElementById('tee-chart'), TEE_DRIVES);
+      if (id === 'approach' && typeof APP_MISSES !== 'undefined' && document.getElementById('app-chart'))
+        drawAppChart(document.getElementById('app-chart'), APP_MISSES, APP_GIR_HITS);
+      if (id === 'putting' && typeof PUTT_DATA !== 'undefined' && document.getElementById('putt-chart'))
+        drawPuttChart(document.getElementById('putt-chart'), PUTT_DATA);
+    }, 150);
   });
 })();
 
