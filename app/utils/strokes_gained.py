@@ -164,6 +164,8 @@ def _tee_shot_lie(tee_shot: str) -> str:
         return 'recovery'
     if primary == 'bunker':
         return 'bunker'
+    if primary == 'trees':
+        return 'recovery'
     return 'rough'  # left / right / other
 
 
@@ -232,37 +234,49 @@ def strokes_gained_putting(holes) -> dict:
 def strokes_gained_off_tee(holes, course_hole_map=None) -> float:
     """
     SG Off the Tee (par 4/5 only):
-      SG = expected_OTT(hole_yardage) - 1 - expected_approach(remaining_dist, lie)
+      Normal:  SG = expected_OTT(yardage) - 1 - expected_approach(remaining, lie)
+      Trees:   SG = expected_OTT(yardage) - 2 - expected_approach(real_approach, lie_after)
 
-    Requires hole yardage from course_hole_map and either approach_distance
-    (par 4) or second_shot_distance (par 5) as the remaining distance after
-    the tee shot.  Falls back to a lie-only adjustment when data is absent.
+    When a tee shot goes into trees (tee_shot starts with 'trees'), the punch-out
+    recovery shot is attributed here rather than SG Approach.  second_shot_distance
+    stores the punch-out distance; approach_distance stores the real approach.
+    The formula charges 2 shots (drive + punch-out) against SG OTT so that
+    SG Approach only reflects genuine approach skill.
     """
     sg = 0.0
     for hole in holes:
         if hole.par not in (4, 5) or not hole.tee_shot:
             continue
 
-        lie = _tee_shot_lie(hole.tee_shot)
-
-        # Remaining distance after tee shot
-        remaining = (hole.approach_distance if hole.par == 4
-                     else _parse_yards(hole.second_shot_distance))
-
-        # Hole yardage from course data
+        primary      = hole.tee_shot.split(',')[0]
+        is_trees     = primary == 'trees'
+        punch_dist   = _parse_yards(hole.second_shot_distance)
         ch           = course_hole_map.get(hole.hole_number) if course_hole_map else None
         hole_yardage = ch.yardage if (ch and ch.yardage) else None
+
+        # Trees on par 4 with a recorded punch-out: bundle drive + punch-out into OTT
+        if is_trees and hole.par == 4 and punch_dist and hole.approach_distance:
+            if hole_yardage:
+                lie_after = hole.lie_type or 'fairway'
+                exp_start = expected_ott(hole_yardage)
+                exp_end   = expected_approach(hole.approach_distance, lie_after)
+                sg += exp_start - 2 - exp_end  # -2: drive + punch-out
+            else:
+                sg -= 1.0  # flat: bad drive + wasted punch-out
+            continue
+
+        lie       = _tee_shot_lie(hole.tee_shot)
+        remaining = (hole.approach_distance if hole.par == 4
+                     else _parse_yards(hole.second_shot_distance))
 
         if hole_yardage and remaining:
             exp_start = expected_ott(hole_yardage)
             exp_end   = expected_approach(remaining, lie)
             sg += exp_start - 1 - exp_end
         else:
-            # Fallback: flat adjustment by lie result (use primary token only)
-            primary = (hole.tee_shot or '').split(',')[0]
             if primary == 'fairway':
                 sg += 0.2
-            elif primary == 'penalty':
+            elif primary in ('penalty', 'trees'):
                 sg -= 0.7
             else:
                 sg -= 0.2
@@ -311,7 +325,15 @@ def strokes_gained_approach(holes) -> float:
                     sg += exp_start - 1 - expected_atg(15, 'rough')
 
         elif hole.par in (4, 5):
-            lie = _tee_shot_lie(hole.tee_shot) if hole.tee_shot else 'rough'
+            is_trees   = hole.tee_shot and hole.tee_shot.split(',')[0] == 'trees'
+            punch_dist = _parse_yards(hole.second_shot_distance)
+
+            # Trees par-4 with punch-out: real approach is approach_distance;
+            # punch-out was already attributed to SG OTT — use lie_type for approach lie
+            if is_trees and hole.par == 4 and punch_dist:
+                lie = hole.lie_type or 'fairway'
+            else:
+                lie = _tee_shot_lie(hole.tee_shot) if hole.tee_shot else 'rough'
 
             if hole.gir:
                 if not dist:

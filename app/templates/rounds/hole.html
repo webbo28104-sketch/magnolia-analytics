@@ -257,8 +257,9 @@
         <text x="255" y="46" text-anchor="middle" fill="rgba(255,255,255,.8)" font-size="10" font-family="DM Mono,monospace" letter-spacing="1">RIGHT</text>
         <text id="ts-check" x="150" y="38" text-anchor="middle" fill="white" font-size="22" visibility="hidden">✓</text>
       </svg>
-      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:4px">
-        <button type="button" class="he-pill he-pill--multi" data-group="tee-mod" data-value="bunker" id="ts-bunker-btn">Bunker</button>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:4px">
+        <button type="button" class="he-pill he-pill--multi" data-group="tee-mod" data-value="bunker"  id="ts-bunker-btn">Bunker</button>
+        <button type="button" class="he-pill he-pill--multi" data-group="tee-mod" data-value="trees"   id="ts-trees-btn">Trees</button>
         <button type="button" class="he-pill he-pill--multi" data-group="tee-mod" data-value="penalty" id="ts-penalty-btn">Penalty</button>
       </div>
     </div>
@@ -391,5 +392,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/round_entry.js') }}?v=5"></script>
+<script src="{{ url_for('static', filename='js/round_entry.js') }}?v=6"></script>
 {% endblock %}

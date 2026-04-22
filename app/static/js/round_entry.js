@@ -105,7 +105,14 @@ function applyPanelContextWarn(type) {
     }
 
   } else if (type === 'app') {
-    if (count === 0 && par !== 3) {
+    const prevOTT = _shots.find(s => s.type === 'ott');
+    const appsSoFar = _shots.filter(s => s.type === 'app').length;
+    if (prevOTT && prevOTT.mod === 'trees' && appsSoFar === 0) {
+      showPanelWarn('app',
+        'Recovery shot — enter the distance you punched out to. ' +
+        'This shot will be attributed to SG Off the Tee, not SG Approach, ' +
+        'keeping your approach stats fair.');
+    } else if (count === 0 && par !== 3) {
       showPanelWarn('app',
         `No tee shot recorded yet. On a par ${par}, the first shot is usually Off the Tee. ` +
         'Use Approach for shots played from the fairway or rough after the tee shot.');
@@ -151,6 +158,7 @@ function shotSummary(shot) {
       else if (shot.direction === 'right') parts.push('Right rough');
       if (shot.mod === 'bunker') parts.push('Bunker');
       else if (shot.mod === 'penalty') parts.push('Penalty');
+      else if (shot.mod === 'trees') parts.push('Trees');
       return parts.join(' · ') || 'Tee shot';
     }
     case 'app': {
@@ -233,7 +241,10 @@ function saveState() {
     setHidden('tee_shot', val);
   }
 
-  if (par === 5 && apps.length >= 2) {
+  // Par 5 second shots and par 4 trees punch-outs both use second_shot_distance
+  // for the intermediate shot, with approach_distance holding the real approach
+  const hasTreesOTT = ott && ott.mod === 'trees';
+  if ((par === 5 || hasTreesOTT) && apps.length >= 2) {
     setHidden('second_shot_distance', apps[0].distance || '');
     const last = apps[apps.length - 1];
     setHidden('approach_distance', last.distance || '');
@@ -616,6 +627,7 @@ function initTeeShotSVG() {
     tsRight.setAttribute('fill',   _tsDir === 'right'   ? ROUGH_ACTIVE : ROUGH_BASE);
     if (tsCheck) tsCheck.setAttribute('visibility', _tsDir === 'fairway' ? 'visible' : 'hidden');
     document.getElementById('ts-bunker-btn')?.classList.toggle('is-active', _tsMod === 'bunker');
+    document.getElementById('ts-trees-btn')?.classList.toggle('is-active',  _tsMod === 'trees');
     document.getElementById('ts-penalty-btn')?.classList.toggle('is-active', _tsMod === 'penalty');
     if (vibrate && navigator.vibrate) navigator.vibrate(10);
   }
