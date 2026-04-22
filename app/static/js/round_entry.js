@@ -68,12 +68,13 @@ function getScore() {
 }
 
 // ── Panel warning helpers ─────────────────────────────────────────────────────
+// Inline style overrides CSS cascade — guarantees visibility regardless of specificity
 function showPanelWarn(type, msg) {
   const el = document.getElementById('warn-' + type);
   if (!el) return;
-  if (!msg) { el.classList.remove('is-visible'); el.textContent = ''; return; }
+  if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
   el.innerHTML = '⚠ ' + msg;
-  el.classList.add('is-visible');
+  el.style.display = 'block';
 }
 function hidePanelWarn(type) { showPanelWarn(type, ''); }
 
