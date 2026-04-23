@@ -249,11 +249,9 @@ function saveState() {
     const last = apps[apps.length - 1];
     setHidden('approach_distance', last.distance || '');
     setHidden('approach_miss',     last.miss || '');
-    setHidden('lie_type',          last.lie  || '');
   } else if (apps.length) {
     setHidden('approach_distance', apps[0].distance || '');
     setHidden('approach_miss',     apps[0].miss || '');
-    setHidden('lie_type',          apps[0].lie  || '');
   }
 
   setHidden('atg_strokes', atgs.length || 0);
@@ -306,9 +304,7 @@ function clearPanel(type) {
   } else if (type === 'app') {
     const d = document.getElementById('app-dist-exact'); if (d) d.value = '';
     document.querySelectorAll('#app-miss-dir-pills .he-pill--multi').forEach(p => p.classList.remove('is-active'));
-    document.querySelectorAll('#app-lie-pills .he-pill--multi').forEach(p => p.classList.remove('is-active'));
     const mi = document.getElementById('app-miss-input'); if (mi) mi.value = '';
-    const li = document.getElementById('app-lie-input');  if (li) li.value = '';
     _appMissed = false;
     document.getElementById('app-hit-green')?.classList.add('is-active');
     document.getElementById('app-missed-green')?.classList.remove('is-active');
@@ -342,11 +338,6 @@ function populatePanel(shot) {
       p.classList.toggle('is-active', missVals.has(p.dataset.value));
     });
     const mi = document.getElementById('app-miss-input'); if (mi) mi.value = shot.miss || '';
-    const lieVal = shot.lie || '';
-    document.querySelectorAll('#app-lie-pills .he-pill--multi').forEach(p => {
-      p.classList.toggle('is-active', p.dataset.value === lieVal);
-    });
-    const li = document.getElementById('app-lie-input'); if (li) li.value = lieVal;
   } else if (type === 'atg') {
     const d = document.getElementById('atg-dist-exact'); if (d) d.value = shot.distance || '';
     const lieVal = shot.lie || '';
@@ -370,7 +361,6 @@ function collectPanelShot(type) {
     const raw = document.getElementById('app-dist-exact')?.value;
     shot.distance = raw ? parseInt(raw) : null;
     shot.miss = _appMissed ? (document.getElementById('app-miss-input')?.value || null) : null;
-    shot.lie  = _appMissed ? (document.getElementById('app-lie-input')?.value || null) : null;
   } else if (type === 'atg') {
     const raw = document.getElementById('atg-dist-exact')?.value;
     shot.distance = raw ? parseInt(raw) : null;
