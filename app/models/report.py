@@ -28,6 +28,12 @@ class Report(db.Model):
     #                         "precip_mm": float, "condition": str}
     weather_json = db.Column(db.Text, nullable=True)
 
+    # Narrative version — bumped whenever prompt logic changes significantly.
+    # On first view, if the stored version is lower than NARRATIVE_VERSION the
+    # cached narrative is discarded and regenerated, then stamped with the new
+    # version so it is only regenerated once per prompt generation change.
+    narrative_version = db.Column(db.Integer, nullable=True)
+
     # Claude metadata
     prompt_tokens = db.Column(db.Integer, nullable=True)
     completion_tokens = db.Column(db.Integer, nullable=True)

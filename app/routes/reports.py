@@ -905,6 +905,12 @@ def view_report(round_id):
     # ---- Claude-generated text (Pro-only; lazy-generate on first view, cached after) ----
     # Free users receive None for both fields — no API call is made, no cached
     # text is served. The template shows an upgrade prompt instead.
+    #
+    # NARRATIVE_VERSION: bump this integer whenever coaching prompt logic changes
+    # significantly. Any stored narrative with a lower version is discarded and
+    # regenerated on the next report view, then stamped so it only regenerates once.
+    NARRATIVE_VERSION = 2
+
     summary_text = None
     narrative    = None
     if user_is_pro:
@@ -914,9 +920,14 @@ def view_report(round_id):
         else:
             summary_text = report.summary_text
 
+        # Clear stale narrative when version is behind current
+        if (report.narrative_version or 0) < NARRATIVE_VERSION:
+            report.narrative_text = None
+
         if not report.narrative_text:
             narrative = generate_narrative(round_, sg_data, historical_ctx)
-            report.narrative_text = narrative
+            report.narrative_text     = narrative
+            report.narrative_version  = NARRATIVE_VERSION
         else:
             narrative = report.narrative_text
 
