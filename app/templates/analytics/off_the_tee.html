@@ -1,0 +1,492 @@
+{% extends 'base.html' %}
+{% block title %}Off the Tee — Magnolia Analytics{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --analysis-accent: #1B4332;
+  --analysis-accent-light: rgba(27,67,50,0.08);
+}
+
+.analysis-page { max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+
+.analysis-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .78rem; color: var(--text-muted, #888); text-decoration: none;
+  font-weight: 500; letter-spacing: .02em; margin-bottom: 24px;
+  transition: color .15s;
+}
+.analysis-back:hover { color: var(--text, #111); }
+.analysis-back svg { opacity: .6; }
+
+.analysis-hero {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 20px; margin-bottom: 28px; flex-wrap: wrap;
+}
+.analysis-hero-title { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.analysis-hero-icon {
+  width: 40px; height: 40px; background: var(--analysis-accent);
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.analysis-hero-icon svg { color: #C9A84C; }
+.analysis-hero h1 { font-size: 1.45rem; font-weight: 800; color: var(--text, #111); margin: 0; line-height: 1.2; }
+.analysis-hero-sub { font-size: .8rem; color: var(--text-muted, #888); margin-top: 2px; }
+
+.analysis-sg-hero {
+  text-align: right; flex-shrink: 0;
+}
+.analysis-sg-label { font-size: .68rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted, #888); margin-bottom: 4px; }
+.analysis-sg-value { font-size: 2.6rem; font-weight: 800; font-family: 'DM Mono', monospace; line-height: 1; }
+.analysis-sg-value.best  { color: #2d6a4f; }
+.analysis-sg-value.mid   { color: #c9a84c; }
+.analysis-sg-value.worst { color: #c0635a; }
+.analysis-hcp { font-size: .78rem; color: var(--text-muted, #888); margin-top: 3px; }
+
+/* Key stat cards */
+.kpi-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px;
+}
+@media (max-width: 600px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+.kpi-card {
+  background: #fff; border: 1px solid var(--border, #e2ddd5);
+  border-top: 3px solid #C9A84C; border-radius: 10px; padding: 18px 16px 16px;
+}
+.kpi-card-value { font-size: 1.6rem; font-weight: 800; font-family: 'DM Mono', monospace; color: var(--text, #111); line-height: 1.1; margin-bottom: 4px; }
+.kpi-card-label { font-size: .7rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted, #888); }
+.kpi-card-sub { font-size: .72rem; color: var(--text-muted, #888); margin-top: 3px; }
+
+/* Chart sections */
+.chart-section { margin-bottom: 28px; }
+.chart-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; gap: 10px; }
+.chart-title { font-size: .9rem; font-weight: 700; color: var(--text, #111); }
+.chart-note  { font-size: .72rem; color: var(--text-muted, #888); }
+
+.chart-card {
+  background: #fff; border: 1px solid var(--border, #e2ddd5);
+  border-radius: 10px; padding: 20px 20px 16px;
+}
+.chart-card canvas { display: block; }
+
+.charts-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+@media (max-width: 640px) { .charts-duo { grid-template-columns: 1fr; } }
+
+/* GIR outcome table */
+.outcome-table { width: 100%; border-collapse: collapse; }
+.outcome-table th, .outcome-table td {
+  text-align: left; padding: 9px 12px; font-size: .8rem;
+  border-bottom: 1px solid var(--border, #e2ddd5);
+}
+.outcome-table th { font-weight: 600; color: var(--text-muted, #888); font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; background: #f8f5ef; }
+.outcome-table td:first-child { font-weight: 600; color: var(--text, #111); }
+.outcome-table tbody tr:last-child td { border-bottom: none; }
+
+.gir-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.gir-bar-track { flex: 1; height: 5px; background: #ede9e1; border-radius: 999px; overflow: hidden; min-width: 60px; }
+.gir-bar-fill { height: 100%; border-radius: 999px; background: #2d6a4f; }
+.gir-pct-val  { font-family: 'DM Mono', monospace; font-weight: 600; font-size: .8rem; min-width: 36px; }
+.gir-pct-val.high   { color: #2d6a4f; }
+.gir-pct-val.medium { color: #c9a84c; }
+.gir-pct-val.low    { color: #c0635a; }
+
+/* Miss direction chips */
+.miss-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.miss-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  background: #f8f5ef; border: 1px solid var(--border, #e2ddd5);
+  font-size: .78rem; font-weight: 600; color: var(--text, #111);
+}
+.miss-chip-pct { font-family: 'DM Mono', monospace; color: var(--text-muted, #888); font-weight: 500; }
+.miss-chip--fairway { background: rgba(45,106,79,.08); border-color: rgba(45,106,79,.2); color: #1B4332; }
+.miss-chip--fairway .miss-chip-pct { color: #2d6a4f; }
+.miss-chip--penalty, .miss-chip--trees { background: rgba(192,99,90,.06); border-color: rgba(192,99,90,.2); color: #8b2e2e; }
+
+.section-divider { border: none; border-top: 1px solid var(--border, #e2ddd5); margin: 28px 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="analysis-page">
+
+  <a href="{{ url_for('dashboard.index') }}" class="analysis-back">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Dashboard
+  </a>
+
+  <!-- Hero -->
+  <div class="analysis-hero">
+    <div>
+      <div class="analysis-hero-title">
+        <div class="analysis-hero-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L8 8H2l5 4-2 7 7-4 7 4-2-7 5-4h-6z"/>
+          </svg>
+        </div>
+        <h1>Off the Tee</h1>
+      </div>
+      <p class="analysis-hero-sub">Last {{ rounds_count }} rounds &middot; {{ total_tee }} par-4 &amp; par-5 tee shots analysed</p>
+    </div>
+    <div class="analysis-sg-hero">
+      <div class="analysis-sg-label">SG: Off the Tee</div>
+      {% if sg_ott_avg is not none %}
+      <div class="analysis-sg-value {{ sg_color }}">{{ '+' if sg_ott_avg > 0 else '' }}{{ '%.2f'|format(sg_ott_avg) }}</div>
+      <div class="analysis-hcp">
+        {% if hcp_equiv == 'Tour' %}Tour level off the tee
+        {% else %}≈ {{ hcp_equiv }} hcp equivalent{% endif %}
+      </div>
+      {% else %}
+      <div class="analysis-sg-value mid">—</div>
+      <div class="analysis-hcp">Not enough data yet</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- KPI row -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-card-value">{{ fir_pct ~ '%' if fir_pct is not none else '—' }}</div>
+      <div class="kpi-card-label">FIR%</div>
+      <div class="kpi-card-sub">{{ fairways_hit }}/{{ total_fairways }} fairways</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card-value">{{ avg_approach ~ 'y' if avg_approach is not none else '—' }}</div>
+      <div class="kpi-card-label">Avg approach dist</div>
+      <div class="kpi-card-sub">After tee shot</div>
+    </div>
+    <div class="kpi-card">
+      {% set fw_outcome = gir_by_outcome | selectattr('label', 'equalto', 'Fairway') | list %}
+      <div class="kpi-card-value">{{ fw_outcome[0].gir_pct ~ '%' if fw_outcome else '—' }}</div>
+      <div class="kpi-card-label">GIR from fairway</div>
+      <div class="kpi-card-sub">Hit fairway → hit green</div>
+    </div>
+    <div class="kpi-card">
+      {% set miss_outcome = gir_by_outcome | rejectattr('label', 'equalto', 'Fairway') | list %}
+      {% if miss_outcome %}
+        {% set miss_gir_total = miss_outcome | sum(attribute='total') %}
+        {% set miss_gir_hit = miss_outcome | sum(attribute='gir') %}
+        <div class="kpi-card-value">{{ ((miss_gir_hit / miss_gir_total * 100) | round | int) ~ '%' if miss_gir_total else '—' }}</div>
+      {% else %}
+        <div class="kpi-card-value">—</div>
+      {% endif %}
+      <div class="kpi-card-label">GIR from miss</div>
+      <div class="kpi-card-sub">Miss fairway → hit green</div>
+    </div>
+  </div>
+
+  <!-- SG Trend chart -->
+  {% if sg_trend | length >= 2 %}
+  <div class="chart-section">
+    <div class="chart-header">
+      <span class="chart-title">SG: Off the Tee — Rolling Trend</span>
+      <span class="chart-note">18-hole equivalent vs. PGA Tour baseline</span>
+    </div>
+    <div class="chart-card">
+      <canvas id="sgTrendChart" height="100"></canvas>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- FIR trend chart -->
+  {% if fir_trend | length >= 2 %}
+  <div class="chart-section">
+    <div class="chart-header">
+      <span class="chart-title">Fairway Hit Rate — Round by Round</span>
+      <span class="chart-note">% of par-4 &amp; par-5 tee shots finding the fairway</span>
+    </div>
+    <div class="chart-card">
+      <canvas id="firTrendChart" height="90"></canvas>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Tee outcome + Miss direction side by side -->
+  <div class="charts-duo">
+
+    <!-- Miss direction donut -->
+    {% if miss_data %}
+    <div>
+      <div class="chart-header">
+        <span class="chart-title">Tee Shot Outcomes</span>
+      </div>
+      <div class="chart-card" style="padding-bottom:20px">
+        <canvas id="missDonutChart" height="180"></canvas>
+        <div class="miss-chips" style="margin-top:14px">
+          {% for m in miss_data %}
+          <span class="miss-chip miss-chip--{{ m.key }}">
+            {{ m.label }}
+            <span class="miss-chip-pct">{{ m.pct }}%</span>
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- GIR by par type -->
+    {% if gir_by_par %}
+    <div>
+      <div class="chart-header">
+        <span class="chart-title">GIR Rate by Par Type</span>
+      </div>
+      <div class="chart-card">
+        <canvas id="girParChart" height="180"></canvas>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- GIR by tee outcome table -->
+  {% if gir_by_outcome %}
+  <div class="chart-section">
+    <div class="chart-header">
+      <span class="chart-title">Green in Regulation by Tee Outcome</span>
+      <span class="chart-note">How your tee position converts to greens hit</span>
+    </div>
+    <div class="chart-card" style="padding: 0; overflow: hidden;">
+      <table class="outcome-table">
+        <thead>
+          <tr>
+            <th>Tee Outcome</th>
+            <th>Holes</th>
+            <th>GIR</th>
+            <th colspan="2">GIR %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in gir_by_outcome %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.total }}</td>
+            <td>{{ row.gir }}</td>
+            <td>
+              <div class="gir-bar-wrap">
+                <div class="gir-bar-track">
+                  <div class="gir-bar-fill" style="width:{{ row.gir_pct }}%"></div>
+                </div>
+                <span class="gir-pct-val {% if row.gir_pct >= 55 %}high{% elif row.gir_pct >= 35 %}medium{% else %}low{% endif %}">
+                  {{ row.gir_pct }}%
+                </span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const C = {
+    green:      '#2d6a4f',
+    greenLight: 'rgba(45,106,79,0.12)',
+    gold:       '#c9a84c',
+    goldLight:  'rgba(201,168,76,0.12)',
+    red:        '#c0635a',
+    redLight:   'rgba(192,99,90,0.10)',
+    dark:       '#1B4332',
+    border:     '#e2ddd5',
+    muted:      '#888',
+    cream:      '#f8f5ef',
+  };
+
+  Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+  Chart.defaults.font.size   = 11;
+  Chart.defaults.color       = C.muted;
+
+  function zeroPlugin(color) {
+    return {
+      id: 'zeroLine',
+      afterDraw(chart) {
+        const {ctx, chartArea, scales} = chart;
+        if (!scales.y) return;
+        const y = scales.y.getPixelForValue(0);
+        if (y < chartArea.top || y > chartArea.bottom) return;
+        ctx.save();
+        ctx.strokeStyle = color || C.border;
+        ctx.lineWidth   = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(chartArea.left, y);
+        ctx.lineTo(chartArea.right, y);
+        ctx.stroke();
+        ctx.restore();
+      }
+    };
+  }
+
+  {% if sg_trend | length >= 2 %}
+  (function () {
+    const labels = {{ sg_trend | map(attribute='date') | list | tojson }};
+    const data   = {{ sg_trend | map(attribute='value') | list | tojson }};
+    const ctx    = document.getElementById('sgTrendChart');
+    if (!ctx) return;
+    const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
+    gradient.addColorStop(0, C.greenLight);
+    gradient.addColorStop(1, 'rgba(45,106,79,0)');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          borderColor: C.green,
+          backgroundColor: gradient,
+          borderWidth: 2.5,
+          pointBackgroundColor: data.map(v => v >= 0 ? C.green : C.red),
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.3,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.parsed.y;
+                return ` SG: ${v > 0 ? '+' : ''}${v.toFixed(2)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { maxTicksLimit: 10 } },
+          y: {
+            grid: { color: 'rgba(0,0,0,0.04)' },
+            ticks: { callback: v => (v > 0 ? '+' : '') + v.toFixed(1) }
+          }
+        }
+      },
+      plugins: [zeroPlugin('rgba(0,0,0,0.15)')]
+    });
+  }());
+  {% endif %}
+
+  {% if fir_trend | length >= 2 %}
+  (function () {
+    const labels = {{ fir_trend | map(attribute='date') | list | tojson }};
+    const data   = {{ fir_trend | map(attribute='value') | list | tojson }};
+    const ctx    = document.getElementById('firTrendChart');
+    if (!ctx) return;
+    const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 180);
+    gradient.addColorStop(0, C.goldLight);
+    gradient.addColorStop(1, 'rgba(201,168,76,0)');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          borderColor: C.gold,
+          backgroundColor: gradient,
+          borderWidth: 2.5,
+          pointBackgroundColor: C.gold,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.3,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: { label: ctx => ` FIR: ${ctx.parsed.y.toFixed(1)}%` }
+          },
+          annotation: {}
+        },
+        scales: {
+          x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { maxTicksLimit: 10 } },
+          y: {
+            min: 0, max: 100,
+            grid: { color: 'rgba(0,0,0,0.04)' },
+            ticks: { callback: v => v + '%' }
+          }
+        }
+      }
+    });
+  }());
+  {% endif %}
+
+  {% if miss_data %}
+  (function () {
+    const missData = {{ miss_data | tojson }};
+    const palette  = { fairway: C.green, left: C.gold, right: '#a08020', bunker: C.red, penalty: '#8b2e2e', trees: '#6b5e1a' };
+    const ctx = document.getElementById('missDonutChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: missData.map(m => m.label),
+        datasets: [{
+          data:            missData.map(m => m.count),
+          backgroundColor: missData.map(m => palette[m.key] || C.gold),
+          borderColor:     '#fff',
+          borderWidth:     2,
+          hoverBorderWidth: 3,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        cutout: '65%',
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12 } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} shots (${missData[ctx.dataIndex].pct}%)` } }
+        }
+      }
+    });
+  }());
+  {% endif %}
+
+  {% if gir_by_par %}
+  (function () {
+    const gip = {{ gir_by_par | tojson }};
+    const labels = Object.keys(gip).map(p => 'Par ' + p);
+    const vals   = Object.values(gip).map(v => v.gir_pct);
+    const ctx = document.getElementById('girParChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'GIR %',
+          data: vals,
+          backgroundColor: vals.map(v => v >= 55 ? C.green : v >= 35 ? C.gold : C.red),
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` GIR: ${ctx.parsed.y}%` } }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.04)' } }
+        }
+      }
+    });
+  }());
+  {% endif %}
+
+}());
+</script>
+{% endblock %}

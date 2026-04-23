@@ -32,6 +32,7 @@ def create_app(config_name='default'):
     from app.routes.waitlist import waitlist_bp
     from app.routes.admin import admin_bp
     from app.routes.payments import payments_bp
+    from app.routes.analytics import analytics_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -39,6 +40,7 @@ def create_app(config_name='default'):
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
     app.register_blueprint(rounds_bp, url_prefix='/rounds')
     app.register_blueprint(reports_bp, url_prefix='/reports')
+    app.register_blueprint(analytics_bp)
     app.register_blueprint(courses_bp)
     app.register_blueprint(profile_bp, url_prefix='/profile')
     app.register_blueprint(waitlist_bp)

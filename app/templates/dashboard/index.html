@@ -177,6 +177,81 @@
 .sg-delta--down { color: #c0635a; background: rgba(192,99,90,.09); }
 .sg-delta--flat { color: var(--text-muted, #888); background: var(--cream-mid, #ede9e1); }
 
+/* ── Game analysis tiles ────────────────────────────────────── */
+.game-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+@media (max-width: 700px) { .game-tiles { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 420px) { .game-tiles { grid-template-columns: 1fr 1fr; } }
+
+.game-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 18px 16px 14px;
+  background: #fff;
+  border: 1px solid var(--border, #e2ddd5);
+  border-top: 3px solid var(--color-gold, #c9a84c);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--text, #111);
+  transition: box-shadow .2s ease, transform .15s ease, border-top-color .15s;
+  cursor: pointer;
+}
+.game-tile:hover {
+  box-shadow: 0 6px 24px rgba(0,0,0,0.09);
+  transform: translateY(-2px);
+  border-top-color: #1B4332;
+}
+.game-tile-icon {
+  width: 36px; height: 36px;
+  background: rgba(27,67,50,0.07);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.game-tile-icon svg { color: #1B4332; }
+.game-tile-name {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text, #111);
+  margin-bottom: 10px;
+  letter-spacing: -.01em;
+  line-height: 1.2;
+}
+.game-tile-stats { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.game-tile-stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+.game-tile-stat-label { font-size: .67rem; color: var(--text-muted, #888); font-weight: 500; }
+.game-tile-stat-value {
+  font-size: .82rem;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  color: var(--text, #111);
+  white-space: nowrap;
+}
+.game-tile-stat-value.positive { color: #2d6a4f; }
+.game-tile-stat-value.negative { color: #c0635a; }
+.game-tile-cta {
+  margin-top: 12px;
+  font-size: .7rem;
+  font-weight: 600;
+  color: var(--color-gold, #c9a84c);
+  letter-spacing: .03em;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.game-tile:hover .game-tile-cta { color: #1B4332; }
+
 /* ── SG locked row ─────────────────────────────────────────── */
 .sg-row--locked .sg-lbl { color: var(--border, #e2ddd5); }
 .sg-row--locked .sg-val { color: var(--border, #e2ddd5); }
@@ -522,15 +597,157 @@
     </div>
 
     {% if sg_avgs.overall_hcp_equiv and user_is_pro %}
-    <div style="margin-top:14px;padding:12px 16px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
-      <div style="font-size:.8rem;color:var(--text-muted);">Overall playing equivalent</div>
-      <div style="font-size:.95rem;font-weight:700;font-family:'DM Mono',monospace;color:var(--text);">
-        {%- if sg_avgs.overall_hcp_equiv == 'Scratch' -%}Scratch
-        {%- else -%}{{ sg_avgs.overall_hcp_equiv }} hcp{%- endif -%}
+    <div style="margin-top:16px;padding:14px 18px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.22);border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted,#888);margin-bottom:3px;">Playing Equivalent</div>
+        <div style="font-size:.8rem;color:var(--text-muted,#888);line-height:1.4;">Your SG total vs. PGA Tour baseline</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:1.5rem;font-weight:800;font-family:'DM Mono',monospace;color:var(--text,#111);line-height:1.1;">
+          {%- if sg_avgs.overall_hcp_equiv == 'Scratch' -%}Scratch
+          {%- else -%}{{ sg_avgs.overall_hcp_equiv }} hcp{%- endif -%}
+        </div>
       </div>
     </div>
     {% endif %}
 
+  </div>
+  {% endif %}
+
+  <!-- Game analysis tiles — Pro only -->
+  {% if user_is_pro and sg_avgs %}
+  <div class="section">
+    <h2 class="section-title">Analyse Your Game</h2>
+    <p class="stats-note">Deep dive into each area — every stat, every trend, nothing left out</p>
+    <div class="game-tiles">
+
+      <!-- Off the Tee -->
+      {% set ott_list = sg_avgs.categories | selectattr('name', 'equalto', 'Off the Tee') | list %}
+      <a href="{{ url_for('analytics.off_the_tee') }}" class="game-tile">
+        <div class="game-tile-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="20" x2="12" y2="4"/><polyline points="8 8 12 4 16 8"/>
+            <line x1="6" y1="20" x2="18" y2="20"/>
+          </svg>
+        </div>
+        <div class="game-tile-name">Off the Tee</div>
+        <div class="game-tile-stats">
+          {% if stats and stats.fir_pct is not none %}
+          <div class="game-tile-stat">
+            <span class="game-tile-stat-label">FIR%</span>
+            <span class="game-tile-stat-value">{{ stats.fir_pct }}%</span>
+          </div>
+          {% endif %}
+          {% if ott_list %}{% set ott = ott_list[0] %}
+          <div class="game-tile-stat">
+            <span class="game-tile-stat-label">SG: OTT</span>
+            <span class="game-tile-stat-value {% if ott.avg > 0 %}positive{% elif ott.avg < -0.05 %}negative{% endif %}">
+              {{ '+' if ott.avg > 0 else '' }}{{ '%.2f'|format(ott.avg) }}
+            </span>
+          </div>
+          {% endif %}
+        </div>
+        <div class="game-tile-cta">Analyse →</div>
+      </a>
+
+      <!-- Approach -->
+      {% set app_list = sg_avgs.categories | selectattr('name', 'equalto', 'Approach') | list %}
+      <a href="{{ url_for('analytics.approach') }}" class="game-tile">
+        <div class="game-tile-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="game-tile-name">Approach</div>
+        <div class="game-tile-stats">
+          {% if stats and stats.gir_pct is not none %}
+          <div class="game-tile-stat">
+            <span class="game-tile-stat-label">GIR%</span>
+            <span class="game-tile-stat-value">{{ stats.gir_pct }}%</span>
+          </div>
+          {% endif %}
+          {% if app_list %}{% set appc = app_list[0] %}
+          <div class="game-tile-stat">
+            <span class="game-tile-stat-label">SG: App</span>
+            <span class="game-tile-stat-value {% if appc.avg > 0 %}positive{% elif appc.avg < -0.05 %}negative{% endif %}">
+              {{ '+' if appc.avg > 0 else '' }}{{ '%.2f'|format(appc.avg) }}
+            </span>
+          </div>
+          {% endif %}
+        </div>
+        <div class="game-tile-cta">Analyse →</div>
+      </a>
+
+      <!-- Around the Green -->
+      {% set atg_list = sg_avgs.categories | selectattr('name', 'equalto', 'Around the Green') | list %}
+      <a href="{{ url_for('analytics.around_green') }}" class="game-tile">
+        <div class="game-tile-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 17l3-8 3 5 3-3 3 6"/>
+            <circle cx="19" cy="17" r="2"/>
+          </svg>
+        </div>
+        <div class="game-tile-name">Around the Green</div>
+        <div class="game-tile-stats">
+          {% if stats and stats.scramble_pct is not none %}
+          <div class="game-tile-stat">
+            <span class="game-tile-stat-label">Scramble%</span>
+            <span class="game-tile-stat-value">{{ stats.scramble_pct }}%</span>
+          </div>
+          {% endif %}
+          {% if atg_list %}{% set atg = atg_list[0] %}
+          <div class="game-tile-stat">
+            <span class="game-tile-stat-label">SG: ATG</span>
+            <span class="game-tile-stat-value {% if atg.avg > 0 %}positive{% elif atg.avg < -0.05 %}negative{% endif %}">
+              {{ '+' if atg.avg > 0 else '' }}{{ '%.2f'|format(atg.avg) }}
+            </span>
+          </div>
+          {% endif %}
+        </div>
+        <div class="game-tile-cta">Analyse →</div>
+      </a>
+
+      <!-- Putting -->
+      {% set putt_list = sg_avgs.categories | selectattr('name', 'equalto', 'Putting') | list %}
+      <a href="{{ url_for('analytics.putting') }}" class="game-tile">
+        <div class="game-tile-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/>
+            <line x1="12" y1="17.5" x2="12" y2="5"/>
+            <line x1="12" y1="5" x2="18" y2="9"/>
+          </svg>
+        </div>
+        <div class="game-tile-name">Putting</div>
+        <div class="game-tile-stats">
+          {% if stats and stats.putts_per_hole is not none %}
+          <div class="game-tile-stat">
+            <span class="game-tile-stat-label">Putts/hole</span>
+            <span class="game-tile-stat-value">{{ stats.putts_per_hole }}</span>
+          </div>
+          {% endif %}
+          {% if putt_list %}{% set putt = putt_list[0] %}
+          <div class="game-tile-stat">
+            <span class="game-tile-stat-label">SG: Putt</span>
+            <span class="game-tile-stat-value {% if putt.avg > 0 %}positive{% elif putt.avg < -0.05 %}negative{% endif %}">
+              {{ '+' if putt.avg > 0 else '' }}{{ '%.2f'|format(putt.avg) }}
+            </span>
+          </div>
+          {% endif %}
+        </div>
+        <div class="game-tile-cta">Analyse →</div>
+      </a>
+
+    </div>
+  </div>
+  {% elif not user_is_pro and total_complete %}
+  <div class="section">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:8px;font-size:13px;color:var(--text-muted)">
+      <span style="font-size:16px">📊</span>
+      <span>
+        <strong style="color:var(--text)">Deep-dive game analysis</strong> (Off the Tee, Approach, Short Game &amp; Putting) is available with Magnolia Pro.
+        <a href="{{ url_for('main.upgrade') }}" style="color:var(--color-gold,#c9a84c);font-weight:600;text-decoration:none;margin-left:4px">Upgrade →</a>
+      </span>
+    </div>
   </div>
   {% endif %}
 

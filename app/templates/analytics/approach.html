@@ -1,0 +1,360 @@
+{% extends 'base.html' %}
+{% block title %}Approach — Magnolia Analytics{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+.analysis-page { max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+
+.analysis-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .78rem; color: var(--text-muted, #888); text-decoration: none;
+  font-weight: 500; letter-spacing: .02em; margin-bottom: 24px; transition: color .15s;
+}
+.analysis-back:hover { color: var(--text, #111); }
+
+.analysis-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 28px; flex-wrap: wrap; }
+.analysis-hero-title { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.analysis-hero-icon { width: 40px; height: 40px; background: #1B4332; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.analysis-hero h1 { font-size: 1.45rem; font-weight: 800; color: var(--text, #111); margin: 0; line-height: 1.2; }
+.analysis-hero-sub { font-size: .8rem; color: var(--text-muted, #888); margin-top: 2px; }
+
+.analysis-sg-hero { text-align: right; flex-shrink: 0; }
+.analysis-sg-label { font-size: .68rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted, #888); margin-bottom: 4px; }
+.analysis-sg-value { font-size: 2.6rem; font-weight: 800; font-family: 'DM Mono', monospace; line-height: 1; }
+.analysis-sg-value.best  { color: #2d6a4f; }
+.analysis-sg-value.mid   { color: #c9a84c; }
+.analysis-sg-value.worst { color: #c0635a; }
+.analysis-hcp { font-size: .78rem; color: var(--text-muted, #888); margin-top: 3px; }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+@media (max-width: 600px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+.kpi-card { background: #fff; border: 1px solid var(--border, #e2ddd5); border-top: 3px solid #C9A84C; border-radius: 10px; padding: 18px 16px 16px; }
+.kpi-card-value { font-size: 1.6rem; font-weight: 800; font-family: 'DM Mono', monospace; color: var(--text, #111); line-height: 1.1; margin-bottom: 4px; }
+.kpi-card-label { font-size: .7rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted, #888); }
+.kpi-card-sub { font-size: .72rem; color: var(--text-muted, #888); margin-top: 3px; }
+
+.chart-section { margin-bottom: 28px; }
+.chart-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; gap: 10px; }
+.chart-title { font-size: .9rem; font-weight: 700; color: var(--text, #111); }
+.chart-note  { font-size: .72rem; color: var(--text-muted, #888); }
+.chart-card { background: #fff; border: 1px solid var(--border, #e2ddd5); border-radius: 10px; padding: 20px 20px 16px; }
+
+.charts-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+@media (max-width: 640px) { .charts-duo { grid-template-columns: 1fr; } }
+
+.band-table { width: 100%; border-collapse: collapse; }
+.band-table th, .band-table td { text-align: left; padding: 9px 12px; font-size: .8rem; border-bottom: 1px solid var(--border, #e2ddd5); }
+.band-table th { font-weight: 600; color: var(--text-muted, #888); font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; background: #f8f5ef; }
+.band-table td:first-child { font-weight: 600; }
+.band-table tbody tr:last-child td { border-bottom: none; }
+.band-table .num { font-family: 'DM Mono', monospace; font-weight: 600; }
+
+.gir-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.gir-bar-track { flex: 1; height: 5px; background: #ede9e1; border-radius: 999px; overflow: hidden; min-width: 60px; }
+.gir-bar-fill  { height: 100%; border-radius: 999px; }
+.gir-pct-val   { font-family: 'DM Mono', monospace; font-weight: 600; font-size: .8rem; min-width: 36px; }
+
+.miss-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.miss-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: #f8f5ef; border: 1px solid var(--border, #e2ddd5); font-size: .78rem; font-weight: 600; color: var(--text, #111); }
+.miss-chip-pct { font-family: 'DM Mono', monospace; color: var(--text-muted, #888); font-weight: 500; }
+
+.section-divider { border: none; border-top: 1px solid var(--border, #e2ddd5); margin: 28px 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="analysis-page">
+
+  <a href="{{ url_for('dashboard.index') }}" class="analysis-back">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Dashboard
+  </a>
+
+  <!-- Hero -->
+  <div class="analysis-hero">
+    <div>
+      <div class="analysis-hero-title">
+        <div class="analysis-hero-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <h1>Approach</h1>
+      </div>
+      <p class="analysis-hero-sub">Last {{ rounds_count }} rounds &middot; {{ total_gir_holes }} approach shots with distance data</p>
+    </div>
+    <div class="analysis-sg-hero">
+      <div class="analysis-sg-label">SG: Approach</div>
+      {% if sg_app_avg is not none %}
+      <div class="analysis-sg-value {{ sg_color }}">{{ '+' if sg_app_avg > 0 else '' }}{{ '%.2f'|format(sg_app_avg) }}</div>
+      <div class="analysis-hcp">
+        {% if hcp_equiv == 'Tour' %}Tour-level approach play
+        {% else %}≈ {{ hcp_equiv }} hcp equivalent{% endif %}
+      </div>
+      {% else %}
+      <div class="analysis-sg-value mid">—</div>
+      <div class="analysis-hcp">Not enough data yet</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- KPI row -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-card-value">{{ gir_pct ~ '%' if gir_pct is not none else '—' }}</div>
+      <div class="kpi-card-label">GIR%</div>
+      <div class="kpi-card-sub">{{ gir_hit }}/{{ total_gir_holes }} greens in reg.</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card-value">{{ avg_app_dist ~ 'y' if avg_app_dist is not none else '—' }}</div>
+      <div class="kpi-card-label">Avg approach dist</div>
+      <div class="kpi-card-sub">Distance to pin</div>
+    </div>
+    <div class="kpi-card">
+      {% set fw_lie = gir_by_lie | selectattr('label', 'equalto', 'Fairway') | list %}
+      <div class="kpi-card-value">{{ fw_lie[0].gir_pct ~ '%' if fw_lie else '—' }}</div>
+      <div class="kpi-card-label">GIR from fairway</div>
+      <div class="kpi-card-sub">Clean lies → greens</div>
+    </div>
+    <div class="kpi-card">
+      {% set rgh_lie = gir_by_lie | selectattr('label', 'equalto', 'Rough') | list %}
+      <div class="kpi-card-value">{{ rgh_lie[0].gir_pct ~ '%' if rgh_lie else '—' }}</div>
+      <div class="kpi-card-label">GIR from rough</div>
+      <div class="kpi-card-sub">Penalty for missing</div>
+    </div>
+  </div>
+
+  <!-- SG Approach trend -->
+  {% if sg_trend | length >= 2 %}
+  <div class="chart-section">
+    <div class="chart-header">
+      <span class="chart-title">SG: Approach — Rolling Trend</span>
+      <span class="chart-note">18-hole equivalent vs. PGA Tour baseline</span>
+    </div>
+    <div class="chart-card">
+      <canvas id="sgTrendChart" height="100"></canvas>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- GIR by distance band — full width bar chart -->
+  {% if gir_by_distance %}
+  <div class="chart-section">
+    <div class="chart-header">
+      <span class="chart-title">GIR Rate by Distance Band</span>
+      <span class="chart-note">Green in regulation % broken down by approach distance</span>
+    </div>
+    <div class="chart-card">
+      <canvas id="girDistanceChart" height="100"></canvas>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- GIR trend + Miss direction -->
+  <div class="charts-duo">
+
+    {% if gir_trend | length >= 2 %}
+    <div>
+      <div class="chart-header">
+        <span class="chart-title">GIR% — Round by Round</span>
+      </div>
+      <div class="chart-card">
+        <canvas id="girTrendChart" height="180"></canvas>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if miss_data %}
+    <div>
+      <div class="chart-header">
+        <span class="chart-title">Miss Direction</span>
+      </div>
+      <div class="chart-card">
+        <canvas id="missChart" height="180"></canvas>
+        <div class="miss-chips">
+          {% for m in miss_data %}
+          <span class="miss-chip">{{ m.label }} <span class="miss-chip-pct">{{ m.pct }}%</span></span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- GIR by distance band table -->
+  {% if gir_by_distance %}
+  <div class="chart-section">
+    <div class="chart-header">
+      <span class="chart-title">Distance Band Breakdown</span>
+      <span class="chart-note">Full detail: attempts, greens hit, and GIR% per range</span>
+    </div>
+    <div class="chart-card" style="padding: 0; overflow: hidden;">
+      <table class="band-table">
+        <thead>
+          <tr>
+            <th>Distance</th>
+            <th>Shots</th>
+            <th>GIR</th>
+            <th colspan="2">GIR %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for band in gir_by_distance %}
+          <tr>
+            <td>{{ band.label }}</td>
+            <td class="num">{{ band.attempts }}</td>
+            <td class="num">{{ band.gir }}</td>
+            <td>
+              <div class="gir-bar-wrap">
+                <div class="gir-bar-track">
+                  <div class="gir-bar-fill" style="width:{{ band.gir_pct }}%; background: {% if band.gir_pct >= 60 %}#2d6a4f{% elif band.gir_pct >= 40 %}#c9a84c{% else %}#c0635a{% endif %};"></div>
+                </div>
+                <span class="gir-pct-val" style="color: {% if band.gir_pct >= 60 %}#2d6a4f{% elif band.gir_pct >= 40 %}#c9a84c{% else %}#c0635a{% endif %}">{{ band.gir_pct }}%</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const C = {
+    green: '#2d6a4f', greenLight: 'rgba(45,106,79,0.12)',
+    gold:  '#c9a84c', goldLight:  'rgba(201,168,76,0.12)',
+    red:   '#c0635a', redLight:   'rgba(192,99,90,0.10)',
+    border: '#e2ddd5', muted: '#888',
+  };
+  Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+  Chart.defaults.font.size   = 11;
+  Chart.defaults.color       = C.muted;
+
+  function zeroPlugin() {
+    return {
+      id: 'zeroLine',
+      afterDraw(chart) {
+        const {ctx, chartArea, scales} = chart;
+        if (!scales.y) return;
+        const y = scales.y.getPixelForValue(0);
+        if (y < chartArea.top || y > chartArea.bottom) return;
+        ctx.save(); ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1;
+        ctx.setLineDash([4,4]); ctx.beginPath();
+        ctx.moveTo(chartArea.left, y); ctx.lineTo(chartArea.right, y);
+        ctx.stroke(); ctx.restore();
+      }
+    };
+  }
+
+  {% if sg_trend | length >= 2 %}
+  (function () {
+    const labels = {{ sg_trend | map(attribute='date') | list | tojson }};
+    const data   = {{ sg_trend | map(attribute='value') | list | tojson }};
+    const ctx    = document.getElementById('sgTrendChart');
+    if (!ctx) return;
+    const g = ctx.getContext('2d').createLinearGradient(0,0,0,200);
+    g.addColorStop(0, C.goldLight); g.addColorStop(1,'rgba(201,168,76,0)');
+    new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [{ data, borderColor: C.gold, backgroundColor: g, borderWidth: 2.5,
+        pointBackgroundColor: data.map(v => v >= 0 ? C.green : C.red), pointRadius: 4, pointHoverRadius: 6, tension: 0.3, fill: true }] },
+      options: { responsive: true, plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => ` SG: ${c.parsed.y > 0 ? '+' : ''}${c.parsed.y.toFixed(2)}` } } },
+        scales: { x: { grid: { color:'rgba(0,0,0,0.04)' }, ticks: { maxTicksLimit:10 } },
+          y: { grid: { color:'rgba(0,0,0,0.04)' }, ticks: { callback: v => (v>0?'+':'')+v.toFixed(1) } } } },
+      plugins: [zeroPlugin()]
+    });
+  }());
+  {% endif %}
+
+  {% if gir_by_distance %}
+  (function () {
+    const bands = {{ gir_by_distance | tojson }};
+    const ctx   = document.getElementById('girDistanceChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: bands.map(b => b.label),
+        datasets: [{
+          label: 'GIR %',
+          data: bands.map(b => b.gir_pct),
+          backgroundColor: bands.map(b => b.gir_pct >= 60 ? C.green : b.gir_pct >= 40 ? C.gold : C.red),
+          borderRadius: 6, borderSkipped: false,
+        }, {
+          label: 'Attempts',
+          data: bands.map(b => 0),   // invisible — just for tooltip context
+          backgroundColor: 'transparent',
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const b = bands[ctx.dataIndex];
+                return ` GIR: ${b.gir_pct}% (${b.gir}/${b.attempts} shots)`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(0,0,0,0.04)' } }
+        }
+      }
+    });
+  }());
+  {% endif %}
+
+  {% if gir_trend | length >= 2 %}
+  (function () {
+    const labels = {{ gir_trend | map(attribute='date') | list | tojson }};
+    const data   = {{ gir_trend | map(attribute='value') | list | tojson }};
+    const ctx    = document.getElementById('girTrendChart');
+    if (!ctx) return;
+    const g = ctx.getContext('2d').createLinearGradient(0,0,0,200);
+    g.addColorStop(0, C.greenLight); g.addColorStop(1,'rgba(45,106,79,0)');
+    new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [{ data, borderColor: C.green, backgroundColor: g, borderWidth: 2.5,
+        pointBackgroundColor: C.green, pointRadius: 4, tension: 0.3, fill: true }] },
+      options: { responsive: true, plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => ` GIR: ${c.parsed.y.toFixed(1)}%` } } },
+        scales: { x: { grid: { color:'rgba(0,0,0,0.04)' }, ticks: { maxTicksLimit: 8 } },
+          y: { min: 0, max: 100, ticks: { callback: v => v+'%' }, grid: { color:'rgba(0,0,0,0.04)' } } } }
+    });
+  }());
+  {% endif %}
+
+  {% if miss_data %}
+  (function () {
+    const m = {{ miss_data | tojson }};
+    const palette = ['#c0635a','#c9a84c','#2d6a4f','#8b2e2e','#a08020'];
+    const ctx = document.getElementById('missChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels: m.map(x => x.label), datasets: [{ data: m.map(x => x.count),
+        backgroundColor: m.map((_,i) => palette[i % palette.length]), borderColor:'#fff', borderWidth:2 }] },
+      options: { responsive: true, maintainAspectRatio: true, cutout: '65%',
+        plugins: { legend: { position:'bottom', labels:{ boxWidth:10, padding:12 } },
+          tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed} (${m[c.dataIndex].pct}%)` } } } }
+    });
+  }());
+  {% endif %}
+}());
+</script>
+{% endblock %}

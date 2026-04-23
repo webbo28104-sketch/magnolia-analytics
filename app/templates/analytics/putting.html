@@ -1,0 +1,322 @@
+{% extends 'base.html' %}
+{% block title %}Putting — Magnolia Analytics{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+.analysis-page { max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+.analysis-back { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; color: var(--text-muted, #888); text-decoration: none; font-weight: 500; letter-spacing: .02em; margin-bottom: 24px; transition: color .15s; }
+.analysis-back:hover { color: var(--text, #111); }
+.analysis-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 28px; flex-wrap: wrap; }
+.analysis-hero-title { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.analysis-hero-icon { width: 40px; height: 40px; background: #1B4332; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.analysis-hero h1 { font-size: 1.45rem; font-weight: 800; color: var(--text, #111); margin: 0; line-height: 1.2; }
+.analysis-hero-sub { font-size: .8rem; color: var(--text-muted, #888); margin-top: 2px; }
+.analysis-sg-hero { text-align: right; flex-shrink: 0; }
+.analysis-sg-label { font-size: .68rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted, #888); margin-bottom: 4px; }
+.analysis-sg-value { font-size: 2.6rem; font-weight: 800; font-family: 'DM Mono', monospace; line-height: 1; }
+.analysis-sg-value.best  { color: #2d6a4f; }
+.analysis-sg-value.mid   { color: #c9a84c; }
+.analysis-sg-value.worst { color: #c0635a; }
+.analysis-hcp { font-size: .78rem; color: var(--text-muted, #888); margin-top: 3px; }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+@media (max-width: 600px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+.kpi-card { background: #fff; border: 1px solid var(--border, #e2ddd5); border-top: 3px solid #C9A84C; border-radius: 10px; padding: 18px 16px 16px; }
+.kpi-card-value { font-size: 1.6rem; font-weight: 800; font-family: 'DM Mono', monospace; color: var(--text, #111); line-height: 1.1; margin-bottom: 4px; }
+.kpi-card-value.good  { color: #2d6a4f; }
+.kpi-card-value.bad   { color: #c0635a; }
+.kpi-card-label { font-size: .7rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted, #888); }
+.kpi-card-sub { font-size: .72rem; color: var(--text-muted, #888); margin-top: 3px; }
+
+.chart-section { margin-bottom: 28px; }
+.chart-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; gap: 10px; }
+.chart-title { font-size: .9rem; font-weight: 700; color: var(--text, #111); }
+.chart-note  { font-size: .72rem; color: var(--text-muted, #888); }
+.chart-card { background: #fff; border: 1px solid var(--border, #e2ddd5); border-radius: 10px; padding: 20px 20px 16px; }
+
+.charts-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+@media (max-width: 640px) { .charts-duo { grid-template-columns: 1fr; } }
+.section-divider { border: none; border-top: 1px solid var(--border, #e2ddd5); margin: 28px 0; }
+
+/* Band detail table */
+.band-table { width: 100%; border-collapse: collapse; }
+.band-table th, .band-table td { text-align: left; padding: 9px 12px; font-size: .8rem; border-bottom: 1px solid var(--border, #e2ddd5); }
+.band-table th { font-weight: 600; color: var(--text-muted, #888); font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; background: #f8f5ef; }
+.band-table td:first-child { font-weight: 600; }
+.band-table tbody tr:last-child td { border-bottom: none; }
+.band-table .num { font-family: 'DM Mono', monospace; font-weight: 600; }
+.band-table .sg-pos { color: #2d6a4f; font-family: 'DM Mono', monospace; font-weight: 600; }
+.band-table .sg-neg { color: #c0635a; font-family: 'DM Mono', monospace; font-weight: 600; }
+
+.bar-wrap { display: flex; align-items: center; gap: 8px; }
+.bar-track { flex: 1; height: 5px; background: #ede9e1; border-radius: 999px; overflow: hidden; min-width: 60px; }
+.bar-fill  { height: 100%; border-radius: 999px; }
+.bar-val   { font-family: 'DM Mono', monospace; font-weight: 600; font-size: .8rem; min-width: 36px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="analysis-page">
+
+  <a href="{{ url_for('dashboard.index') }}" class="analysis-back">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Dashboard
+  </a>
+
+  <!-- Hero -->
+  <div class="analysis-hero">
+    <div>
+      <div class="analysis-hero-title">
+        <div class="analysis-hero-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="20" r="1"/><path d="M12 4v12"/><path d="M12 4l6 4"/><path d="M6 8l6-4"/>
+          </svg>
+        </div>
+        <h1>Putting</h1>
+      </div>
+      <p class="analysis-hero-sub">Last {{ rounds_count }} rounds &middot; {{ total_putt_holes }} holes with putt data</p>
+    </div>
+    <div class="analysis-sg-hero">
+      <div class="analysis-sg-label">SG: Putting</div>
+      {% if sg_putt_avg is not none %}
+      <div class="analysis-sg-value {{ sg_color }}">{{ '+' if sg_putt_avg > 0 else '' }}{{ '%.2f'|format(sg_putt_avg) }}</div>
+      <div class="analysis-hcp">
+        {% if hcp_equiv == 'Tour' %}Tour-level putting
+        {% else %}≈ {{ hcp_equiv }} hcp equivalent{% endif %}
+      </div>
+      {% else %}
+      <div class="analysis-sg-value mid">—</div>
+      <div class="analysis-hcp">Not enough data yet</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- KPI row -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-card-value">{{ putts_per_hole or '—' }}</div>
+      <div class="kpi-card-label">Putts / hole</div>
+      <div class="kpi-card-sub">18-hole equiv: {{ (putts_per_hole * 18) | round(1) if putts_per_hole else '—' }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card-value {% if make_pct_6ft is not none %}{% if make_pct_6ft >= 90 %}good{% elif make_pct_6ft < 75 %}bad{% endif %}{% endif %}">
+        {{ make_pct_6ft ~ '%' if make_pct_6ft is not none else '—' }}
+      </div>
+      <div class="kpi-card-label">Make % inside 6 ft</div>
+      <div class="kpi-card-sub">{{ makes_6ft }}/{{ total_6ft }} made</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card-value {% if three_putt_pct is not none %}{% if three_putt_pct <= 5 %}good{% elif three_putt_pct >= 15 %}bad{% endif %}{% endif %}">
+        {{ three_putt_pct ~ '%' if three_putt_pct is not none else '—' }}
+      </div>
+      <div class="kpi-card-label">3-putt rate</div>
+      <div class="kpi-card-sub">{{ three_putt_holes }} three-putts</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card-value {% if one_putt_pct is not none %}{% if one_putt_pct >= 35 %}good{% endif %}{% endif %}">
+        {{ one_putt_pct ~ '%' if one_putt_pct is not none else '—' }}
+      </div>
+      <div class="kpi-card-label">1-putt rate</div>
+      <div class="kpi-card-sub">{{ one_putt_holes }} one-putts</div>
+    </div>
+  </div>
+
+  <!-- SG Putting trend -->
+  {% if sg_trend | length >= 2 %}
+  <div class="chart-section">
+    <div class="chart-header">
+      <span class="chart-title">SG: Putting — Rolling Trend</span>
+      <span class="chart-note">18-hole equivalent vs. PGA Tour baseline</span>
+    </div>
+    <div class="chart-card">
+      <canvas id="sgTrendChart" height="100"></canvas>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Make% by distance band — primary insight chart -->
+  {% if band_data %}
+  <div class="chart-section">
+    <div class="chart-header">
+      <span class="chart-title">Make % by Distance Band</span>
+      <span class="chart-note">One-putt rate from each distance range — this is your putting fingerprint</span>
+    </div>
+    <div class="chart-card">
+      <canvas id="makePctChart" height="100"></canvas>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Putting distribution + Putts trend -->
+  <div class="charts-duo">
+
+    <div>
+      <div class="chart-header">
+        <span class="chart-title">Putting Distribution</span>
+        <span class="chart-note">Holes by putt count</span>
+      </div>
+      <div class="chart-card">
+        <canvas id="puttDistChart" height="190"></canvas>
+      </div>
+    </div>
+
+    {% if putts_trend | length >= 2 %}
+    <div>
+      <div class="chart-header">
+        <span class="chart-title">Putts per Round — Trend</span>
+        <span class="chart-note">18-hole equivalent</span>
+      </div>
+      <div class="chart-card">
+        <canvas id="puttsTrendChart" height="190"></canvas>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- Band detail table -->
+  {% if band_data %}
+  <div class="chart-section">
+    <div class="chart-header">
+      <span class="chart-title">Distance Band Detail</span>
+      <span class="chart-note">Attempts, make rate, avg putts, and SG per band</span>
+    </div>
+    <div class="chart-card" style="padding: 0; overflow: hidden;">
+      <table class="band-table">
+        <thead>
+          <tr>
+            <th>Distance</th>
+            <th>Attempts</th>
+            <th>Makes</th>
+            <th colspan="2">Make %</th>
+            <th>Avg putts</th>
+            <th>SG total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for band in band_data %}
+          <tr>
+            <td>{{ band.label }}</td>
+            <td class="num">{{ band.attempts }}</td>
+            <td class="num">{{ band.makes }}</td>
+            <td>
+              <div class="bar-wrap">
+                <div class="bar-track">
+                  <div class="bar-fill" style="width:{{ band.make_pct }}%; background: {% if band.make_pct >= 80 %}#2d6a4f{% elif band.make_pct >= 50 %}#c9a84c{% else %}#c0635a{% endif %};"></div>
+                </div>
+                <span class="bar-val" style="color: {% if band.make_pct >= 80 %}#2d6a4f{% elif band.make_pct >= 50 %}#c9a84c{% else %}#c0635a{% endif %}">{{ band.make_pct }}%</span>
+              </div>
+            </td>
+            <td class="num">{{ band.avg_putts }}</td>
+            <td class="{% if band.sg >= 0 %}sg-pos{% else %}sg-neg{% endif %}">{{ '+' if band.sg >= 0 else '' }}{{ band.sg }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Summary context callout -->
+  {% if avg_fpd %}
+  <div style="padding:16px 20px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:10px;font-size:.84rem;line-height:1.6;color:var(--text)">
+    <strong style="color:var(--text)">Your average first-putt distance is {{ avg_fpd }} ft.</strong>
+    {% if avg_fpd <= 18 %}
+    That's solid position off the green — you're giving yourself makeable looks.
+    {% elif avg_fpd <= 28 %}
+    At that length you're often two-putting — focus on lag putts and 3-putt avoidance.
+    {% else %}
+    Longer first putts suggest approach misses are costing distance to the pin. Combine this with your approach data.
+    {% endif %}
+  </div>
+  {% endif %}
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const C = {
+    green: '#2d6a4f', greenLight: 'rgba(45,106,79,0.12)',
+    gold:  '#c9a84c', goldLight:  'rgba(201,168,76,0.12)',
+    red:   '#c0635a', redLight:   'rgba(192,99,90,0.10)',
+    border: '#e2ddd5', muted: '#888',
+  };
+  Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+  Chart.defaults.font.size   = 11;
+  Chart.defaults.color       = C.muted;
+
+  function zeroPlugin() {
+    return { id:'zl', afterDraw(ch) {
+      const {ctx,chartArea,scales}=ch; if(!scales.y)return;
+      const y=scales.y.getPixelForValue(0);
+      if(y<chartArea.top||y>chartArea.bottom)return;
+      ctx.save();ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;
+      ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(chartArea.left,y);ctx.lineTo(chartArea.right,y);ctx.stroke();ctx.restore();
+    }};
+  }
+
+  {% if sg_trend | length >= 2 %}
+  (function(){
+    const labels={{sg_trend|map(attribute='date')|list|tojson}};
+    const data  ={{sg_trend|map(attribute='value')|list|tojson}};
+    const ctx=document.getElementById('sgTrendChart'); if(!ctx)return;
+    const g=ctx.getContext('2d').createLinearGradient(0,0,0,200);
+    g.addColorStop(0,C.greenLight);g.addColorStop(1,'rgba(45,106,79,0)');
+    new Chart(ctx,{type:'line',data:{labels,datasets:[{data,borderColor:C.green,backgroundColor:g,borderWidth:2.5,
+      pointBackgroundColor:data.map(v=>v>=0?C.green:C.red),pointRadius:4,pointHoverRadius:6,tension:0.3,fill:true}]},
+      options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` SG: ${c.parsed.y>0?'+':''}${c.parsed.y.toFixed(2)}`}}},
+      scales:{x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{maxTicksLimit:10}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{callback:v=>(v>0?'+':'')+v.toFixed(1)}}}},plugins:[zeroPlugin()]});
+  }());
+  {% endif %}
+
+  {% if band_data %}
+  (function(){
+    const bands={{band_data|tojson}};
+    const ctx=document.getElementById('makePctChart'); if(!ctx)return;
+    new Chart(ctx,{type:'bar',data:{labels:bands.map(b=>b.label),datasets:[{label:'Make %',
+      data:bands.map(b=>b.make_pct),
+      backgroundColor:bands.map(b=>b.make_pct>=80?C.green:b.make_pct>=50?C.gold:C.red),
+      borderRadius:6,borderSkipped:false}]},
+      options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{
+        const b=bands[c.dataIndex]; return ` Make: ${b.make_pct}% (${b.makes}/${b.attempts})`;
+      }}}},scales:{x:{grid:{display:false}},
+        y:{min:0,max:100,ticks:{callback:v=>v+'%'},grid:{color:'rgba(0,0,0,0.04)'}},},}});
+  }());
+  {% endif %}
+
+  (function(){
+    const dist = {{ putt_dist | tojson }};
+    const labels=['1 putt','2 putts','3 putts','4+ putts'];
+    const data=[dist[1]||0,dist[2]||0,dist[3]||0,dist['4+']||0];
+    const ctx=document.getElementById('puttDistChart'); if(!ctx)return;
+    new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,
+      backgroundColor:[C.green,C.gold,'#c9a84c88',C.red],borderColor:'#fff',borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:true,cutout:'62%',
+        plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:10}},
+          tooltip:{callbacks:{label:c=>{const total=data.reduce((a,b)=>a+b,0);return ` ${c.label}: ${c.parsed} holes (${Math.round(c.parsed/total*100)}%)`;}}}}
+      }});
+  }());
+
+  {% if putts_trend | length >= 2 %}
+  (function(){
+    const labels={{putts_trend|map(attribute='date')|list|tojson}};
+    const data  ={{putts_trend|map(attribute='value')|list|tojson}};
+    const ctx=document.getElementById('puttsTrendChart'); if(!ctx)return;
+    const g=ctx.getContext('2d').createLinearGradient(0,0,0,200);
+    g.addColorStop(0,C.goldLight);g.addColorStop(1,'rgba(201,168,76,0)');
+    new Chart(ctx,{type:'line',data:{labels,datasets:[{data,borderColor:C.gold,backgroundColor:g,
+      borderWidth:2.5,pointBackgroundColor:C.gold,pointRadius:4,tension:0.3,fill:true}]},
+      options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` Putts: ${c.parsed.y.toFixed(1)}`}}},
+      scales:{x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{maxTicksLimit:8}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{stepSize:1}}}}});
+  }());
+  {% endif %}
+}());
+</script>
+{% endblock %}
