@@ -262,7 +262,17 @@ function saveState() {
   }
 
   setHidden('putts', putts.length);
-  if (putts.length) setHidden('first_putt_distance', putts[0].putt_distance || '');
+  // first_putt_distance = distance before the first putting-type shot.
+  // If the only putt is a gimme, use its gimme_distance (ATG/Approach SG
+  // needs to know where the ball was left — the conceded distance).
+  const firstPutt = putts.length > 0 ? putts[0] : null;
+  let firstPuttDist = '';
+  if (firstPutt) {
+    firstPuttDist = firstPutt.type === 'gimme'
+      ? (firstPutt.gimme_distance || 3)   // 3 ft standard gimme distance
+      : (firstPutt.putt_distance  || '');
+  }
+  setHidden('first_putt_distance', firstPuttDist);
   const lastPutt = putts.length > 0 ? putts[putts.length - 1] : null;
   setHidden('last_putt_gimme', (lastPutt && lastPutt.type === 'gimme') ? 'true' : '');
   setHidden('gimme_distance', (lastPutt && lastPutt.type === 'gimme' && lastPutt.gimme_distance) ? lastPutt.gimme_distance : '');

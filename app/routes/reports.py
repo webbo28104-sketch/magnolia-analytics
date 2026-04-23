@@ -16,6 +16,7 @@ from app.utils.strokes_gained import (
     _tee_shot_lie,
     _parse_yards,
 )
+import json as _json
 from app.utils.round_stats import build_course_hole_map
 from app.utils.personal_bests import check_recent_personal_best
 from app.services.weather_service import get_round_weather
@@ -388,6 +389,122 @@ def _scoring_by_par_type(holes_data: list) -> dict:
     return result
 
 
+def _build_shot_circles(h, course_hole_map: dict) -> list:
+    """
+    Build a per-shot SG circle list from shots_json using the telescoping Broadie formula.
+
+    Each circle dict:
+      label     – display label (OTT / App / ATG / Putt / Gimme)
+      sg        – float or None (None = gimme, shown as grey 0.00)
+      is_gimme  – bool
+      detail    – short descriptor string for the popover
+
+    Falls back to [] if shots_json is missing or unparseable — the caller
+    then falls through to the legacy aggregate dots.
+    """
+    STANDARD_GIMME_FT = 3
+
+    try:
+        shots = _json.loads(h.shots_json or '[]')
+    except (ValueError, TypeError):
+        return []
+    if not shots:
+        return []
+
+    ch           = course_hole_map.get(h.hole_number)
+    hole_yardage = ch.yardage if (ch and ch.yardage) else None
+    circles      = []
+
+    def _exp_end(i):
+        """Expected strokes from the end position of shots[i] = start of shots[i+1]."""
+        if i + 1 >= len(shots):
+            return 0.0          # ball is in the hole
+        nxt = shots[i + 1]
+        t   = nxt.get('type')
+        if t == 'gimme':
+            d = nxt.get('gimme_distance') or STANDARD_GIMME_FT
+            return expected_putts(float(d))
+        if t == 'putt':
+            d = nxt.get('putt_distance')
+            return expected_putts(float(d)) if d else None
+        if t == 'app':
+            d = nxt.get('distance')
+            if d:
+                lie = _tee_shot_lie(h.tee_shot) if h.tee_shot else 'fairway'
+                return expected_approach(float(d), lie)
+            return None
+        if t == 'atg':
+            d   = nxt.get('distance')
+            lie = nxt.get('lie') or 'rough'
+            return expected_scramble(float(d), lie) if d else None
+        return None
+
+    for i, shot in enumerate(shots):
+        t = shot.get('type')
+
+        if t == 'gimme':
+            gd = shot.get('gimme_distance')
+            circles.append({
+                'label':    'Gimme',
+                'sg':       None,
+                'is_gimme': True,
+                'detail':   f"Conceded at {gd}ft" if gd else "Conceded (≤3ft)",
+            })
+
+        elif t == 'ott':
+            if not hole_yardage:
+                continue
+            exp_end = _exp_end(i)
+            if exp_end is None:
+                continue
+            sg = round(expected_ott(hole_yardage) - 1 - exp_end, 3)
+            outcome = h.tee_shot or 'Tee shot'
+            circles.append({'label': 'OTT', 'sg': sg, 'is_gimme': False,
+                             'detail': outcome.replace(',', ' ').title()})
+
+        elif t == 'app':
+            d = shot.get('distance')
+            if not d:
+                continue
+            # Lie: after OTT use tee-shot lie; otherwise shot's own lie
+            prev = shots[i - 1] if i > 0 else None
+            if prev and prev.get('type') == 'ott':
+                lie = _tee_shot_lie(h.tee_shot) if h.tee_shot else 'fairway'
+            else:
+                lie = shot.get('lie') or 'fairway'
+            exp_end = _exp_end(i)
+            if exp_end is None:
+                continue
+            sg = round(expected_approach(float(d), lie) - 1 - exp_end, 3)
+            circles.append({'label': 'App', 'sg': sg, 'is_gimme': False,
+                             'detail': f"{d}y"})
+
+        elif t == 'atg':
+            d   = shot.get('distance')
+            lie = shot.get('lie') or 'rough'
+            if not d:
+                continue
+            exp_end = _exp_end(i)
+            if exp_end is None:
+                continue
+            sg = round(expected_scramble(float(d), lie) - 1 - exp_end, 3)
+            circles.append({'label': 'ATG', 'sg': sg, 'is_gimme': False,
+                             'detail': f"{d}y · {lie}"})
+
+        elif t == 'putt':
+            d = shot.get('putt_distance')
+            if not d:
+                continue    # no distance — can't compute individual SG
+            exp_end = _exp_end(i)
+            if exp_end is None:
+                continue
+            sg = round(expected_putts(float(d)) - 1 - exp_end, 3)
+            circles.append({'label': 'Putt', 'sg': sg, 'is_gimme': False,
+                             'detail': f"{d}ft"})
+
+    return circles
+
+
 def _per_hole_sg(holes, course_hole_map: dict) -> list:
     """Compute per-hole SG values for putting, approach, off-the-tee, and ATG.
     Returns list of dicts keyed by hole_number; values are None when not computable."""
@@ -395,24 +512,37 @@ def _per_hole_sg(holes, course_hole_map: dict) -> list:
     for h in holes:
         ch = course_hole_map.get(h.hole_number)
         row: dict = {
-            'hole_number': h.hole_number,
-            'par':         h.par,
-            'sg_putt':     None,
-            'sg_ott':      None,
-            'sg_approach': None,
-            'sg_atg':      None,
+            'hole_number':  h.hole_number,
+            'par':          h.par,
+            'sg_putt':      None,
+            'sg_ott':       None,
+            'sg_approach':  None,
+            'sg_atg':       None,
+            'shot_circles': [],
         }
 
+        # Gimme helpers — first_putt_distance may be blank on legacy gimme holes
+        is_gimme  = getattr(h, 'last_putt_gimme', False)
+        gimme_d   = getattr(h, 'gimme_distance', None) or 3
+        # Effective first-putt distance: stored value, or gimme distance fallback
+        fpd = h.first_putt_distance or (gimme_d if is_gimme else None)
+
         # SG: Putting
-        if h.first_putt_distance and h.putts:
-            row['sg_putt'] = round(expected_putts(h.first_putt_distance) - h.putts, 3)
+        if fpd and h.putts:
+            if is_gimme:
+                actual = h.putts - 1
+                if actual > 0:
+                    row['sg_putt'] = round(
+                        expected_putts(fpd) - actual - expected_putts(gimme_d), 3)
+            else:
+                row['sg_putt'] = round(expected_putts(fpd) - h.putts, 3)
 
         # SG: Off the Tee (par 4/5 only)
         if h.par in (4, 5) and h.tee_shot:
-            lie      = _tee_shot_lie(h.tee_shot)
+            lie       = _tee_shot_lie(h.tee_shot)
             remaining = (h.approach_distance if h.par == 4
                          else _parse_yards(h.second_shot_distance))
-            yardage  = ch.yardage if (ch and ch.yardage) else None
+            yardage   = ch.yardage if (ch and ch.yardage) else None
             if yardage and remaining:
                 row['sg_ott'] = round(
                     expected_ott(yardage) - 1 - expected_approach(remaining, lie), 3)
@@ -425,22 +555,25 @@ def _per_hole_sg(holes, course_hole_map: dict) -> list:
 
         if h.par == 3 and dist:
             exp_start = expected_approach(dist, 'fairway')
-            if h.gir and h.first_putt_distance:
-                row['sg_approach'] = round(exp_start - 1 - expected_putts(h.first_putt_distance), 3)
+            if h.gir and fpd:
+                row['sg_approach'] = round(exp_start - 1 - expected_putts(fpd), 3)
             elif not h.gir and sdist:
                 row['sg_approach'] = round(exp_start - 1 - expected_scramble(sdist, atg_lie), 3)
         elif h.par in (4, 5):
-            if h.gir and dist and h.first_putt_distance:
+            if h.gir and dist and fpd:
                 row['sg_approach'] = round(
-                    expected_approach(dist, lie) - 1 - expected_putts(h.first_putt_distance), 3)
+                    expected_approach(dist, lie) - 1 - expected_putts(fpd), 3)
             elif not h.gir and dist and sdist:
                 row['sg_approach'] = round(
                     expected_approach(dist, lie) - 1 - expected_scramble(sdist, atg_lie), 3)
 
         # SG: Around the Green (GIR misses only)
-        if not h.gir and sdist and h.first_putt_distance:
+        if not h.gir and sdist and fpd:
             row['sg_atg'] = round(
-                expected_scramble(sdist, atg_lie) - 1 - expected_putts(h.first_putt_distance), 3)
+                expected_scramble(sdist, atg_lie) - 1 - expected_putts(fpd), 3)
+
+        # Per-shot circles from shots_json (used in template)
+        row['shot_circles'] = _build_shot_circles(h, course_hole_map)
 
         result.append(row)
     return result

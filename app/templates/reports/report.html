@@ -620,14 +620,17 @@ body::before {
 }
 .sg-dot:hover { transform:scale(1.12); box-shadow:0 2px 10px rgba(0,0,0,0.4); }
 .sg-dot:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
-.sg-dot-pos { background:rgba(74,158,107,0.28); border:1.5px solid rgba(74,158,107,0.55); }
-.sg-dot-neg { background:rgba(232,160,144,0.28); border:1.5px solid rgba(232,160,144,0.55); }
+.sg-dot-pos   { background:rgba(74,158,107,0.28); border:1.5px solid rgba(74,158,107,0.55); }
+.sg-dot-neg   { background:rgba(232,160,144,0.28); border:1.5px solid rgba(232,160,144,0.55); }
+.sg-dot-gimme { background:rgba(160,160,160,0.15); border:1.5px solid rgba(160,160,160,0.35); }
 .sg-dot-label { font-size:7px; letter-spacing:.05em; text-transform:uppercase; line-height:1; }
-.sg-dot-pos .sg-dot-label { color:var(--green-soft); }
-.sg-dot-neg .sg-dot-label { color:var(--red-soft); }
+.sg-dot-pos   .sg-dot-label { color:var(--green-soft); }
+.sg-dot-neg   .sg-dot-label { color:var(--red-soft); }
+.sg-dot-gimme .sg-dot-label { color:rgba(180,180,180,0.7); }
 .sg-dot-val { font-family:'Inter',system-ui,sans-serif; font-size:9px; font-weight:700; line-height:1; }
-.sg-dot-pos .sg-dot-val { color:var(--green-soft); }
-.sg-dot-neg .sg-dot-val { color:var(--red-soft); }
+.sg-dot-pos   .sg-dot-val { color:var(--green-soft); }
+.sg-dot-neg   .sg-dot-val { color:var(--red-soft); }
+.sg-dot-gimme .sg-dot-val { color:rgba(180,180,180,0.7); }
 .sg-det-panel {
   display:none; position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%);
   background:var(--forest-light); border:1px solid var(--border-mid); border-radius:5px;
@@ -1943,7 +1946,7 @@ body::before {
   <div class="sg-hbyh-wrap fu d7">
     {% for h in holes_data %}
     {% set _hsg = hole_sg_by_num.get(h.hole_number, {}) %}
-    {% set _has_any = _hsg.get('sg_ott') is not none or _hsg.get('sg_approach') is not none or _hsg.get('sg_atg') is not none or _hsg.get('sg_putt') is not none %}
+    {% set _has_any = _hsg.get('shot_circles') or _hsg.get('sg_ott') is not none or _hsg.get('sg_approach') is not none or _hsg.get('sg_atg') is not none or _hsg.get('sg_putt') is not none %}
     {% if _has_any %}
     {% set _htot = _hsg.get('sg_hole_total') %}
     {% set _hhist = historical_hole_sg.get(h.hole_number) %}
@@ -1955,7 +1958,49 @@ body::before {
       </div>
       <div class="sg-dots-row">
 
-        {# OTT dot — par 4/5 only #}
+        {# ── Per-shot circles (shots_json path) ───────────────────────────── #}
+        {% set _circles = _hsg.get('shot_circles', []) %}
+        {% if _circles %}
+          {% for _c in _circles %}
+          {% set _dot_id = 'sgd-' ~ h.hole_number ~ '-' ~ loop.index %}
+          {% if _c.is_gimme %}
+          {# Grey gimme dot — no SG computed, shows 0.00 #}
+          <div class="sg-dot-wrap">
+            <button class="sg-dot sg-dot-gimme"
+                    onclick="toggleSgDet('{{ _dot_id }}',this)"
+                    aria-label="Gimme — conceded putt">
+              <span class="sg-dot-label">Gimme</span>
+              <span class="sg-dot-val">0.00</span>
+            </button>
+            <div class="sg-det-panel" id="{{ _dot_id }}">
+              <div class="sg-det-head">Gimme</div>
+              <div class="sg-det-val" style="color:rgba(180,180,180,0.8);">0.00</div>
+              <div class="sg-det-row"><span class="sg-det-k">Note</span><span class="sg-det-v">Putt conceded — not scored</span></div>
+              <div class="sg-det-row"><span class="sg-det-k">Distance</span><span class="sg-det-v">{{ _c.detail }}</span></div>
+            </div>
+          </div>
+          {% else %}
+          {% set _sv = _c.sg %}
+          <div class="sg-dot-wrap">
+            <button class="sg-dot {{ 'sg-dot-pos' if _sv >= 0 else 'sg-dot-neg' }}"
+                    onclick="toggleSgDet('{{ _dot_id }}',this)"
+                    aria-label="{{ _c.label }}: {{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}">
+              <span class="sg-dot-label">{{ _c.label }}</span>
+              <span class="sg-dot-val">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</span>
+            </button>
+            <div class="sg-det-panel" id="{{ _dot_id }}">
+              <div class="sg-det-head">{{ _c.label }}</div>
+              <div class="sg-det-val {{ 'c-grn' if _sv >= 0 else 'c-red' }}">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</div>
+              <div class="sg-det-row"><span class="sg-det-k">Detail</span><span class="sg-det-v">{{ _c.detail }}</span></div>
+            </div>
+          </div>
+          {% endif %}
+          {% endfor %}
+
+        {% else %}
+        {# ── Legacy fallback: aggregate dots (no shots_json) ─────────────── #}
+
+        {# OTT dot #}
         {% if _hsg.get('sg_ott') is not none %}
         {% set _sv = _hsg['sg_ott'] %}
         <div class="sg-dot-wrap">
@@ -1970,8 +2015,7 @@ body::before {
             <div class="sg-det-val {{ 'c-grn' if _sv >= 0 else 'c-red' }}">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</div>
             {% if h.tee_shot %}<div class="sg-det-row"><span class="sg-det-k">Outcome</span><span class="sg-det-v" style="text-transform:capitalize;">{{ h.tee_shot }}</span></div>{% endif %}
             {% if h.yardage %}<div class="sg-det-row"><span class="sg-det-k">Hole yardage</span><span class="sg-det-v">{{ h.yardage }}y</span></div>{% endif %}
-            {% if h.approach_distance and h.par == 4 %}<div class="sg-det-row"><span class="sg-det-k">Approach left</span><span class="sg-det-v">{{ h.approach_distance }}y to pin</span></div>{% endif %}
-            {% if h.second_shot_distance and h.par == 5 %}<div class="sg-det-row"><span class="sg-det-k">2nd shot dist</span><span class="sg-det-v">{{ h.second_shot_distance }}y to pin</span></div>{% endif %}
+            {% if h.approach_distance and h.par == 4 %}<div class="sg-det-row"><span class="sg-det-k">Approach left</span><span class="sg-det-v">{{ h.approach_distance }}y</span></div>{% endif %}
           </div>
         </div>
         {% endif %}
@@ -1989,14 +2033,13 @@ body::before {
           <div class="sg-det-panel" id="sgd-{{ h.hole_number }}-app">
             <div class="sg-det-head">Approach</div>
             <div class="sg-det-val {{ 'c-grn' if _sv >= 0 else 'c-red' }}">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</div>
-            {% if h.approach_distance %}<div class="sg-det-row"><span class="sg-det-k">Distance to pin</span><span class="sg-det-v">{{ h.approach_distance }}y</span></div>{% endif %}
-            <div class="sg-det-row"><span class="sg-det-k">Result</span><span class="sg-det-v {{ 'c-grn' if h.gir else 'c-red' }}">{{ 'GIR ✓' if h.gir else 'Missed GIR' }}{% if h.first_putt_distance and h.gir %} · {{ h.first_putt_distance }}ft{% endif %}</span></div>
-            {% if h.approach_miss %}<div class="sg-det-row"><span class="sg-det-k">Miss direction</span><span class="sg-det-v" style="text-transform:capitalize;">{{ h.approach_miss }}</span></div>{% endif %}
+            {% if h.approach_distance %}<div class="sg-det-row"><span class="sg-det-k">Distance</span><span class="sg-det-v">{{ h.approach_distance }}y</span></div>{% endif %}
+            <div class="sg-det-row"><span class="sg-det-k">Result</span><span class="sg-det-v {{ 'c-grn' if h.gir else 'c-red' }}">{{ 'GIR ✓' if h.gir else 'Missed GIR' }}</span></div>
           </div>
         </div>
         {% endif %}
 
-        {# ATG dot — GIR miss only #}
+        {# ATG dot #}
         {% if _hsg.get('sg_atg') is not none %}
         {% set _sv = _hsg['sg_atg'] %}
         <div class="sg-dot-wrap">
@@ -2010,9 +2053,7 @@ body::before {
             <div class="sg-det-head">Around the Green</div>
             <div class="sg-det-val {{ 'c-grn' if _sv >= 0 else 'c-red' }}">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</div>
             {% if h.scramble_distance %}<div class="sg-det-row"><span class="sg-det-k">Scramble dist</span><span class="sg-det-v">{{ h.scramble_distance }}y</span></div>{% endif %}
-            {% if h.lie_type %}<div class="sg-det-row"><span class="sg-det-k">Lie</span><span class="sg-det-v" style="text-transform:capitalize;">{{ h.lie_type }}</span></div>{% endif %}
             {% if h.first_putt_distance %}<div class="sg-det-row"><span class="sg-det-k">Left for putt</span><span class="sg-det-v">{{ h.first_putt_distance }}ft</span></div>{% endif %}
-            <div class="sg-det-row"><span class="sg-det-k">Hole result</span><span class="sg-det-v {{ 'c-grn' if h.score_vs_par <= 0 else 'c-red' }}">{{ h.score_label }}</span></div>
           </div>
         </div>
         {% endif %}
@@ -2030,11 +2071,13 @@ body::before {
           <div class="sg-det-panel" id="sgd-{{ h.hole_number }}-putt">
             <div class="sg-det-head">Putting</div>
             <div class="sg-det-val {{ 'c-grn' if _sv >= 0 else 'c-red' }}">{{ '+' if _sv >= 0 }}{{ '%.2f'|format(_sv) }}</div>
-            {% if h.first_putt_distance %}<div class="sg-det-row"><span class="sg-det-k">First putt dist</span><span class="sg-det-v">{{ h.first_putt_distance }}ft</span></div>{% endif %}
+            {% if h.first_putt_distance %}<div class="sg-det-row"><span class="sg-det-k">First putt</span><span class="sg-det-v">{{ h.first_putt_distance }}ft</span></div>{% endif %}
             {% if h.putts is not none %}<div class="sg-det-row"><span class="sg-det-k">Putts taken</span><span class="sg-det-v">{{ h.putts }}</span></div>{% endif %}
           </div>
         </div>
         {% endif %}
+
+        {% endif %}{# end shots_json / legacy branch #}
 
       </div>
       <div class="sg-hbyh-totals">

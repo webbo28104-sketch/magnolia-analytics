@@ -415,9 +415,15 @@ def strokes_gained_around_green(holes) -> float:
         sdist   = _parse_yards(hole.scramble_distance)
         atg_lie = 'bunker' if hole.approach_miss == 'bunker' else 'rough'
 
-        if sdist and hole.first_putt_distance:
+        # Resolve first_putt_distance — may be blank on gimme-only holes stored
+        # before the JS fix; fall back to gimme_distance or standard 3 ft.
+        fpd = hole.first_putt_distance
+        if not fpd and getattr(hole, 'last_putt_gimme', False):
+            fpd = getattr(hole, 'gimme_distance', None) or 3
+
+        if sdist and fpd:
             exp_start = expected_scramble(sdist, atg_lie)
-            exp_end   = expected_putts(hole.first_putt_distance)
+            exp_end   = expected_putts(fpd)
             sg += exp_start - (hole.atg_strokes or 1) - exp_end
         else:
             # Fallback: score-relative model
