@@ -103,7 +103,7 @@ body::before {
 .ctx-label { font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:var(--cream-faint); margin-bottom:3px; }
 .ctx-val   { font-size:11px; color:var(--cream); line-height:1.35; font-family:'Inter',system-ui,sans-serif; }
 .ctx-val strong { color:var(--gold-light); }
-.sec-label   { font-size:9px; letter-spacing:.28em; text-transform:uppercase; color:var(--gold); opacity:.8; margin-bottom:14px; margin-top:40px; }
+.sec-label   { font-size:9px; letter-spacing:.28em; text-transform:uppercase; color:var(--gold); opacity:.8; margin-bottom:14px; margin-top:26px; }
 .sec-divider { height:1px; background:var(--border); margin-top:38px; }
 .sum-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
 .sum-card { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:16px 14px 14px; position:relative; overflow:visible; box-shadow:0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(201,168,76,0.06); }
@@ -512,7 +512,7 @@ body::before {
 .tab-btn.active { color: #f5f0e8; border-bottom-color: var(--gold); font-weight: 700; }
 
 /* Tab panels — only the active panel visible on screen */
-.tab-panel { display: none; padding-top: 24px; }
+.tab-panel { display: none; padding-top: 16px; }
 .tab-panel.active { display: block; }
 
 /* Hide the leading sec-divider at the top of each panel (only used between sections within a panel) */
@@ -1249,7 +1249,6 @@ body::before {
   <div class="{% if not user_is_pro %}pro-gate{% endif %}">
   <div class="{% if not user_is_pro %}pro-blur{% endif %}">
 
-  <div class="sec-divider"></div>
   <div class="sec-label fu d5">Approach Play</div>
   {% set _best_band  = approach_bds | sort(attribute='gir_pct', reverse=True) | first if approach_bds else none %}
   {% set _worst_band = approach_bds | sort(attribute='gir_pct') | first if approach_bds else none %}
@@ -1453,7 +1452,6 @@ body::before {
   {% set _atg_pars   = _atg_misses | selectattr('score_vs_par','equalto',0) | list | length %}
   {% set _atg_birdies = _atg_misses | selectattr('score_vs_par','le',-1) | list | length %}
 
-  <div class="sec-divider"></div>
   <div class="sec-label fu d6">Around the Green</div>
 
   {# ── Header: SG ATG focal card + summary tiles ── #}
@@ -1690,36 +1688,17 @@ body::before {
   <div class="{% if not user_is_pro %}pro-gate{% endif %}">
   <div class="{% if not user_is_pro %}pro-blur{% endif %}">
 
-  <div class="sec-divider"></div>
   <div class="sec-label fu d6">Putting</div>
   {% set _putt_total_holes = holes_data | length %}
   {% set _1putt_pct = (putt_dist[1] / _putt_total_holes * 100) | round | int if _putt_total_holes else 0 %}
   {% set _3putt_pct = (putt_dist[3] / _putt_total_holes * 100) | round | int if _putt_total_holes else 0 %}
-  <div class="two-col fu d6">
-    <div class="a-card">
-      <div class="a-card-title">Putt Distribution</div>
-      <div class="stat-row"><span class="sk">1-Putts</span>
-        <span class="sv c-grn">{{ putt_dist[1] }}{% if one_putt_holes %} (H{{ one_putt_holes | join(', H') }}){% endif %}</span>
-      </div>
-      <div class="stat-row"><span class="sk">2-Putts</span><span class="sv">{{ putt_dist[2] }}</span></div>
-      <div class="stat-row"><span class="sk">3-Putts</span>
-        <span class="sv {{ 'c-red' if putt_dist[3] > 0 }}">
-          {{ putt_dist[3] }}{% if three_putt_holes %} (H{{ three_putt_holes | join(', H') }}){% endif %}
-        </span>
-      </div>
-      {% if putt_dist['4+'] > 0 %}
-      <div class="stat-row"><span class="sk">4+ Putts</span><span class="sv c-red">{{ putt_dist['4+'] }}</span></div>
-      {% endif %}
-      <div class="stat-row"><span class="sk">Total Putts</span><span class="sv">{{ round.total_putts }}</span></div>
-      <div class="stat-row"><span class="sk">Avg per hole</span><span class="sv">{{ putts_ph }}</span></div>
-      <div class="stat-row"><span class="sk">Avg 1st putt distance</span><span class="sv">{{ avg_fpd ~ 'ft' if avg_fpd is not none else '—' }}</span></div>
-      <div class="stat-row">
-        <span class="sk">
-          <span class="mg-tip">SG Putting<span class="mg-tip-icon">ⓘ</span>
-            <span class="mg-pop">Strokes Gained: Putting — how many strokes your putting gained or lost versus the PGA Tour average, calculated from first-putt distances. Positive = fewer putts than tour average.</span>
-          </span>
-        </span>
-        <span class="sv" style="color:{{ rankclr(sg_data.sg_putting.total, sg_putt_ok) }}">{{ sgfmt(sg_data.sg_putting.total) if sg_putt_ok else '—' }}</span>
+  <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;" class="fu d6 sg-stat-flex">
+    <div style="width:160px;flex-shrink:0;" class="sg-stat-sidebar">
+      <div class="a-card" style="text-align:center;padding:20px 14px;">
+        <div class="a-card-title" style="margin-bottom:10px;">SG: Putting</div>
+        <div style="font-family:'Inter',system-ui,sans-serif;font-size:clamp(28px,4vw,44px);font-weight:700;line-height:1;" class="{{ sgcol(sg_data.sg_putting.total) if sg_putt_ok else 'sg-neutral' }}">{{ sgfmt(sg_data.sg_putting.total) if sg_putt_ok else '—' }}</div>
+        <div style="font-size:9px;color:var(--cream-faint);margin-top:8px;letter-spacing:.1em;text-transform:uppercase;">vs scratch</div>
+        <div style="font-size:10px;color:var(--cream-faint);margin-top:6px;">{{ round.total_putts }} putts · {{ avg_fpd ~ 'ft avg' if avg_fpd is not none else '—' }}</div>
       </div>
     </div>
     <div style="flex:1;min-width:0;">
@@ -1730,6 +1709,32 @@ body::before {
       ];
       </script>
       <canvas id="putt-chart" style="width:100%;height:260px;display:block"></canvas>
+    </div>
+  </div>
+  <div class="a-card fu d6" style="margin-bottom:14px;">
+    <div class="a-card-title">Putt Distribution</div>
+    <div class="stat-row"><span class="sk">1-Putts</span>
+      <span class="sv c-grn">{{ putt_dist[1] }}{% if one_putt_holes %} (H{{ one_putt_holes | join(', H') }}){% endif %}</span>
+    </div>
+    <div class="stat-row"><span class="sk">2-Putts</span><span class="sv">{{ putt_dist[2] }}</span></div>
+    <div class="stat-row"><span class="sk">3-Putts</span>
+      <span class="sv {{ 'c-red' if putt_dist[3] > 0 }}">
+        {{ putt_dist[3] }}{% if three_putt_holes %} (H{{ three_putt_holes | join(', H') }}){% endif %}
+      </span>
+    </div>
+    {% if putt_dist['4+'] > 0 %}
+    <div class="stat-row"><span class="sk">4+ Putts</span><span class="sv c-red">{{ putt_dist['4+'] }}</span></div>
+    {% endif %}
+    <div class="stat-row"><span class="sk">Total Putts</span><span class="sv">{{ round.total_putts }}</span></div>
+    <div class="stat-row"><span class="sk">Avg per hole</span><span class="sv">{{ putts_ph }}</span></div>
+    <div class="stat-row"><span class="sk">Avg 1st putt distance</span><span class="sv">{{ avg_fpd ~ 'ft' if avg_fpd is not none else '—' }}</span></div>
+    <div class="stat-row">
+      <span class="sk">
+        <span class="mg-tip">SG Putting<span class="mg-tip-icon">ⓘ</span>
+          <span class="mg-pop">Strokes Gained: Putting — how many strokes your putting gained or lost versus the PGA Tour average, calculated from first-putt distances. Positive = fewer putts than tour average.</span>
+        </span>
+      </span>
+      <span class="sv" style="color:{{ rankclr(sg_data.sg_putting.total, sg_putt_ok) }}">{{ sgfmt(sg_data.sg_putting.total) if sg_putt_ok else '—' }}</span>
     </div>
   </div>
   <div class="sum-grid fu d6" style="margin-bottom:14px;">
@@ -1818,7 +1823,6 @@ body::before {
   <div class="{% if not user_is_pro %}pro-blur{% endif %}">
 
   <!-- STROKES GAINED -->
-  <div class="sec-divider"></div>
   <div class="sec-label fu d7">
     <span class="mg-tip">Strokes Gained Analysis<span class="mg-tip-icon">ⓘ</span>
       <span class="mg-pop">Strokes Gained (SG) measures performance in each area relative to a scratch handicap baseline, following Mark Broadie's methodology. Positive = gained strokes vs scratch; negative = lost strokes. Values are estimates derived from your shot data.</span>
