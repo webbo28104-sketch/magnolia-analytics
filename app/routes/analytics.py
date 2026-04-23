@@ -524,11 +524,12 @@ def putting():
     one_putt_pct   = _safe_pct(one_putt_holes, len(putt_holes))
 
     # ── Putting distribution (1 / 2 / 3 / 4+) ────────────────────────────────
-    putt_dist = {1: 0, 2: 0, 3: 0, '4+': 0}
+    # All keys must be strings so tojson serialises cleanly in the template.
+    putt_dist = {'1': 0, '2': 0, '3': 0, '4+': 0}
     for h in putt_holes:
-        if h.putts <= 1:   putt_dist[1]  += 1
-        elif h.putts == 2: putt_dist[2]  += 1
-        elif h.putts == 3: putt_dist[3]  += 1
+        if h.putts <= 1:   putt_dist['1']  += 1
+        elif h.putts == 2: putt_dist['2']  += 1
+        elif h.putts == 3: putt_dist['3']  += 1
         else:              putt_dist['4+'] += 1
 
     # ── SG Putting trend ──────────────────────────────────────────────────────

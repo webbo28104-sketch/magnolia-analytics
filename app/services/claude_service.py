@@ -275,16 +275,24 @@ def _build_narrative_prompt(round_, sg_data: dict, historical_ctx: dict) -> str:
     # Scale handicap for 9-hole rounds
     hc_expected = hc_index if holes_played >= 14 else round(hc_index * holes_played / 18, 1)
     perf_vs_expected = (score_vs_par or 0) - hc_expected
-    if perf_vs_expected <= -5:
-        hc_sentiment = 'significantly better than expected for this handicap'
-    elif perf_vs_expected <= -2:
-        hc_sentiment = 'better than expected for this handicap'
+    if perf_vs_expected <= -8:
+        hc_sentiment = 'exceptional — well ahead of what this handicap typically produces'
+        hc_tone = 'STRONGLY POSITIVE — this is a genuinely excellent round relative to ability'
+    elif perf_vs_expected <= -4:
+        hc_sentiment = 'very good — meaningfully better than this handicap would normally produce'
+        hc_tone = 'POSITIVE — open with genuine acknowledgement of a strong performance'
+    elif perf_vs_expected <= -1:
+        hc_sentiment = 'solid — slightly better than expected for this handicap'
+        hc_tone = 'MILDLY POSITIVE — acknowledge the above-average result before the analytical breakdown'
     elif perf_vs_expected <= 2:
-        hc_sentiment = 'in line with expectation for this handicap'
+        hc_sentiment = 'par for the course — exactly in line with what this handicap would normally produce'
+        hc_tone = 'NEUTRAL — neither praise nor criticism; focus on patterns and improvement areas'
     elif perf_vs_expected <= 5:
         hc_sentiment = 'slightly below expectation for this handicap'
+        hc_tone = 'CONSTRUCTIVE — acknowledge the slight underperformance honestly but without alarm'
     else:
-        hc_sentiment = f'{perf_vs_expected:+.0f} strokes below expectation for this handicap'
+        hc_sentiment = f'{perf_vs_expected:+.0f} strokes below what this handicap would typically produce'
+        hc_tone = 'HONEST — acknowledge the underperformance clearly but constructively; identify the specific causes'
 
     round_count = historical_ctx.get('round_count', 1)
 
@@ -374,6 +382,29 @@ Last 5 rounds:
 
     return f"""You are the coaching analyst for Magnolia Analytics, a performance tracking platform for amateur golfers.
 
+═══════════════════════════════════════════════════════════════════
+HANDICAP CONTEXT — READ THIS FIRST. IT GOVERNS YOUR ENTIRE TONE.
+═══════════════════════════════════════════════════════════════════
+Golfer handicap index: {user.handicap_index}
+Expected score vs par for a player at this handicap: {hc_expected:+.1f}
+Actual score vs par this round:                       {score_label}
+Performance vs what this handicap normally produces:  {perf_vs_expected:+.1f} strokes
+Round assessment:                                     {hc_sentiment}
+Tone this narrative MUST take:                        {hc_tone}
+
+WHAT THIS MEANS FOR SG INTERPRETATION:
+All SG figures below are measured against the PGA Tour average (0 = tour standard).
+A player with a {user.handicap_index} handicap will ALWAYS produce negative SG totals — that is normal and expected.
+Negative SG does NOT mean the player performed poorly. It only means they are not a PGA Tour player.
+The correct benchmark is: how does this round compare to WHAT THIS SPECIFIC PLAYER NORMALLY PRODUCES?
+Use the "Performance vs expectation" figure above as the primary quality signal. SG figures explain WHERE
+strokes were lost or gained relative to tour — they do not define whether the round was good or bad.
+
+EXAMPLE: A 28-handicap player shooting +20 is performing EXCEPTIONALLY well, even though every SG
+category will be deeply negative. Do not write "your approach play was poor" just because SG Approach
+is -4.0 — that may be entirely normal for this handicap and you should say so if it is.
+═══════════════════════════════════════════════════════════════════
+
 ROUND SUMMARY
 -------------
 Golfer:    {user.full_name} (HC Index {user.handicap_index})
@@ -385,17 +416,8 @@ FIR:       {round_.fairways_hit}/{round_.fairways_available} ({fw_pct}%)
 GIR:       {round_.gir_count}/{holes_played} ({gir_pct}%)
 Penalties: {round_.penalties}
 
-HANDICAP-RELATIVE PERFORMANCE
-------------------------------
-Handicap Index:               {user.handicap_index}
-Expected score vs par (HC):   {hc_expected:+.1f}
-Actual score vs par:          {score_label}
-Performance vs expectation:   {perf_vs_expected:+.1f} strokes ({hc_sentiment})
-NOTE: A score BETTER than the HC-expected score is a strong round for this player.
-      A score WORSE than the HC-expected score indicates underperformance.
-
-STROKES GAINED  (0 = scratch handicap baseline)
-------------------------------------------------
+STROKES GAINED  (vs PGA Tour baseline — negative is normal for all amateurs)
+-----------------------------------------------------------------------------
 SG Off Tee:      {sg_off_tee:+.2f}
 SG Approach:     {sg_approach:+.2f}
 SG Around Green: {sg_atg:+.2f}
@@ -414,10 +436,11 @@ ApprDist=approach dist-to-hole | Miss=approach miss direction(s) | Lie=lie type 
 ANALYTICAL INSTRUCTIONS — follow all sections:
 
 1. SG ANALYSIS
-- Lead with whichever SG category had the largest impact this round (most positive or most negative)
-- For each SG figure state whether it is above, at, or below scratch (0 = scratch level)
-- If any category lacks sufficient data, acknowledge the gap — do not fabricate insight
-- Back up every SG claim with specific hole evidence from the data above
+- Lead with whichever SG category had the largest impact this round (most positive or most negative relative to the OTHER categories this round — not relative to zero)
+- Do NOT say a category is "poor" or "a weakness" because its SG value is negative; negative SG is expected for amateurs
+- Only flag a category as a concern if it is materially worse than the other three categories this round, OR if personal baseline data shows it below the player's own average
+- Back up every SG observation with specific hole evidence from the data above
+- If personal baseline data is available, compare each category to the player's OWN average — this is more meaningful than comparing to tour
 
 2. MISS PATTERN ANALYSIS
 - Systematically examine the Miss and Lie columns for directional bias
@@ -426,8 +449,8 @@ ANALYTICAL INSTRUCTIONS — follow all sections:
 - Check whether miss tendencies differ by par type (par 3 vs par 4 vs par 5) and name it if they do
 
 3. PAR 5 PERFORMANCE (only if the round contains par 5s)
-- Assess whether par 5s were scoring opportunities or weaknesses based on actual scores
-- Use the 2nd column where populated to infer lay-up vs attacking strategy
+- Assess whether par 5s were scoring opportunities or weaknesses based on actual scores vs par
+- Use the 2nd shot distance column where populated to infer lay-up vs attacking strategy
 - Cross-reference GIR and score: reaching the green but not making birdie is a missed opportunity
 
 4. CONSISTENCY AND ROUND FLOW
@@ -437,35 +460,32 @@ ANALYTICAL INSTRUCTIONS — follow all sections:
 - Assess variance: controlled scoring (pars and single bogeys) vs boom/bust
 
 5. PRACTICE RECOMMENDATIONS (end of narrative, exactly 2–3)
-- Rank by impact: biggest SG drain or most frequent miss pattern goes first
+- Rank by impact: the category or pattern with the most strokes to recover goes first
 - Be specific: cite hole numbers, shot counts, or distance bands from the data
+- Calibrate to the player's level — do not recommend tour-level practice goals for a high handicapper
 - If the data is insufficient for a specific recommendation, say so; do not substitute generic advice
 - Write as a coach speaking directly to the player, not as a data summary
 
-TONE RULES
-- Evaluate all performance RELATIVE TO THE PLAYER'S HANDICAP, not against scratch or PGA Tour standards
-- A high-handicap player shooting well above par can still be performing excellently relative to their level — acknowledge this
-- If performance vs expectation is positive (better than expected): open with genuine praise before the analytical breakdown
-- If performance vs expectation is negative (worse than expected): be honest and constructive, not harsh
-- Never frame a 20-handicapper's round as "poor" because they shot +18 — that may be exactly what they're expected to shoot
-- Knowledgeable, direct, honest — encouraging when the handicap-relative data genuinely warrants it
-- No filler praise ("great round", "well done on your GIR") unless the round is genuinely strong relative to this player's handicap
+TONE RULES — these are non-negotiable
+- The tone is ENTIRELY SET by the "Tone this narrative MUST take" field at the top of this prompt
+- STRONGLY POSITIVE means: open with clear, specific praise before any analysis. Name what went well
+- NEUTRAL means: skip the praise, go straight to patterns — accurate, not harsh
+- CONSTRUCTIVE/HONEST means: acknowledge the underperformance directly but immediately pivot to causes
+- Never compare a player's performance to scratch or PGA Tour standard when assessing quality
 - Never repeat the same observation across paragraphs
 - Vary sentence structure; avoid chains of "your X was Y" constructions
 - Write as if you watched the round, not as if you scanned a scorecard
-- Do not reference weather, temperature, wind, or external conditions unless the user has explicitly noted them in the round data
-- Use strokes gained as the primary analytical lens; handicap context frames the overall tone and round assessment
-- If fewer than 20 rounds of history exist, focus analysis on the current round's shot data only; do not draw handicap trend conclusions
-- Write in direct, plain sentences; do not use hedging language or qualify every observation with uncertainty
+- Do not reference weather, temperature, wind, or external conditions unless noted in the round data
+- Write in direct, plain sentences; do not use hedging language or qualify every observation
 
 OUTPUT
 Write 4–5 paragraphs of plain text, separated by blank lines. No markdown, no HTML, no bullet points, no section headers.
 
-Para 1 — Round character: open with a handicap-relative assessment of the round (was this a good, average, or poor round FOR THIS PLAYER given their HC index?), then summarise which SG category had the biggest impact.
+Para 1 — Round character: your FIRST sentence must state whether this was a strong, average, or tough round FOR THIS PLAYER relative to their handicap. Name the handicap and what was expected. Then identify the biggest SG driver.
 Para 2 — Shot pattern and miss analysis: directional tendencies, lie context, any par-type differences
 Para 3 — Par 5 performance (if applicable) and round consistency / flow
 Para 4 — Historical context: {'compare to established baseline and comment on trend' if round_count >= 20 else 'one sentence acknowledging early-stage observations; do not pad'}
-Para 5 — 2–3 specific, ranked practice recommendations
+Para 5 — 2–3 specific, ranked practice recommendations calibrated to this player's level
 
 Begin immediately."""
 

@@ -293,7 +293,7 @@
   (function(){
     const dist = {{ putt_dist | tojson }};
     const labels=['1 putt','2 putts','3 putts','4+ putts'];
-    const data=[dist[1]||0,dist[2]||0,dist[3]||0,dist['4+']||0];
+    const data=[dist['1']||0,dist['2']||0,dist['3']||0,dist['4+']||0];
     const ctx=document.getElementById('puttDistChart'); if(!ctx)return;
     new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,
       backgroundColor:[C.green,C.gold,'#c9a84c88',C.red],borderColor:'#fff',borderWidth:2}]},
