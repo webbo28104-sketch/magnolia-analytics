@@ -207,6 +207,10 @@ def strokes_gained_putting(holes) -> dict:
     for hole in holes:
         if not (hole.first_putt_distance and hole.putts):
             continue
+        # Gimme putts are excluded: the final putt was conceded, so we cannot
+        # credit or penalise putting ability that was never demonstrated.
+        if getattr(hole, 'last_putt_gimme', False):
+            continue
         dist = hole.first_putt_distance
         exp  = expected_putts(dist)
         sg   = exp - hole.putts

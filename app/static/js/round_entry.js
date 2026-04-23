@@ -265,6 +265,8 @@ function saveState() {
 
   setHidden('putts', putts.length);
   if (putts.length) setHidden('first_putt_distance', putts[0].putt_distance || '');
+  const lastPutt = putts.length > 0 ? putts[putts.length - 1] : null;
+  setHidden('last_putt_gimme', (lastPutt && lastPutt.type === 'gimme') ? 'true' : '');
 }
 
 // ── Panel management ──────────────────────────────────────────────────────────

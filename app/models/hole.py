@@ -31,6 +31,7 @@ class Hole(db.Model):
     # Putting
     putts = db.Column(db.Integer, nullable=False, default=2)
     first_putt_distance = db.Column(db.Integer, nullable=True)  # in feet
+    last_putt_gimme = db.Column(db.Boolean, default=False, nullable=True)  # True = final putt conceded
 
     # Sand save (only shown when approach_miss == 'bunker')
     sand_save_attempt = db.Column(db.Boolean, nullable=True)

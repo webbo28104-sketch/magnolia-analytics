@@ -206,6 +206,7 @@ def enter_hole(round_id, hole_number):
         hole.second_shot_distance = int(data['second_shot_distance']) if data.get('second_shot_distance') else None
         hole.putts             = int(data.get('putts', 2))
         hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
+        hole.last_putt_gimme   = data.get('last_putt_gimme') == 'true'
         hole.sand_save_attempt = bool(data.get('sand_save_attempt') == 'true') if data.get('sand_save_attempt') else None
         hole.sand_save_made    = data.get('sand_save_made') == 'true' if data.get('sand_save_made') else None
         hole.penalties         = int(data.get('penalties', 0))
@@ -259,10 +260,16 @@ def enter_hole(round_id, hole_number):
             sdist = _parse_yards(h.scramble_distance) if h.scramble_distance else None
             atg_lie = 'bunker' if 'bunker' in (h.lie_type or '') else 'rough'
             shots.append({'type': 'atg', 'distance': sdist, 'lie': atg_lie})
-        for i in range(h.putts or 2):
-            s = {'type': 'putt'}
-            if i == 0 and h.first_putt_distance: s['putt_distance'] = h.first_putt_distance
-            shots.append(s)
+        total_putts = h.putts or 2
+        is_gimme = getattr(h, 'last_putt_gimme', False)
+        for i in range(total_putts):
+            is_last = (i == total_putts - 1)
+            if is_last and is_gimme:
+                shots.append({'type': 'gimme'})
+            else:
+                s = {'type': 'putt'}
+                if i == 0 and h.first_putt_distance: s['putt_distance'] = h.first_putt_distance
+                shots.append(s)
         return shots
 
     if existing:
@@ -330,6 +337,7 @@ def autosave_hole(round_id, hole_number):
     hole.second_shot_distance = int(data['second_shot_distance']) if data.get('second_shot_distance') else None
     hole.putts             = int(data.get('putts', 2))
     hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
+    hole.last_putt_gimme   = data.get('last_putt_gimme') == 'true'
     hole.sand_save_attempt = bool(data.get('sand_save_attempt') == 'true') if data.get('sand_save_attempt') else None
     hole.sand_save_made    = data.get('sand_save_made') == 'true' if data.get('sand_save_made') else None
     hole.penalties         = int(data.get('penalties', 0))
