@@ -213,6 +213,7 @@
     <input type="hidden" name="putts"                  id="putts-input"               value="0">
     <input type="hidden" name="first_putt_distance"    id="first-putt-input"          value="">
     <input type="hidden" name="last_putt_gimme"        id="last-putt-gimme-input"     value="">
+    <input type="hidden" name="gimme_distance"         id="gimme-distance-input"      value="">
     <input type="hidden" name="sand_save_attempt"      id="sand-save-attempt-input"   value="">
     <input type="hidden" name="penalties"              id="penalties-input"           value="{{ init_penalties }}">
     <input type="hidden" name="shots_json"             id="shots-json-input"          value="">
@@ -336,7 +337,15 @@
       </div>
     </div>
 
-    <!-- Gimme: no panel needed (adds immediately) -->
+    <!-- Gimme panel -->
+    <div class="he-shot-panel" id="panel-gimme">
+      <div class="he-panel-lbl">Gimme — putt conceded</div>
+      <div class="he-panel-row">
+        <label class="he-label">Distance from hole <span class="he-label-hint">ft · completely optional</span></label>
+        <input type="number" id="gimme-dist-exact" class="he-exact" placeholder="skip if unsure" min="1" max="10" inputmode="numeric">
+      </div>
+      <p style="text-align:center;font-size:.72rem;color:#aaa;margin:4px 0 0;line-height:1.5;">No need to measure — leave blank and we'll use a standard 3 ft.<br>Only matters for fine SG accuracy on lag putts.</p>
+    </div>
 
     <button type="button" id="panel-add-btn" class="he-panel-add-btn" style="display:none">Add Shot</button>
   </div>

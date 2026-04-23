@@ -177,7 +177,7 @@ function shotSummary(shot) {
     case 'putt':
       return shot.putt_distance ? shot.putt_distance + 'ft' : 'Putt';
     case 'gimme':
-      return 'Conceded';
+      return shot.gimme_distance ? `Conceded (${shot.gimme_distance}ft)` : 'Conceded';
     default:
       return '';
   }
@@ -267,6 +267,7 @@ function saveState() {
   if (putts.length) setHidden('first_putt_distance', putts[0].putt_distance || '');
   const lastPutt = putts.length > 0 ? putts[putts.length - 1] : null;
   setHidden('last_putt_gimme', (lastPutt && lastPutt.type === 'gimme') ? 'true' : '');
+  setHidden('gimme_distance', (lastPutt && lastPutt.type === 'gimme' && lastPutt.gimme_distance) ? lastPutt.gimme_distance : '');
 }
 
 // ── Panel management ──────────────────────────────────────────────────────────
@@ -277,7 +278,12 @@ function openPanel(type, editing) {
   const panel = document.getElementById('panel-' + type);
   if (panel) panel.classList.add('is-visible');
   const btn = document.getElementById('panel-add-btn');
-  if (btn) { btn.style.display = 'block'; btn.textContent = editing ? 'Update Shot' : 'Add Shot'; }
+  if (btn) {
+    btn.style.display = 'block';
+    btn.textContent = type === 'gimme'
+      ? (editing ? 'Update Gimme' : 'Add Gimme')
+      : (editing ? 'Update Shot' : 'Add Shot');
+  }
   applyPanelContextWarn(type);
 }
 
@@ -313,6 +319,8 @@ function clearPanel(type) {
     const li = document.getElementById('atg-lie-input'); if (li) li.value = '';
   } else if (type === 'putt') {
     const d = document.getElementById('putt-dist-exact'); if (d) d.value = '';
+  } else if (type === 'gimme') {
+    const d = document.getElementById('gimme-dist-exact'); if (d) d.value = '';
   }
 }
 
@@ -348,6 +356,8 @@ function populatePanel(shot) {
     const li = document.getElementById('atg-lie-input'); if (li) li.value = lieVal;
   } else if (type === 'putt') {
     const d = document.getElementById('putt-dist-exact'); if (d) d.value = shot.putt_distance || '';
+  } else if (type === 'gimme') {
+    const d = document.getElementById('gimme-dist-exact'); if (d) d.value = shot.gimme_distance || '';
   }
 }
 
@@ -368,6 +378,9 @@ function collectPanelShot(type) {
   } else if (type === 'putt') {
     const raw = document.getElementById('putt-dist-exact')?.value;
     shot.putt_distance = raw ? parseInt(raw) : null;
+  } else if (type === 'gimme') {
+    const raw = document.getElementById('gimme-dist-exact')?.value;
+    shot.gimme_distance = raw ? parseInt(raw) : null;
   }
   return shot;
 }
@@ -663,13 +676,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.he-type-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const type = btn.dataset.type;
-      if (type === 'gimme') {
-        _shots.push({ type: 'gimme' });
-        saveState(); renderShotList(); updateScoreDisplay(); scheduleAutosave();
-        if (navigator.vibrate) navigator.vibrate(10);
-        _autoOpenNext(); // scrolls to Next Hole button
-        return;
-      }
       if (_activeType === type && _editIdx === null) { closePanel(); return; }
       _editIdx = null;
       clearPanel(type);

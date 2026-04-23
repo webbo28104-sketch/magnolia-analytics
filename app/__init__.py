@@ -138,6 +138,7 @@ def _run_column_migrations():
         ('users',     'email_confirmed',            'BOOLEAN DEFAULT TRUE'),
         ('users',     'email_confirm_token',        'VARCHAR(100)'),
         ('holes',     'last_putt_gimme',            'BOOLEAN DEFAULT FALSE'),
+        ('holes',     'gimme_distance',             'INTEGER'),
     ]
     for table, column, col_type in migrations:
         try:

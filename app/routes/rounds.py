@@ -207,6 +207,7 @@ def enter_hole(round_id, hole_number):
         hole.putts             = int(data.get('putts', 2))
         hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
         hole.last_putt_gimme   = data.get('last_putt_gimme') == 'true'
+        hole.gimme_distance    = int(data['gimme_distance']) if data.get('gimme_distance') else None
         hole.sand_save_attempt = bool(data.get('sand_save_attempt') == 'true') if data.get('sand_save_attempt') else None
         hole.sand_save_made    = data.get('sand_save_made') == 'true' if data.get('sand_save_made') else None
         hole.penalties         = int(data.get('penalties', 0))
@@ -265,7 +266,9 @@ def enter_hole(round_id, hole_number):
         for i in range(total_putts):
             is_last = (i == total_putts - 1)
             if is_last and is_gimme:
-                shots.append({'type': 'gimme'})
+                s = {'type': 'gimme'}
+                if h.gimme_distance: s['gimme_distance'] = h.gimme_distance
+                shots.append(s)
             else:
                 s = {'type': 'putt'}
                 if i == 0 and h.first_putt_distance: s['putt_distance'] = h.first_putt_distance
@@ -338,6 +341,7 @@ def autosave_hole(round_id, hole_number):
     hole.putts             = int(data.get('putts', 2))
     hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
     hole.last_putt_gimme   = data.get('last_putt_gimme') == 'true'
+    hole.gimme_distance    = int(data['gimme_distance']) if data.get('gimme_distance') else None
     hole.sand_save_attempt = bool(data.get('sand_save_attempt') == 'true') if data.get('sand_save_attempt') else None
     hole.sand_save_made    = data.get('sand_save_made') == 'true' if data.get('sand_save_made') else None
     hole.penalties         = int(data.get('penalties', 0))

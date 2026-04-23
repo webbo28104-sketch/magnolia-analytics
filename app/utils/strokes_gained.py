@@ -197,9 +197,25 @@ def _parse_yards(value):
 
 def strokes_gained_putting(holes) -> dict:
     """
-    SG Putting per hole: expected_putts(first_putt_distance) - actual_putts.
-    Returns per-band breakdown and total.
+    SG Putting per hole using Broadie's telescoping formula.
+
+    Normal hole (holed out):
+      SG = expected_putts(first_putt_distance) - actual_putts
+
+    Gimme hole (last putt conceded):
+      SG = expected_putts(first_putt_distance)
+           - actual_strokes_taken
+           - expected_putts(gimme_distance)
+
+    Example — 80 ft lag left to a 3 ft gimme:
+      SG = 2.322 − 1 − 1.053 = +0.269   (excellent lag credited; uncompleted putt neutral)
+
+    Standard gimme distance (bottom of putter grip): 3 ft.
+    Used as fallback when gimme_distance was not recorded.
     """
+    # Standard gimme distance: bottom of putter grip ≈ 3 ft
+    STANDARD_GIMME_FT = 3
+
     band_data = {band[2]: {'attempts': 0, 'makes': 0, 'sg': 0.0}
                  for band in DISTANCE_BANDS}
     total_sg = 0.0
@@ -207,20 +223,28 @@ def strokes_gained_putting(holes) -> dict:
     for hole in holes:
         if not (hole.first_putt_distance and hole.putts):
             continue
-        # Gimme putts are excluded: the final putt was conceded, so we cannot
-        # credit or penalise putting ability that was never demonstrated.
-        if getattr(hole, 'last_putt_gimme', False):
-            continue
+
+        is_gimme = getattr(hole, 'last_putt_gimme', False)
         dist = hole.first_putt_distance
-        exp  = expected_putts(dist)
-        sg   = exp - hole.putts
+
+        if is_gimme:
+            actual_putts = hole.putts - 1
+            if actual_putts <= 0:
+                continue  # solo gimme, no prior real putt — skip
+            gimme_dist = getattr(hole, 'gimme_distance', None) or STANDARD_GIMME_FT
+            sg   = expected_putts(dist) - actual_putts - expected_putts(gimme_dist)
+            made = False  # player did not hole out
+        else:
+            sg   = expected_putts(dist) - hole.putts
+            made = (hole.putts == 1)
+
         total_sg += sg
 
         for lo, hi, label in DISTANCE_BANDS:
             if lo <= dist < hi:
                 band_data[label]['attempts'] += 1
                 band_data[label]['sg'] += sg
-                if hole.putts == 1:
+                if made:
                     band_data[label]['makes'] += 1
                 break
 
