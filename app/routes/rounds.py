@@ -423,14 +423,42 @@ def submit_round(round_id):
     return render_template('rounds/submit.html', round=round_, holes=holes)
 
 
+def _recompute_round(round_):
+    """Recompute aggregate stats and invalidate the cached report for a complete round.
+
+    Called after any mid-review edit (hole removal, manual score override) so the
+    report reflects the updated hole data on next view rather than serving stale text.
+    Only acts when the round is already complete — in-progress rounds have no cached
+    report to invalidate and will recompute naturally at submission.
+    """
+    if round_.status != 'complete':
+        return
+    try:
+        compute_all_stats(round_)
+        round_.compute_differential()
+    except Exception as e:
+        current_app.logger.exception(f"[_recompute_round] stats failed for round {round_.id}: {e}")
+    report = round_.report
+    if report:
+        report.narrative_text    = None
+        report.summary_text      = None
+        report.narrative_version = None
+    db.session.commit()
+    try:
+        _recalculate_handicap(current_user)
+    except Exception as e:
+        current_app.logger.exception(f"[_recompute_round] handicap recalc failed: {e}")
+
+
 @rounds_bp.route('/<int:round_id>/hole/<int:hole_number>/remove', methods=['POST'])
 @login_required
 def remove_hole(round_id, hole_number):
-    """Delete a single hole from an in-progress round (called from the review page)."""
+    """Delete a single hole from a round (called from the review page)."""
     round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
     hole = Hole.query.filter_by(round_id=round_id, hole_number=hole_number).first_or_404()
     db.session.delete(hole)
     db.session.commit()
+    _recompute_round(round_)
     return jsonify({'ok': True})
 
 
@@ -448,6 +476,7 @@ def set_hole_score(round_id, hole_number):
         return jsonify({'ok': False, 'error': 'Invalid score'}), 400
     hole.score = score
     db.session.commit()
+    _recompute_round(round_)
     return jsonify({'ok': True, 'score': hole.score})
 
 
