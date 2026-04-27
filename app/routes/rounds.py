@@ -316,6 +316,16 @@ def autosave_hole(round_id, hole_number):
     data = request.form
 
     if not existing:
+        shots_raw = data.get('shots_json') or ''
+        has_shots = shots_raw not in ('', '[]', 'null')
+        par_val = int(data.get('par', 4))
+        score_raw = data.get('score')
+        score_differs = score_raw and int(score_raw) != par_val and int(score_raw) != 0
+        has_field = any(data.get(f) for f in (
+            'tee_shot', 'approach_distance', 'scramble_distance', 'putts'
+        ))
+        if not (has_shots or score_differs or has_field):
+            return jsonify({'ok': True, 'skipped': True})
         hole = Hole(round_id=round_id, hole_number=actual_hole_number)
         db.session.add(hole)
     else:
@@ -411,6 +421,34 @@ def submit_round(round_id):
 
     holes = round_.holes.all()
     return render_template('rounds/submit.html', round=round_, holes=holes)
+
+
+@rounds_bp.route('/<int:round_id>/hole/<int:hole_number>/remove', methods=['POST'])
+@login_required
+def remove_hole(round_id, hole_number):
+    """Delete a single hole from an in-progress round (called from the review page)."""
+    round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
+    hole = Hole.query.filter_by(round_id=round_id, hole_number=hole_number).first_or_404()
+    db.session.delete(hole)
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+@rounds_bp.route('/<int:round_id>/hole/<int:hole_number>/set-score', methods=['POST'])
+@login_required
+def set_hole_score(round_id, hole_number):
+    """Manually set the gross score for a hole from the review page."""
+    round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
+    hole = Hole.query.filter_by(round_id=round_id, hole_number=hole_number).first_or_404()
+    try:
+        score = int(request.form.get('score', 0))
+        if score < 1 or score > 20:
+            return jsonify({'ok': False, 'error': 'Invalid score'}), 400
+    except (ValueError, TypeError):
+        return jsonify({'ok': False, 'error': 'Invalid score'}), 400
+    hole.score = score
+    db.session.commit()
+    return jsonify({'ok': True, 'score': hole.score})
 
 
 @rounds_bp.route('/<int:round_id>/reopen', methods=['POST'])

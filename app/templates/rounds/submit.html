@@ -1,6 +1,49 @@
 {% extends 'base.html' %}
 {% block title %}Review Round — Magnolia Analytics{% endblock %}
 
+{% block head %}
+<style>
+  .scorecard-table td.score-cell { padding: 0; }
+  .score-input {
+    width: 52px; text-align: center; font-weight: 700;
+    border: none; border-bottom: 2px solid transparent;
+    background: transparent; font-size: inherit; color: inherit;
+    font-family: inherit; padding: 8px 4px; cursor: pointer;
+    border-radius: 0;
+  }
+  .score-input:focus {
+    outline: none; border-bottom-color: #c9a84c; background: rgba(201,168,76,.06);
+  }
+  .remove-hole-btn {
+    background: none; border: none; color: rgba(0,0,0,.2); font-size: 18px;
+    cursor: pointer; padding: 4px 8px; line-height: 1; vertical-align: middle;
+    transition: color .15s;
+  }
+  .remove-hole-btn:hover { color: #c0392b; }
+  .row--removed { opacity: .35; text-decoration: line-through; pointer-events: none; }
+
+  /* Confirmation modal */
+  .ma-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 500;
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  .ma-modal-overlay.is-open { display: flex; }
+  .ma-modal-box {
+    background: #fff; border-radius: 16px; padding: 24px 20px 20px;
+    max-width: 320px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  }
+  .ma-modal-title { font-weight: 700; font-size: .95rem; color: #1a2e1a; margin: 0 0 8px; }
+  .ma-modal-body  { font-size: .84rem; color: #555; line-height: 1.55; margin: 0 0 20px; }
+  .ma-modal-actions { display: flex; gap: 10px; }
+  .ma-modal-btn {
+    flex: 1; height: 44px; border-radius: 999px; font-size: .875rem;
+    font-weight: 600; cursor: pointer; border: 1.5px solid;
+  }
+  .ma-modal-btn--ghost { background: transparent; border-color: #d8d0c0; color: #7a7060; }
+  .ma-modal-btn--danger { background: #c0392b; border-color: #c0392b; color: #fff; }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="round-submit">
   <div class="form-page">
@@ -14,28 +57,44 @@
       <table class="scorecard-table">
         <thead>
           <tr>
-            <th>Hole</th><th>Par</th><th>Score</th><th>Tee</th><th>GIR</th><th>Putts</th>
+            <th>Hole</th><th>Par</th><th>Score</th><th>Tee</th><th>GIR</th><th>Putts</th><th></th>
           </tr>
         </thead>
         <tbody>
           {% for hole in holes %}
-          <tr class="{% if hole.score < hole.par %}row--under{% elif hole.score == hole.par %}row--par{% else %}row--over{% endif %}">
+          <tr class="{% if hole.score < hole.par %}row--under{% elif hole.score == hole.par %}row--par{% else %}row--over{% endif %}"
+              data-hole="{{ hole.hole_number }}" id="row-hole-{{ hole.hole_number }}">
             <td>{{ hole.hole_number }}</td>
             <td>{{ hole.par }}</td>
-            <td><strong>{{ hole.score }}</strong></td>
+            <td class="score-cell">
+              <input type="number"
+                     class="score-input"
+                     value="{{ hole.score }}"
+                     min="1" max="20"
+                     data-hole="{{ hole.hole_number }}"
+                     data-original="{{ hole.score }}"
+                     inputmode="numeric"
+                     aria-label="Score for hole {{ hole.hole_number }}">
+            </td>
             <td>{{ hole.tee_shot or '—' }}</td>
             <td>{{ 'Yes' if hole.gir else 'No' }}</td>
             <td>{{ hole.putts }}</td>
+            <td>
+              <button type="button" class="remove-hole-btn"
+                      data-hole="{{ hole.hole_number }}"
+                      aria-label="Remove hole {{ hole.hole_number }}">×</button>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
         <tfoot>
           <tr>
             <td colspan="2"><strong>Total</strong></td>
-            <td><strong>{{ holes|sum(attribute='score') }}</strong></td>
+            <td id="total-score"><strong>{{ holes|sum(attribute='score') }}</strong></td>
             <td></td>
-            <td>{{ holes|selectattr('gir')|list|length }}/{{ holes|length }}</td>
-            <td>{{ holes|sum(attribute='putts') }}</td>
+            <td id="total-gir">{{ holes|selectattr('gir')|list|length }}/{{ holes|length }}</td>
+            <td id="total-putts">{{ holes|sum(attribute='putts') }}</td>
+            <td></td>
           </tr>
         </tfoot>
       </table>
@@ -51,6 +110,18 @@
   </div>
 </section>
 
+<!-- Confirmation modal -->
+<div class="ma-modal-overlay" id="remove-confirm-modal">
+  <div class="ma-modal-box">
+    <p class="ma-modal-title">Remove this hole?</p>
+    <p class="ma-modal-body">Are you sure? This will delete potentially useful shot and stat data for this hole.</p>
+    <div class="ma-modal-actions">
+      <button type="button" class="ma-modal-btn ma-modal-btn--ghost" id="remove-cancel">Cancel</button>
+      <button type="button" class="ma-modal-btn ma-modal-btn--danger" id="remove-confirm">Remove</button>
+    </div>
+  </div>
+</div>
+
 <!-- Loading overlay — shown while report is being generated server-side -->
 <div id="report-loading" style="display:none;position:fixed;inset:0;z-index:9999;background:#1a2e1a;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
   <div style="
@@ -64,10 +135,85 @@
   <p style="color:rgba(245,240,232,0.45);font-family:'Inter',system-ui,sans-serif;font-size:.82rem;margin:0;">This usually takes a few seconds</p>
 </div>
 <style>@keyframes rpt-spin { to { transform: rotate(360deg); } }</style>
+
 <script>
-document.getElementById('submit-form').addEventListener('submit', function() {
-  var overlay = document.getElementById('report-loading');
-  overlay.style.display = 'flex';
-});
+(function () {
+  const ROUND_ID = {{ round.id }};
+
+  // ── Remove hole ──────────────────────────────────────────────────────────────
+  let _pendingRemoveHole = null;
+
+  document.querySelectorAll('.remove-hole-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _pendingRemoveHole = parseInt(btn.dataset.hole);
+      document.getElementById('remove-confirm-modal').classList.add('is-open');
+    });
+  });
+
+  document.getElementById('remove-cancel').addEventListener('click', () => {
+    _pendingRemoveHole = null;
+    document.getElementById('remove-confirm-modal').classList.remove('is-open');
+  });
+
+  document.getElementById('remove-confirm').addEventListener('click', async () => {
+    const holeNum = _pendingRemoveHole;
+    document.getElementById('remove-confirm-modal').classList.remove('is-open');
+    _pendingRemoveHole = null;
+    if (!holeNum) return;
+
+    const url = `/rounds/${ROUND_ID}/hole/${holeNum}/remove`;
+    try {
+      const resp = await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (resp.ok) {
+        const row = document.getElementById(`row-hole-${holeNum}`);
+        if (row) row.remove();
+        recalcTotals();
+      }
+    } catch (err) {
+      alert('Could not remove hole. Please try again.');
+    }
+  });
+
+  // ── Manual score edit ────────────────────────────────────────────────────────
+  document.querySelectorAll('.score-input').forEach(input => {
+    input.addEventListener('change', async function () {
+      const holeNum = parseInt(this.dataset.hole);
+      const score   = parseInt(this.value);
+      if (!score || score < 1 || score > 20) {
+        this.value = this.dataset.original;
+        return;
+      }
+      const url  = `/rounds/${ROUND_ID}/hole/${holeNum}/set-score`;
+      const body = new FormData();
+      body.append('score', score);
+      try {
+        const resp = await fetch(url, { method: 'POST', body, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (resp.ok) {
+          this.dataset.original = score;
+          recalcTotals();
+        } else {
+          this.value = this.dataset.original;
+        }
+      } catch {
+        this.value = this.dataset.original;
+      }
+    });
+  });
+
+  // ── Recompute footer totals from DOM ─────────────────────────────────────────
+  function recalcTotals() {
+    let total = 0;
+    document.querySelectorAll('.score-input').forEach(inp => {
+      total += parseInt(inp.value) || 0;
+    });
+    const totalEl = document.getElementById('total-score');
+    if (totalEl) totalEl.innerHTML = `<strong>${total}</strong>`;
+  }
+
+  // ── Submit spinner ───────────────────────────────────────────────────────────
+  document.getElementById('submit-form').addEventListener('submit', function () {
+    document.getElementById('report-loading').style.display = 'flex';
+  });
+})();
 </script>
 {% endblock %}

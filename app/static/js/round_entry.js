@@ -443,7 +443,7 @@ function _doCommitShot() {
   saveState();
   renderShotList();
   updateScoreDisplay();
-  scheduleAutosave();
+  triggerAutosave();
   if (navigator.vibrate) navigator.vibrate(10);
   if (!wasEdit) _autoOpenNext();
 }
