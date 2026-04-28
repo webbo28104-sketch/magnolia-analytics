@@ -105,6 +105,11 @@ def recompute(dry_run: bool = False, stale_only: bool = False) -> None:
                         f'TOTAL={sg_tot:+.2f}'
                     )
                 else:
+                    # Recompute GIR per hole before computing stats
+                    for hole in holes:
+                        if hole.score is not None and hole.putts is not None and hole.par is not None:
+                            hole.gir = (hole.score - hole.putts) <= (hole.par - 2)
+
                     ok = compute_all_stats(round_)
                     if not ok:
                         skipped += 1

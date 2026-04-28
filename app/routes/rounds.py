@@ -205,7 +205,7 @@ def enter_hole(round_id, hole_number):
         # GIR is True iff the player reached the green in regulation.
         # An ATG shot (scramble_distance) can occur on par 4/5 after a great drive
         # without missing the green — only approach_miss indicates a genuine miss.
-        hole.gir               = not bool(hole.approach_miss)
+        hole.gir               = (hole.score - hole.putts) <= (hole.par - 2)
         hole.second_shot_distance = int(data['second_shot_distance']) if data.get('second_shot_distance') else None
         hole.putts             = int(data.get('putts', 2))
         hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
@@ -443,6 +443,11 @@ def _recompute_round(round_):
     """
     if round_.status != 'complete':
         return
+    # Recompute GIR for every hole using the score/putts formula before re-running stats
+    for hole in round_.holes.all():
+        if hole.score is not None and hole.putts is not None and hole.par is not None:
+            hole.gir = (hole.score - hole.putts) <= (hole.par - 2)
+    db.session.flush()
     try:
         compute_all_stats(round_)
         round_.compute_differential()

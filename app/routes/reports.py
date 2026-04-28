@@ -582,10 +582,12 @@ def _per_hole_sg(holes, course_hole_map: dict) -> list:
                 row['sg_approach'] = round(
                     expected_approach(dist, lie) - 1 - expected_scramble(sdist, atg_lie), 3)
 
-        # SG: Around the Green (GIR misses only)
-        if not h.gir and sdist and fpd:
+        # SG: Around the Green — computed whenever an ATG shot occurred,
+        # regardless of GIR (a player can hit the green in regulation via an ATG shot)
+        if sdist and fpd:
+            atg_strokes = getattr(h, 'atg_strokes', None) or 1
             row['sg_atg'] = round(
-                expected_scramble(sdist, atg_lie) - 1 - expected_putts(fpd), 3)
+                expected_scramble(sdist, atg_lie) - atg_strokes - expected_putts(fpd), 3)
 
         # Per-shot circles from shots_json (used in template)
         row['shot_circles'] = _build_shot_circles(h, course_hole_map)

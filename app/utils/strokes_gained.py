@@ -403,20 +403,23 @@ def strokes_gained_approach(holes) -> float:
 
 def strokes_gained_around_green(holes) -> float:
     """
-    SG Around the Green (GIR-miss holes only):
-      SG = expected_atg(scramble_distance, lie) - 1 - expected_putts(first_putt_distance)
+    SG Around the Green — any hole where an ATG shot was played:
+      SG = expected_atg(scramble_distance, lie) - atg_strokes - expected_putts(first_putt_distance)
 
+    GIR status is not used as the gate; a player can hit an ATG shot on a GIR hole
+    (e.g. driving near the green on a par 4 and chipping on in regulation).
     Falls back to a score-based adjustment when scramble_distance or
     first_putt_distance is unavailable.
     """
     sg = 0.0
 
     for hole in holes:
-        if hole.gir:
-            continue
-
         sdist   = _parse_yards(hole.scramble_distance)
         atg_lie = 'bunker' if hole.approach_miss == 'bunker' else 'rough'
+
+        # Skip holes where no ATG shot occurred
+        if not sdist and not hole.atg_strokes:
+            continue
 
         # Resolve first_putt_distance — may be blank on gimme-only holes stored
         # before the JS fix; fall back to gimme_distance or standard 3 ft.
