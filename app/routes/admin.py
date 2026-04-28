@@ -794,36 +794,3 @@ def db_users():
     except Exception as exc:
         return jsonify({'error': str(exc), 'traceback': traceback.format_exc()}), 200
 
-
-@admin_bp.route('/recompute-all-rounds', methods=['GET', 'POST'])
-@staff_required
-def recompute_all_rounds():
-    from app.models.round import Round
-    from app.models.hole import Hole
-    from app.utils.round_stats import compute_all_stats
-    from app import db
-
-    rounds = Round.query.filter_by(status='complete').order_by(Round.id).all()
-    updated = errors = 0
-    log = []
-
-    for round_ in rounds:
-        try:
-            holes = round_.holes.all()
-            if not holes:
-                continue
-            for hole in holes:
-                if hole.score is not None and hole.putts is not None and hole.par is not None:
-                    hole.gir = (hole.score - hole.putts) <= (hole.par - 2)
-            db.session.flush()
-            compute_all_stats(round_)
-            updated += 1
-            log.append(f'Round {round_.id} ({round_.date_played}) — OK')
-        except Exception as exc:
-            db.session.rollback()
-            errors += 1
-            log.append(f'Round {round_.id} — ERROR: {exc}')
-
-    db.session.commit()
-    summary = f'Done. updated={updated} errors={errors}'
-    return '<pre>' + summary + '\n\n' + '\n'.join(log) + '</pre>'
