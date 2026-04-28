@@ -32,6 +32,13 @@ document.addEventListener('click', function(e) {
       }
       pill.classList.add('is-active');
     }
+  } else if (group === 'app-shot-type') {
+    // Exclusive single-select — deactivate siblings, activate this one
+    pill.closest('.he-pills')?.querySelectorAll('.he-pill--multi').forEach(p => p.classList.remove('is-active'));
+    pill.classList.add('is-active');
+    _appShotType = value;
+    _syncAppShotType();
+    return;
   } else if (group === 'lie-type' || group === 'app-lie' || group === 'atg-lie') {
     pill.classList.toggle('is-active');
   } else if (group === 'tee-mod') {
@@ -321,6 +328,8 @@ function closePanel() {
 var _appShotType  = 'standard'; // 'standard' | 'layup' | 'recovery'
 
 function _syncAppShotType() {
+  // Active class is managed by the delegated handler; this only handles show/hide.
+  // Also called from clearPanel/populatePanel to restore state when editing a shot.
   document.getElementById('app-type-standard')?.classList.toggle('is-active', _appShotType === 'standard');
   document.getElementById('app-type-layup')?.classList.toggle('is-active',    _appShotType === 'layup');
   document.getElementById('app-type-recovery')?.classList.toggle('is-active', _appShotType === 'recovery');
@@ -716,16 +725,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Panel add/update button
   document.getElementById('panel-add-btn')?.addEventListener('click', commitShot);
-
-  // Approach shot-type pills (Standard / Lay Up / Recovery)
-  const _appTypeMap = { 'app-type-standard': 'standard', 'app-type-layup': 'layup', 'app-type-recovery': 'recovery' };
-  Object.entries(_appTypeMap).forEach(([id, val]) => {
-    document.getElementById(id)?.addEventListener('click', () => {
-      _appShotType = val;
-      _syncAppShotType();
-      if (navigator.vibrate) navigator.vibrate(10);
-    });
-  });
 
   // Penalties stepper
   const penDown = document.getElementById('pen-down');
