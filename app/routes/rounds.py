@@ -237,13 +237,6 @@ def enter_hole(round_id, hole_number):
     running_vs_par  = sum((h.score - h.par) for h in completed_before if h.par)
     holes_completed = len(completed_before)
 
-    # When re-entering a hole that already has a saved score, include it so the
-    # "Thru N" pill reflects the full round total through and including that hole.
-    if existing and existing.score is not None:
-        running_gross   += existing.score
-        running_vs_par  += (existing.score - existing.par) if existing.par else 0
-        holes_completed += 1
-
     completed_hole_numbers = {h.hole_number for h in round_.holes.all()}
 
     import json as _json

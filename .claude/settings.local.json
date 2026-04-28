@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(DATABASE_URL=\"postgresql://postgres:rmiABFfKOShmIpGKCgELnGIkZXacmwKH@shuttle.proxy.rlwy.net:43880/railway\" python recompute_sg.py 2>&1)",
+      "Bash(pip install:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:rmiABFfKOShmIpGKCgELnGIkZXacmwKH@shuttle.proxy.rlwy.net:43880/railway\" python recompute_sg.py)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:rmiABFfKOShmIpGKCgELnGIkZXacmwKH@shuttle.proxy.rlwy.net:43880/railway\" python -c \"\nfrom app import create_app, db\nfrom app.models.round import Round\napp = create_app\\('production'\\)\nwith app.app_context\\(\\):\n    r = Round.query.get\\(25\\)\n    print\\(f'Round 25: sg_off_tee={r.sg_off_tee}, sg_approach={r.sg_approach}, sg_atg={r.sg_atg}, sg_putting={r.sg_putting}, sg_total={r.sg_total}'\\)\n\" 2>&1)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:rmiABFfKOShmIpGKCgELnGIkZXacmwKH@shuttle.proxy.rlwy.net:43880/railway\" python recompute_sg.py --dry-run 2>&1)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:rmiABFfKOShmIpGKCgELnGIkZXacmwKH@shuttle.proxy.rlwy.net:43880/railway\" python - <<'EOF':*)",
+      "Bash(2)",
+      "Bash(python -c \"from app import create_app; app = create_app\\(''development''\\); print\\(''OK''\\)\")",
+      "Bash(psql:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:rmiABFfKOShmIpGKCgELnGIkZXacmwKH@shuttle.proxy.rlwy.net:43880/railway\" python recompute_sg.py --dry-run)",
+      "Bash(python -c \"from app import create_app; from app.utils.round_stats import CURRENT_ALGO_VERSION, build_course_hole_map, compute_all_stats; app = create_app\\(''development''\\); print\\(''imports OK, CURRENT_ALGO_VERSION ='', CURRENT_ALGO_VERSION\\)\")",
+      "Bash(python -c \":*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(xargs grep:*)",
+      "Bash(python recompute_sg.py)",
+      "Bash(DATABASE_URL=\"sqlite:///magnolia_dev.db\" python recompute_sg.py)"
+    ]
+  }
+}

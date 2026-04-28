@@ -597,6 +597,7 @@
     </div>
 
     {% if sg_avgs.overall_hcp_equiv and user_is_pro %}
+    {% set _delta = sg_avgs.overall_hcp_delta %}
     <div style="margin-top:16px;padding:14px 18px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.22);border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
       <div>
         <div style="font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted,#888);margin-bottom:3px;">Playing Equivalent</div>
@@ -607,6 +608,13 @@
           {%- if sg_avgs.overall_hcp_equiv == 'Scratch' -%}Scratch
           {%- else -%}{{ sg_avgs.overall_hcp_equiv }} hcp{%- endif -%}
         </div>
+        {% if _delta is not none and _delta != 0.0 %}
+        <div style="font-size:.72rem;font-weight:600;margin-top:3px;
+          color:{{ '#2d8a4e' if _delta < 0 else '#c0392b' }};">
+          {% if _delta < 0 %}↓ {{ '%.1f'|format(_delta|abs) }} improved
+          {% else %}↑ {{ '%.1f'|format(_delta) }} vs last round{% endif %}
+        </div>
+        {% endif %}
       </div>
     </div>
     {% endif %}

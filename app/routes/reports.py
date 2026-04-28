@@ -556,10 +556,13 @@ def _per_hole_sg(holes, course_hole_map: dict) -> list:
         # SG: Approach
         dist    = h.approach_distance
         _primary_ts = (h.tee_shot or '').split(',')[0]
-        # Trees tee shots: approach is evaluated on where the ball lies after recovery,
-        # not on the tee-shot outcome — use lie_type when available.
         if h.tee_shot and h.par in (4, 5):
-            lie = (h.lie_type or 'fairway') if _primary_ts == 'trees' else _tee_shot_lie(h.tee_shot)
+            if _primary_ts == 'trees':
+                lie = h.lie_type or 'fairway'
+            elif h.lie_type == 'recovery':
+                lie = 'recovery'
+            else:
+                lie = _tee_shot_lie(h.tee_shot)
         else:
             lie = 'fairway'
         atg_lie = 'bunker' if h.approach_miss == 'bunker' else 'rough'

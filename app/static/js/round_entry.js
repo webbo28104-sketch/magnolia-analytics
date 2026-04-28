@@ -163,9 +163,10 @@ function shotSummary(shot) {
     }
     case 'app': {
       const parts = [];
+      if (shot.is_layup)          parts.push('Lay Up');
+      else if (shot.lie === 'recovery') parts.push('Recovery');
       if (shot.distance) parts.push(shot.distance + 'y');
       if (shot.miss) parts.push('Miss ' + shot.miss.replace(',', '/'));
-      if (shot.lie) parts.push(shot.lie.charAt(0).toUpperCase() + shot.lie.slice(1));
       return parts.join(' · ') || 'Approach';
     }
     case 'atg': {
@@ -241,18 +242,31 @@ function saveState() {
     setHidden('tee_shot', val);
   }
 
-  // Par 5 second shots and par 4 trees punch-outs both use second_shot_distance
-  // for the intermediate shot, with approach_distance holding the real approach
+  // Par 5 second shots, par 4 trees punch-outs, and deliberate lay-ups all use
+  // second_shot_distance for the intermediate shot; approach_distance = real approach.
   const hasTreesOTT = ott && ott.mod === 'trees';
-  if ((par === 5 || hasTreesOTT) && apps.length >= 2) {
+  const hasLayup    = apps.some(s => s.is_layup);
+  const needsSplit  = (par === 5 || hasTreesOTT || hasLayup) && apps.length >= 2;
+  if (needsSplit) {
     setHidden('second_shot_distance', apps[0].distance || '');
     const last = apps[apps.length - 1];
     setHidden('approach_distance', last.distance || '');
-    setHidden('approach_miss',     last.miss || '');
+    // Par 4 layup: player can't hit GIR (3+ shots to reach green) — force a miss marker
+    // so the server correctly sets gir = False regardless of how the last approach lands.
+    if (par === 4 && hasLayup && !last.miss) {
+      setHidden('approach_miss', 'layup');
+    } else {
+      setHidden('approach_miss', last.miss || '');
+    }
   } else if (apps.length) {
     setHidden('approach_distance', apps[0].distance || '');
     setHidden('approach_miss',     apps[0].miss || '');
   }
+
+  // Record lie_type = 'recovery' when any approach is a recovery shot, so the
+  // aggregate strokes_gained_approach() uses the correct baseline.
+  const recoveryApp = apps.find(s => s.lie === 'recovery');
+  setHidden('lie_type', recoveryApp ? 'recovery' : '');
 
   setHidden('atg_strokes', atgs.length || 0);
   if (atgs.length) {
@@ -304,7 +318,28 @@ function closePanel() {
   if (btn) btn.style.display = 'none';
 }
 
-var _appMissed = false;
+var _appMissed    = false;
+var _appShotType  = 'standard'; // 'standard' | 'layup' | 'recovery'
+
+function _syncAppShotType() {
+  document.querySelectorAll('#app-type-pills .he-pill').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.appType === _appShotType);
+  });
+  const isLayup    = _appShotType === 'layup';
+  const resultRow  = document.getElementById('app-result-row');
+  const layupNote  = document.getElementById('app-layup-note');
+  if (resultRow) resultRow.style.display = isLayup ? 'none' : '';
+  if (layupNote) layupNote.style.display  = isLayup ? 'block' : 'none';
+}
+
+// Wire up the shot-type pills (Standard / Lay Up / Recovery)
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-app-type]');
+  if (!btn) return;
+  _appShotType = btn.dataset.appType;
+  _syncAppShotType();
+  if (navigator.vibrate) navigator.vibrate(10);
+});
 
 function clearPanel(type) {
   hidePanelWarn(type);
@@ -316,6 +351,8 @@ function clearPanel(type) {
     document.querySelectorAll('#app-miss-dir-pills .he-pill--multi').forEach(p => p.classList.remove('is-active'));
     const mi = document.getElementById('app-miss-input'); if (mi) mi.value = '';
     _appMissed = false;
+    _appShotType = 'standard';
+    _syncAppShotType();
     document.getElementById('app-hit-green')?.classList.add('is-active');
     document.getElementById('app-missed-green')?.classList.remove('is-active');
     reveal(document.getElementById('app-miss-reveal'), false);
@@ -339,6 +376,8 @@ function populatePanel(shot) {
     if (_tsSyncUI) _tsSyncUI(false);
   } else if (type === 'app') {
     const d = document.getElementById('app-dist-exact'); if (d) d.value = shot.distance || '';
+    _appShotType = shot.is_layup ? 'layup' : (shot.lie === 'recovery' ? 'recovery' : 'standard');
+    _syncAppShotType();
     _appMissed = !!shot.miss;
     document.getElementById('app-hit-green')?.classList.toggle('is-active', !_appMissed);
     document.getElementById('app-missed-green')?.classList.toggle('is-active', _appMissed);
@@ -370,7 +409,15 @@ function collectPanelShot(type) {
   } else if (type === 'app') {
     const raw = document.getElementById('app-dist-exact')?.value;
     shot.distance = raw ? parseInt(raw) : null;
-    shot.miss = _appMissed ? (document.getElementById('app-miss-input')?.value || null) : null;
+    if (_appShotType === 'layup') {
+      shot.is_layup = true;
+      shot.miss = null;  // layup never records a miss direction
+    } else if (_appShotType === 'recovery') {
+      shot.lie  = 'recovery';
+      shot.miss = _appMissed ? (document.getElementById('app-miss-input')?.value || null) : null;
+    } else {
+      shot.miss = _appMissed ? (document.getElementById('app-miss-input')?.value || null) : null;
+    }
   } else if (type === 'atg') {
     const raw = document.getElementById('atg-dist-exact')?.value;
     shot.distance = raw ? parseInt(raw) : null;
@@ -414,7 +461,8 @@ function _autoOpenNext() {
   }
 
   if (last.type === 'app') {
-    // Hit green → putt; missed green → around the green
+    // Lay up → another approach; hit green → putt; missed green → around the green
+    if (last.is_layup) { clearPanel('app'); openPanel('app', false); return; }
     const type = last.miss ? 'atg' : 'putt';
     clearPanel(type); openPanel(type, false);
     return;

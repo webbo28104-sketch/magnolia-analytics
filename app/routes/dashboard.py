@@ -327,14 +327,20 @@ def _compute_sg_avgs(rounds):
         return None
 
     # Overall HCP equivalent: total SG = strokes vs scratch, so hcp ≈ -total_sg
-    overall_sg = sum(c['avg'] for c in categories)
-    hcp_raw = round(-overall_sg)
+    overall_sg  = sum(c['avg'] for c in categories)
+    hcp_raw     = round(-overall_sg, 1)
     if hcp_raw < 0:
-        overall_hcp_equiv = f'+{abs(hcp_raw)}'
-    elif hcp_raw == 0:
+        overall_hcp_equiv = f'+{abs(hcp_raw):.1f}'
+    elif hcp_raw == 0.0:
         overall_hcp_equiv = 'Scratch'
     else:
-        overall_hcp_equiv = str(hcp_raw)
+        overall_hcp_equiv = f'{hcp_raw:.1f}'
+
+    # Delta vs previous rolling window (positive = regression, negative = improvement)
+    sg_delta = sum(c['delta'] for c in categories if c.get('delta') is not None)
+    # Only show delta when at least one category had enough rounds to compute one
+    has_delta = any(c.get('delta') is not None for c in categories)
+    overall_hcp_delta = round(-sg_delta, 1) if has_delta else None
 
     # Relative colour ranking: best (highest avg) → green, worst → red, middle → gold
     ranked = sorted(categories, key=lambda c: c['avg'])
@@ -366,8 +372,9 @@ def _compute_sg_avgs(rounds):
             cat['positive']  = True
 
     return {
-        'categories':      categories,
-        'rounds_count':    max_count,
-        'zero_pct':        zero_pct,
+        'categories':        categories,
+        'rounds_count':      max_count,
+        'zero_pct':          zero_pct,
         'overall_hcp_equiv': overall_hcp_equiv,
+        'overall_hcp_delta': overall_hcp_delta,
     }
