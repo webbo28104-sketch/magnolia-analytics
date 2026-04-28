@@ -466,10 +466,16 @@ def _build_shot_circles(h, course_hole_map: dict) -> list:
             d = shot.get('distance')
             if not d:
                 continue
-            # Lie: after OTT use tee-shot lie; otherwise shot's own lie
+            # Lie: after a trees OTT (or any OTT with a stored lie on this shot),
+            # prefer the shot's own recorded lie so the approach is evaluated on
+            # where the ball actually ended up, not the tee-shot outcome.
             prev = shots[i - 1] if i > 0 else None
             if prev and prev.get('type') == 'ott':
-                lie = _tee_shot_lie(h.tee_shot) if h.tee_shot else 'fairway'
+                primary = (h.tee_shot or '').split(',')[0]
+                if primary == 'trees':
+                    lie = shot.get('lie') or 'fairway'
+                else:
+                    lie = _tee_shot_lie(h.tee_shot) if h.tee_shot else 'fairway'
             else:
                 lie = shot.get('lie') or 'fairway'
             exp_end = _exp_end(i)
@@ -549,7 +555,13 @@ def _per_hole_sg(holes, course_hole_map: dict) -> list:
 
         # SG: Approach
         dist    = h.approach_distance
-        lie     = _tee_shot_lie(h.tee_shot) if (h.tee_shot and h.par in (4, 5)) else 'fairway'
+        _primary_ts = (h.tee_shot or '').split(',')[0]
+        # Trees tee shots: approach is evaluated on where the ball lies after recovery,
+        # not on the tee-shot outcome — use lie_type when available.
+        if h.tee_shot and h.par in (4, 5):
+            lie = (h.lie_type or 'fairway') if _primary_ts == 'trees' else _tee_shot_lie(h.tee_shot)
+        else:
+            lie = 'fairway'
         atg_lie = 'bunker' if h.approach_miss == 'bunker' else 'rough'
         sdist   = _parse_yards(h.scramble_distance)
 
@@ -825,11 +837,22 @@ def view_report(round_id):
 
     # ---- Per-hole SG (used for top moments, best-shot callouts, band SG) ----
     hole_sg         = _per_hole_sg(holes, course_hole_map)
-    # Enrich each row with a hole-level SG total (sum of available categories)
+    # Enrich each row with a hole-level SG total.
+    # When shot_circles are present use their sum so the displayed circles and
+    # the hole total are always consistent (multiple shots of the same category
+    # would otherwise cause the category aggregate and circle values to diverge).
     for row in hole_sg:
-        sg_vals = [row[k] for k in ('sg_putt', 'sg_ott', 'sg_approach', 'sg_atg')
-                   if row.get(k) is not None]
-        row['sg_hole_total'] = round(sum(sg_vals), 2) if sg_vals else None
+        circles = row.get('shot_circles', [])
+        if circles:
+            circle_sum = sum(
+                c['sg'] for c in circles
+                if not c.get('is_gimme') and c.get('sg') is not None
+            )
+            row['sg_hole_total'] = round(circle_sum, 2)
+        else:
+            sg_vals = [row[k] for k in ('sg_putt', 'sg_ott', 'sg_approach', 'sg_atg')
+                       if row.get(k) is not None]
+            row['sg_hole_total'] = round(sum(sg_vals), 2) if sg_vals else None
     hole_sg_by_num  = {h['hole_number']: h for h in hole_sg}
     top_sg_moments  = _top_sg_moments(hole_sg, n=3)
 

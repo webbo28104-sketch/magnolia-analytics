@@ -356,9 +356,10 @@ def strokes_gained_approach(holes) -> float:
             is_trees   = hole.tee_shot and hole.tee_shot.split(',')[0] == 'trees'
             punch_dist = _parse_yards(hole.second_shot_distance)
 
-            # Trees par-4 with punch-out: real approach is approach_distance;
-            # punch-out was already attributed to SG OTT — use lie_type for approach lie
-            if is_trees and hole.par == 4 and punch_dist:
+            # Trees: approach is always a genuine approach shot — use recorded lie_type,
+            # not the tee-shot outcome.  The punch-out (if any) was already attributed
+            # to SG OTT so the approach gets evaluated on its own merits.
+            if is_trees:
                 lie = hole.lie_type or 'fairway'
             else:
                 lie = _tee_shot_lie(hole.tee_shot) if hole.tee_shot else 'rough'

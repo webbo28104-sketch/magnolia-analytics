@@ -202,7 +202,10 @@ def enter_hole(round_id, hole_number):
         hole.approach_miss     = approach_miss
         hole.lie_type          = data.get('lie_type') or None
         hole.scramble_distance = data.get('scramble_distance') or None
-        hole.gir               = not bool(hole.approach_miss or hole.scramble_distance)
+        # GIR is True iff the player reached the green in regulation.
+        # An ATG shot (scramble_distance) can occur on par 4/5 after a great drive
+        # without missing the green — only approach_miss indicates a genuine miss.
+        hole.gir               = not bool(hole.approach_miss)
         hole.second_shot_distance = int(data['second_shot_distance']) if data.get('second_shot_distance') else None
         hole.putts             = int(data.get('putts', 2))
         hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
@@ -233,6 +236,13 @@ def enter_hole(round_id, hole_number):
     running_gross   = sum(h.score for h in completed_before)
     running_vs_par  = sum((h.score - h.par) for h in completed_before if h.par)
     holes_completed = len(completed_before)
+
+    # When re-entering a hole that already has a saved score, include it so the
+    # "Thru N" pill reflects the full round total through and including that hole.
+    if existing and existing.score is not None:
+        running_gross   += existing.score
+        running_vs_par  += (existing.score - existing.par) if existing.par else 0
+        holes_completed += 1
 
     completed_hole_numbers = {h.hole_number for h in round_.holes.all()}
 
@@ -346,7 +356,7 @@ def autosave_hole(round_id, hole_number):
     hole.approach_miss     = approach_miss
     hole.lie_type          = data.get('lie_type') or None
     hole.scramble_distance = data.get('scramble_distance') or None
-    hole.gir               = not bool(hole.approach_miss or hole.scramble_distance)
+    hole.gir               = not bool(hole.approach_miss)
     hole.second_shot_distance = int(data['second_shot_distance']) if data.get('second_shot_distance') else None
     hole.putts             = int(data.get('putts', 2))
     hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
@@ -391,6 +401,13 @@ def submit_round(round_id):
             current_app.logger.exception(f"[submit_round] Handicap recalc failed: {e}")
         try:
             report = generate_report(round_)
+            # Invalidate cached coaching narrative so it regenerates from fresh data
+            # on next report view (covers the re-submission / re-edit path).
+            if report:
+                report.narrative_text    = None
+                report.summary_text      = None
+                report.narrative_version = None
+                db.session.commit()
             # All users receive an email — pro users get the full report, free
             # users get a trimmed version that teases paid features.
             # Don't re-send if this round was already emailed (re-edit path).
