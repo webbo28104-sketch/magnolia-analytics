@@ -272,41 +272,28 @@
       <div class="he-panel-warn" id="warn-app"></div>
       <div class="he-panel-row">
         <label class="he-label">Shot type</label>
-        <div class="he-pills" id="app-type-pills">
-          <button type="button" class="he-pill is-active" id="app-type-standard" data-app-type="standard">Standard</button>
-          <button type="button" class="he-pill" id="app-type-layup" data-app-type="layup">Lay Up</button>
-          <button type="button" class="he-pill" id="app-type-recovery" data-app-type="recovery">Recovery</button>
+        <div class="he-pills">
+          <button type="button" class="he-pill is-active" id="app-type-standard">Standard</button>
+          <button type="button" class="he-pill" id="app-type-layup">Lay Up</button>
+          <button type="button" class="he-pill" id="app-type-recovery">Recovery</button>
         </div>
       </div>
       <div class="he-panel-row">
-        <label class="he-label" id="app-dist-label">Distance to pin <span class="he-label-hint">yds · from this position before the shot</span></label>
+        <label class="he-label">Distance to pin <span class="he-label-hint">yds · from this position before the shot</span></label>
         <input type="number" id="app-dist-exact" class="he-exact" placeholder="yds" min="1" max="600" inputmode="numeric">
       </div>
-      <div id="app-result-row">
-        <div class="he-panel-row">
-          <label class="he-label">Result</label>
-          <div class="he-pills">
-            <button type="button" class="he-pill is-active" id="app-hit-green">Hit green</button>
-            <button type="button" class="he-pill" id="app-missed-green">Missed green</button>
-          </div>
+      <div class="he-panel-row" id="app-miss-row">
+        <label class="he-label">Miss direction <span class="he-label-hint">optional — leave blank if hit green</span></label>
+        <div class="he-pills" id="app-miss-dir-pills" data-target="app-miss-input">
+          <button type="button" class="he-pill he-pill--multi" data-group="app-miss-dir" data-value="left">Left</button>
+          <button type="button" class="he-pill he-pill--multi" data-group="app-miss-dir" data-value="right">Right</button>
+          <button type="button" class="he-pill he-pill--multi" data-group="app-miss-dir" data-value="long">Long</button>
+          <button type="button" class="he-pill he-pill--multi" data-group="app-miss-dir" data-value="short">Short</button>
         </div>
-        <div class="he-reveal" id="app-miss-reveal">
-          <div class="he-reveal-inner">
-            <div class="he-panel-row" style="padding-top:12px">
-              <label class="he-label">Miss direction</label>
-              <div class="he-pills" id="app-miss-dir-pills" data-target="app-miss-input">
-                <button type="button" class="he-pill he-pill--multi" data-group="app-miss-dir" data-value="left">Left</button>
-                <button type="button" class="he-pill he-pill--multi" data-group="app-miss-dir" data-value="right">Right</button>
-                <button type="button" class="he-pill he-pill--multi" data-group="app-miss-dir" data-value="long">Long</button>
-                <button type="button" class="he-pill he-pill--multi" data-group="app-miss-dir" data-value="short">Short</button>
-              </div>
-              <input type="hidden" id="app-miss-input" value="">
-            </div>
-          </div>
-        </div>
+        <input type="hidden" id="app-miss-input" value="">
       </div>
       <div id="app-layup-note" style="display:none;padding:8px 0 4px;font-size:.78rem;color:var(--he-muted);line-height:1.5;">
-        Playing short intentionally — next shot will be another approach. Enter your distance to the pin before this shot.
+        Playing short — next shot will be another approach. Enter distance to pin before this shot.
       </div>
     </div>
 

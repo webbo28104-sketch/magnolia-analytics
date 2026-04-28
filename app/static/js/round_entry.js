@@ -318,28 +318,18 @@ function closePanel() {
   if (btn) btn.style.display = 'none';
 }
 
-var _appMissed    = false;
 var _appShotType  = 'standard'; // 'standard' | 'layup' | 'recovery'
 
 function _syncAppShotType() {
-  document.querySelectorAll('#app-type-pills .he-pill').forEach(btn => {
-    btn.classList.toggle('is-active', btn.dataset.appType === _appShotType);
-  });
-  const isLayup    = _appShotType === 'layup';
-  const resultRow  = document.getElementById('app-result-row');
-  const layupNote  = document.getElementById('app-layup-note');
-  if (resultRow) resultRow.style.display = isLayup ? 'none' : '';
-  if (layupNote) layupNote.style.display  = isLayup ? 'block' : 'none';
+  document.getElementById('app-type-standard')?.classList.toggle('is-active', _appShotType === 'standard');
+  document.getElementById('app-type-layup')?.classList.toggle('is-active',    _appShotType === 'layup');
+  document.getElementById('app-type-recovery')?.classList.toggle('is-active', _appShotType === 'recovery');
+  const isLayup   = _appShotType === 'layup';
+  const missRow   = document.getElementById('app-miss-row');
+  const layupNote = document.getElementById('app-layup-note');
+  if (missRow)   missRow.style.display   = isLayup ? 'none'  : '';
+  if (layupNote) layupNote.style.display = isLayup ? 'block' : 'none';
 }
-
-// Wire up the shot-type pills (Standard / Lay Up / Recovery)
-document.addEventListener('click', function(e) {
-  const btn = e.target.closest('[data-app-type]');
-  if (!btn) return;
-  _appShotType = btn.dataset.appType;
-  _syncAppShotType();
-  if (navigator.vibrate) navigator.vibrate(10);
-});
 
 function clearPanel(type) {
   hidePanelWarn(type);
@@ -350,12 +340,8 @@ function clearPanel(type) {
     const d = document.getElementById('app-dist-exact'); if (d) d.value = '';
     document.querySelectorAll('#app-miss-dir-pills .he-pill--multi').forEach(p => p.classList.remove('is-active'));
     const mi = document.getElementById('app-miss-input'); if (mi) mi.value = '';
-    _appMissed = false;
     _appShotType = 'standard';
     _syncAppShotType();
-    document.getElementById('app-hit-green')?.classList.add('is-active');
-    document.getElementById('app-missed-green')?.classList.remove('is-active');
-    reveal(document.getElementById('app-miss-reveal'), false);
   } else if (type === 'atg') {
     const d = document.getElementById('atg-dist-exact'); if (d) d.value = '';
     document.querySelectorAll('#atg-lie-pills .he-pill--multi').forEach(p => p.classList.remove('is-active'));
@@ -378,10 +364,6 @@ function populatePanel(shot) {
     const d = document.getElementById('app-dist-exact'); if (d) d.value = shot.distance || '';
     _appShotType = shot.is_layup ? 'layup' : (shot.lie === 'recovery' ? 'recovery' : 'standard');
     _syncAppShotType();
-    _appMissed = !!shot.miss;
-    document.getElementById('app-hit-green')?.classList.toggle('is-active', !_appMissed);
-    document.getElementById('app-missed-green')?.classList.toggle('is-active', _appMissed);
-    reveal(document.getElementById('app-miss-reveal'), _appMissed);
     const missVals = new Set((shot.miss || '').split(',').filter(Boolean));
     document.querySelectorAll('#app-miss-dir-pills .he-pill--multi').forEach(p => {
       p.classList.toggle('is-active', missVals.has(p.dataset.value));
@@ -411,12 +393,10 @@ function collectPanelShot(type) {
     shot.distance = raw ? parseInt(raw) : null;
     if (_appShotType === 'layup') {
       shot.is_layup = true;
-      shot.miss = null;  // layup never records a miss direction
-    } else if (_appShotType === 'recovery') {
-      shot.lie  = 'recovery';
-      shot.miss = _appMissed ? (document.getElementById('app-miss-input')?.value || null) : null;
+      shot.miss     = null;
     } else {
-      shot.miss = _appMissed ? (document.getElementById('app-miss-input')?.value || null) : null;
+      if (_appShotType === 'recovery') shot.lie = 'recovery';
+      shot.miss = document.getElementById('app-miss-input')?.value || null;
     }
   } else if (type === 'atg') {
     const raw = document.getElementById('atg-dist-exact')?.value;
@@ -737,18 +717,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Panel add/update button
   document.getElementById('panel-add-btn')?.addEventListener('click', commitShot);
 
-  // App hit/miss toggle
-  document.getElementById('app-hit-green')?.addEventListener('click', () => {
-    _appMissed = false;
-    document.getElementById('app-hit-green')?.classList.add('is-active');
-    document.getElementById('app-missed-green')?.classList.remove('is-active');
-    reveal(document.getElementById('app-miss-reveal'), false);
-  });
-  document.getElementById('app-missed-green')?.addEventListener('click', () => {
-    _appMissed = true;
-    document.getElementById('app-missed-green')?.classList.add('is-active');
-    document.getElementById('app-hit-green')?.classList.remove('is-active');
-    reveal(document.getElementById('app-miss-reveal'), true);
+  // Approach shot-type pills (Standard / Lay Up / Recovery)
+  const _appTypeMap = { 'app-type-standard': 'standard', 'app-type-layup': 'layup', 'app-type-recovery': 'recovery' };
+  Object.entries(_appTypeMap).forEach(([id, val]) => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      _appShotType = val;
+      _syncAppShotType();
+      if (navigator.vibrate) navigator.vibrate(10);
+    });
   });
 
   // Penalties stepper
