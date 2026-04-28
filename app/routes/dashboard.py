@@ -340,7 +340,7 @@ def _compute_sg_avgs(rounds):
     sg_delta = sum(c['delta'] for c in categories if c.get('delta') is not None)
     # Only show delta when at least one category had enough rounds to compute one
     has_delta = any(c.get('delta') is not None for c in categories)
-    overall_hcp_delta = round(-sg_delta, 1) if has_delta else None
+    overall_hcp_delta = round(-sg_delta * 4, 1) if has_delta else None
 
     # Relative colour ranking: best (highest avg) → green, worst → red, middle → gold
     ranked = sorted(categories, key=lambda c: c['avg'])
