@@ -261,15 +261,19 @@ def strokes_gained_putting(holes) -> dict:
 
 def strokes_gained_off_tee(holes, course_hole_map=None) -> float:
     """
-    SG Off the Tee (par 4/5 only):
-      Normal:  SG = expected_OTT(yardage) - 1 - expected_approach(remaining, lie)
-      Trees:   SG = expected_OTT(yardage) - 2 - expected_approach(real_approach, lie_after)
+    SG Off the Tee (par 4/5 only) — Broadie telescoping formula.
 
-    When a tee shot goes into trees (tee_shot starts with 'trees'), the punch-out
-    recovery shot is attributed here rather than SG Approach.  second_shot_distance
-    stores the punch-out distance; approach_distance stores the real approach.
-    The formula charges 2 shots (drive + punch-out) against SG OTT so that
-    SG Approach only reflects genuine approach skill.
+    Every shot must have a real start and end position drawn from the
+    baseline tables.  No flat fallbacks: holes without sufficient data
+    are skipped so they contribute 0 rather than an invented value.
+
+    Par 4 normal:  SG = E_OTT(yardage) - 1 - E_APP(approach_dist, lie)
+    Par 4 ATG:     SG = E_OTT(yardage) - 1 - E_ATG(scramble_dist, lie)
+                   (when approach_distance is absent but scramble_distance
+                   is recorded — player drove near the green)
+    Par 4 trees:   SG = E_OTT(yardage) - 2 - E_APP(approach_dist, lie_after)
+                   (drive + punch-out bundled; charged 2 shots)
+    Par 5 normal:  SG = E_OTT(yardage) - 1 - E_APP(second_shot_dist, lie)
     """
     sg = 0.0
     for hole in holes:
@@ -282,32 +286,28 @@ def strokes_gained_off_tee(holes, course_hole_map=None) -> float:
         ch           = course_hole_map.get(hole.hole_number) if course_hole_map else None
         hole_yardage = ch.yardage if (ch and ch.yardage) else None
 
-        # Trees on par 4 with a recorded punch-out: bundle drive + punch-out into OTT
+        if not hole_yardage:
+            continue  # no yardage → can't compute, skip cleanly
+
+        # Trees par 4 with punch-out: bundle drive + punch-out into OTT
         if is_trees and hole.par == 4 and punch_dist and hole.approach_distance:
-            if hole_yardage:
-                lie_after = hole.lie_type or 'fairway'
-                exp_start = expected_ott(hole_yardage)
-                exp_end   = expected_approach(hole.approach_distance, lie_after)
-                sg += exp_start - 2 - exp_end  # -2: drive + punch-out
-            else:
-                sg -= 1.0  # flat: bad drive + wasted punch-out
+            lie_after = hole.lie_type or 'fairway'
+            sg += expected_ott(hole_yardage) - 2 - expected_approach(hole.approach_distance, lie_after)
             continue
 
         lie       = _tee_shot_lie(hole.tee_shot)
         remaining = (hole.approach_distance if hole.par == 4
                      else _parse_yards(hole.second_shot_distance))
 
-        if hole_yardage and remaining:
-            exp_start = expected_ott(hole_yardage)
-            exp_end   = expected_approach(remaining, lie)
-            sg += exp_start - 1 - exp_end
-        else:
-            if primary == 'fairway':
-                sg += 0.2
-            elif primary in ('penalty', 'trees'):
-                sg -= 0.7
-            else:
-                sg -= 0.2
+        if remaining:
+            sg += expected_ott(hole_yardage) - 1 - expected_approach(remaining, lie)
+        elif hole.par == 4:
+            # No approach shot recorded — check for ATG (drove near the green)
+            sdist = _parse_yards(hole.scramble_distance)
+            if sdist:
+                atg_lie = 'bunker' if 'bunker' in (hole.approach_miss or '') else 'rough'
+                sg += expected_ott(hole_yardage) - 1 - expected_scramble(sdist, atg_lie)
+            # else: insufficient data — skip (contribute 0, not a fabricated value)
 
     return round(sg, 2)
 
@@ -318,14 +318,18 @@ def strokes_gained_off_tee(holes, course_hole_map=None) -> float:
 
 def strokes_gained_approach(holes) -> float:
     """
-    SG Approach to the Green:
-      SG = expected_approach(dist, lie) - 1 - expected_end_position
+    SG Approach to the Green — Broadie telescoping formula.
+
+    No flat fallbacks: holes without the data needed for a real calculation
+    are skipped entirely (contribute 0) rather than using fabricated values.
+
+    Lie for par 4/5: use hole.lie_type when explicitly recorded (covers trees
+    recovery, recovery shots, and future explicit lie entry); otherwise infer
+    from tee-shot outcome.
 
     End position:
-    - GIR hit:    expected_putts(first_putt_distance)
-    - GIR missed: expected_atg(scramble_distance, atg_lie)
-
-    Falls back to a flat penalty when approach_distance is unavailable.
+    - GIR hit:    E_PUTT(first_putt_distance) — uses 20ft average if missing
+    - GIR missed: E_ATG(scramble_distance, lie) — skipped if sdist absent
     """
     sg = 0.0
 
@@ -335,64 +339,44 @@ def strokes_gained_approach(holes) -> float:
         if hole.par == 3:
             if not dist:
                 continue
-            # Tee shot IS the approach shot; lies are played from the tee (fairway)
             exp_start = expected_approach(dist, 'fairway')
             if hole.gir:
                 fpd = hole.first_putt_distance
-                exp_end = expected_putts(fpd) if fpd else expected_putts(20)
-                sg += exp_start - 1 - exp_end
+                sg += exp_start - 1 - (expected_putts(fpd) if fpd else expected_putts(20))
             else:
-                # Missed GIR — end position is an ATG shot
-                sdist  = _parse_yards(hole.scramble_distance)
-                atg_lie = 'bunker' if hole.approach_miss == 'bunker' else 'rough'
+                sdist   = _parse_yards(hole.scramble_distance)
+                atg_lie = 'bunker' if 'bunker' in (hole.approach_miss or '') else 'rough'
                 if sdist:
                     sg += exp_start - 1 - expected_scramble(sdist, atg_lie)
-                elif hole.approach_miss == 'bunker':
-                    sg += exp_start - 1 - expected_atg(10, 'bunker')
-                else:
-                    sg += exp_start - 1 - expected_atg(15, 'rough')
+                # else: no scramble distance — skip cleanly
 
         elif hole.par in (4, 5):
-            is_trees   = hole.tee_shot and hole.tee_shot.split(',')[0] == 'trees'
-            punch_dist = _parse_yards(hole.second_shot_distance)
+            is_trees = hole.tee_shot and hole.tee_shot.split(',')[0] == 'trees'
 
-            # Trees: use recorded lie_type (lie after recovery).
-            # Recovery approach (explicit): lie_type = 'recovery' overrides tee-shot lie.
-            # Otherwise: derive lie from tee-shot outcome as normal.
+            # Lie resolution: explicit lie_type beats tee-shot inference
             if is_trees:
                 lie = hole.lie_type or 'fairway'
-            elif hole.lie_type == 'recovery':
-                lie = 'recovery'
+            elif hole.lie_type:
+                lie = hole.lie_type
             else:
                 lie = _tee_shot_lie(hole.tee_shot) if hole.tee_shot else 'rough'
 
+            atg_lie = 'bunker' if 'bunker' in (hole.approach_miss or '') else 'rough'
+            sdist   = _parse_yards(hole.scramble_distance)
+
             if hole.gir:
                 if not dist:
-                    continue
-                exp_start = expected_approach(dist, lie)
-                fpd       = hole.first_putt_distance
-                exp_end   = expected_putts(fpd) if fpd else expected_putts(20)
-                sg += exp_start - 1 - exp_end
+                    continue  # no approach distance on GIR hole — skip
+                fpd = hole.first_putt_distance
+                sg += expected_approach(dist, lie) - 1 - (
+                    expected_putts(fpd) if fpd else expected_putts(20))
             else:
-                # Missed GIR
-                sdist   = _parse_yards(hole.scramble_distance)
-                atg_lie = 'bunker' if hole.approach_miss == 'bunker' else 'rough'
                 if dist and sdist:
-                    exp_start = expected_approach(dist, lie)
-                    sg += exp_start - 1 - expected_scramble(sdist, atg_lie)
+                    sg += expected_approach(dist, lie) - 1 - expected_scramble(sdist, atg_lie)
                 elif dist:
-                    # No scramble distance — use typical ATG distance by miss type
-                    exp_start = expected_approach(dist, lie)
-                    default_sdist = 10 if hole.approach_miss == 'bunker' else 15
-                    sg += exp_start - 1 - expected_atg(default_sdist, atg_lie)
-                else:
-                    # No approach distance at all — flat fallback
-                    if hole.approach_miss == 'bunker':
-                        sg -= 0.4
-                    elif hole.approach_miss in ('left', 'right', 'short', 'long'):
-                        sg -= 0.3
-                    else:
-                        sg -= 0.25
+                    # Missed green but no scramble distance recorded — skip
+                    pass
+                # else: no approach distance — skip
 
     return round(sg, 2)
 
@@ -403,21 +387,19 @@ def strokes_gained_approach(holes) -> float:
 
 def strokes_gained_around_green(holes) -> float:
     """
-    SG Around the Green — any hole where an ATG shot was played:
-      SG = expected_atg(scramble_distance, lie) - atg_strokes - expected_putts(first_putt_distance)
+    SG Around the Green — any hole where an ATG shot was played.
 
-    GIR status is not used as the gate; a player can hit an ATG shot on a GIR hole
-    (e.g. driving near the green on a par 4 and chipping on in regulation).
-    Falls back to a score-based adjustment when scramble_distance or
-    first_putt_distance is unavailable.
+    No flat fallbacks: skipped when scramble_distance or first_putt_distance
+    is absent.  GIR status is not the gate — a player can hit an ATG shot on
+    a GIR hole (e.g. driving near the green on a par 4 and chipping on).
     """
     sg = 0.0
 
     for hole in holes:
         sdist   = _parse_yards(hole.scramble_distance)
-        atg_lie = 'bunker' if hole.approach_miss == 'bunker' else 'rough'
+        atg_lie = 'bunker' if 'bunker' in (hole.approach_miss or '') else 'rough'
 
-        # Skip holes where no ATG shot occurred
+        # Skip holes where no ATG shot occurred or data is incomplete
         if not sdist and not hole.atg_strokes:
             continue
 
@@ -428,21 +410,7 @@ def strokes_gained_around_green(holes) -> float:
             fpd = getattr(hole, 'gimme_distance', None) or 3
 
         if sdist and fpd:
-            exp_start = expected_scramble(sdist, atg_lie)
-            exp_end   = expected_putts(fpd)
-            sg += exp_start - (hole.atg_strokes or 1) - exp_end
-        else:
-            # Fallback: score-relative model
-            score_diff = hole.score - hole.par
-            if hole.sand_save_attempt:
-                sg += 0.5 if hole.sand_save_made else -0.3
-            elif score_diff <= 0:
-                sg += 0.4
-            elif score_diff == 1:
-                sg += 0.0
-            elif score_diff == 2:
-                sg -= 0.4
-            else:
-                sg -= 0.7
+            sg += expected_scramble(sdist, atg_lie) - (hole.atg_strokes or 1) - expected_putts(fpd)
+        # else: incomplete data — skip (contribute 0, not a fabricated value)
 
     return round(sg, 2)

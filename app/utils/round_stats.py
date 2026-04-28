@@ -37,7 +37,7 @@ from app.utils.strokes_gained import (
 
 # Increment whenever computation logic changes.
 # Rounds with algo_version < CURRENT_ALGO_VERSION (or NULL) are stale.
-CURRENT_ALGO_VERSION = 3
+CURRENT_ALGO_VERSION = 4
 
 
 def build_course_hole_map(round_):

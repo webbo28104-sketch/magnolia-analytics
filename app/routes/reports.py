@@ -545,45 +545,57 @@ def _per_hole_sg(holes, course_hole_map: dict) -> list:
 
         # SG: Off the Tee (par 4/5 only)
         if h.par in (4, 5) and h.tee_shot:
-            lie       = _tee_shot_lie(h.tee_shot)
-            remaining = (h.approach_distance if h.par == 4
-                         else _parse_yards(h.second_shot_distance))
+            _ott_lie  = _tee_shot_lie(h.tee_shot)
             yardage   = ch.yardage if (ch and ch.yardage) else None
-            if yardage and remaining:
-                row['sg_ott'] = round(
-                    expected_ott(yardage) - 1 - expected_approach(remaining, lie), 3)
+            if yardage:
+                if h.par == 4:
+                    if h.approach_distance:
+                        row['sg_ott'] = round(
+                            expected_ott(yardage) - 1 - expected_approach(h.approach_distance, _ott_lie), 3)
+                    else:
+                        # No approach shot — drove near the green (ATG next)
+                        _atg_lie = 'bunker' if 'bunker' in (h.approach_miss or '') else 'rough'
+                        _sdist0  = _parse_yards(h.scramble_distance)
+                        if _sdist0:
+                            row['sg_ott'] = round(
+                                expected_ott(yardage) - 1 - expected_scramble(_sdist0, _atg_lie), 3)
+                else:  # par 5
+                    _remaining = _parse_yards(h.second_shot_distance)
+                    if _remaining:
+                        row['sg_ott'] = round(
+                            expected_ott(yardage) - 1 - expected_approach(_remaining, _ott_lie), 3)
 
         # SG: Approach
-        dist    = h.approach_distance
+        dist        = h.approach_distance
         _primary_ts = (h.tee_shot or '').split(',')[0]
         if h.tee_shot and h.par in (4, 5):
             if _primary_ts == 'trees':
                 lie = h.lie_type or 'fairway'
-            elif h.lie_type == 'recovery':
-                lie = 'recovery'
+            elif h.lie_type:
+                lie = h.lie_type
             else:
                 lie = _tee_shot_lie(h.tee_shot)
         else:
             lie = 'fairway'
-        atg_lie = 'bunker' if h.approach_miss == 'bunker' else 'rough'
+        atg_lie = 'bunker' if 'bunker' in (h.approach_miss or '') else 'rough'
         sdist   = _parse_yards(h.scramble_distance)
 
         if h.par == 3 and dist:
             exp_start = expected_approach(dist, 'fairway')
-            if h.gir and fpd:
-                row['sg_approach'] = round(exp_start - 1 - expected_putts(fpd), 3)
-            elif not h.gir and sdist:
+            if h.gir:
+                row['sg_approach'] = round(
+                    exp_start - 1 - (expected_putts(fpd) if fpd else expected_putts(20)), 3)
+            elif sdist:
                 row['sg_approach'] = round(exp_start - 1 - expected_scramble(sdist, atg_lie), 3)
         elif h.par in (4, 5):
-            if h.gir and dist and fpd:
+            if h.gir and dist:
                 row['sg_approach'] = round(
-                    expected_approach(dist, lie) - 1 - expected_putts(fpd), 3)
+                    expected_approach(dist, lie) - 1 - (expected_putts(fpd) if fpd else expected_putts(20)), 3)
             elif not h.gir and dist and sdist:
                 row['sg_approach'] = round(
                     expected_approach(dist, lie) - 1 - expected_scramble(sdist, atg_lie), 3)
 
-        # SG: Around the Green — computed whenever an ATG shot occurred,
-        # regardless of GIR (a player can hit the green in regulation via an ATG shot)
+        # SG: Around the Green — any hole with an ATG shot and complete data
         if sdist and fpd:
             atg_strokes = getattr(h, 'atg_strokes', None) or 1
             row['sg_atg'] = round(
