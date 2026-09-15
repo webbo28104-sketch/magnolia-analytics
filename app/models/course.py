@@ -13,6 +13,12 @@ class Course(db.Model):
     city = db.Column(db.String(100), nullable=True)     # nearest town/city
     lat = db.Column(db.Float, nullable=True)
     lng = db.Column(db.Float, nullable=True)
+    # Set True after a coordinate lookup against GolfCourseAPI has failed once
+    # (404, or any other error) — stops the startup backfill from retrying a
+    # course forever on every restart. GolfCourseAPI's free tier is a scarce
+    # 35 requests/day; a course that will never resolve (e.g. deleted from
+    # their DB) shouldn't keep spending that quota on every deploy.
+    coords_unavailable = db.Column(db.Boolean, default=False, nullable=True)
     holes = db.Column(db.Integer, default=18)
     par = db.Column(db.Integer, default=72)
 

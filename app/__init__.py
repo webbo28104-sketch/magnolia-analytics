@@ -143,6 +143,7 @@ def _run_column_migrations():
         ('holes',     'last_putt_gimme',            'BOOLEAN DEFAULT FALSE'),
         ('holes',     'gimme_distance',             'INTEGER'),
         ('reports',   'narrative_version',          'INTEGER'),
+        ('courses',   'coords_unavailable',         'BOOLEAN DEFAULT FALSE'),
     ]
     for table, column, col_type in migrations:
         try:
@@ -156,15 +157,28 @@ def _run_column_migrations():
 
 def _backfill_course_coordinates(app):
     """
-    One-time backfill: fetch missing lat/lng for courses that have an external_id
-    but no coordinates stored. Runs on startup; exits immediately when nothing to fix.
+    One-time backfill: fetch missing lat/lng for courses that have a *real*
+    GolfCourseAPI external_id but no coordinates stored yet. Runs on startup;
+    exits immediately when nothing to fix.
+
+    GolfCourseAPI's free tier is 35 requests/day (cut from 50 on 2026-09-10) —
+    scarce enough that this must never waste a call on a course that can't
+    possibly resolve:
+      - 'manual_' courses were created locally (app/routes/courses.py
+        add_manual_course) and were never a real API course — calling the API
+        with that "id" always 404s.
+      - Any course marked coords_unavailable already failed once; retrying it
+        every restart forever burns quota for no benefit, so it's skipped
+        until someone clears the flag.
     """
     from app.models.course import Course
     try:
         missing = Course.query.filter(
             Course.external_id.isnot(None),
+            ~Course.external_id.startswith('manual_'),
+            Course.coords_unavailable.isnot(True),
             db.or_(Course.lat.is_(None), Course.lng.is_(None)),
-        ).limit(10).all()  # cap to avoid slow startups
+        ).limit(3).all()  # cap low — quota is 35/day total, shared with live user searches
 
         if not missing:
             return
@@ -183,9 +197,24 @@ def _backfill_course_coordinates(app):
                         '[startup] Backfilled coordinates for %s: lat=%.5f lng=%.5f',
                         course.name, lat, lng,
                     )
+                else:
+                    course.coords_unavailable = True
+                    db.session.commit()
             except GolfCourseAPIError as exc:
                 db.session.rollback()
+                # Only give up permanently on a 404 (this external_id will
+                # never resolve). Rate limits / auth / network errors are
+                # transient — leave coords_unavailable unset so a later
+                # restart (once quota resets) retries normally instead of
+                # silently giving up on a course that would have worked.
+                if 'not found' in str(exc).lower():
+                    course.coords_unavailable = True
+                    db.session.commit()
                 app.logger.warning('[startup] Could not fetch coords for %s: %s', course.name, exc)
+                if 'rate limit' in str(exc).lower():
+                    # No point burning the rest of today's quota retrying
+                    # more courses once we've hit the daily cap.
+                    break
             except Exception as exc:
                 db.session.rollback()
                 app.logger.warning('[startup] Coord backfill error for %s: %s', course.name, exc)

@@ -49,7 +49,13 @@ def debug_raw_search():
     Use this to inspect actual field names and structure.
 
     e.g. /api/debug/raw-search?q=seaford
+
+    Staff-only: GolfCourseAPI's free tier is 35 requests/day — this hits the
+    live API directly with no caching, so it isn't safe to leave open to
+    every logged-in user.
     """
+    if not current_user.is_staff:
+        return jsonify({'error': 'Not found.'}), 404
     q = request.args.get('q', 'seaford')
     try:
         raw = api_get('/search', params={'search_query': q})
@@ -66,7 +72,11 @@ def debug_raw_course(course_id):
     Use this to inspect tee / hole field names.
 
     e.g. /api/debug/raw-course/12345
+
+    Staff-only: see debug_raw_search.
     """
+    if not current_user.is_staff:
+        return jsonify({'error': 'Not found.'}), 404
     try:
         raw = api_get(f'/courses/{course_id}')
     except GolfCourseAPIError as e:
@@ -97,8 +107,11 @@ def search_courses():
 
         # If the primary query returns few results, broaden by trimming 2 chars
         # (e.g. "foxhill" â "foxhi" finds "Foxhills"). Merge, dedup by id+name.
-        # Always broaden to catch club siblings
-        if len(q) >= 5:
+        # Only spend the extra API call when the primary search came back thin —
+        # GolfCourseAPI's free tier is a scarce 35 requests/day, so a query that
+        # already found a healthy set of matches doesn't need a second call to
+        # go catch club siblings too.
+        if len(q) >= 5 and len(results) < 5:
             short_q = q[:max(4, len(q) - 2)]
             broader = api_search(query=short_q, country=country)
             seen = {(r.get('id'), (r.get('name') or '').lower()) for r in results}
