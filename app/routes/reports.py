@@ -15,6 +15,7 @@ from app.utils.strokes_gained import (
     expected_scramble,
     _tee_shot_lie,
     _parse_yards,
+    normalize_to_18,
 )
 import json as _json
 from app.utils.round_stats import build_course_hole_map
@@ -699,13 +700,19 @@ def _build_historical_context(round_, prev_rounds: list) -> dict:
     # Averages shown only when >= 5 previous rounds have data for that category.
     # Sparkline shown only when total data points (prev + current) >= 5.
     _sg_cat_defs = [
-        ('sg_off_tee',  round_.sg_off_tee),
-        ('sg_approach', round_.sg_approach),
-        ('sg_atg',      round_.sg_atg),
-        ('sg_putting',  round_.sg_putting),
+        ('sg_off_tee',  normalize_to_18(round_.sg_off_tee,  round_.holes_played)),
+        ('sg_approach', normalize_to_18(round_.sg_approach, round_.holes_played)),
+        ('sg_atg',      normalize_to_18(round_.sg_atg,      round_.holes_played)),
+        ('sg_putting',  normalize_to_18(round_.sg_putting,  round_.holes_played)),
     ]
     for cat, curr_val in _sg_cat_defs:
-        cat_vals = [getattr(r, cat) for r in prev_rounds if getattr(r, cat) is not None]
+        # Normalize every previous round to its 18-hole equivalent before
+        # averaging, so 9-hole and 6-hole rounds don't drag the baseline
+        # down/up just because fewer holes were played.
+        cat_vals = [
+            normalize_to_18(getattr(r, cat), r.holes_played)
+            for r in prev_rounds if getattr(r, cat) is not None
+        ]
         count = len(cat_vals)
         ctx[f'avg_{cat}'] = round(sum(cat_vals) / count, 2) if count >= 5 else None
         ctx[f'{cat}_count'] = count
@@ -735,7 +742,7 @@ def _build_historical_context(round_, prev_rounds: list) -> dict:
     scored = [r for r in prev_rounds if r.total_score is not None]
 
     scores_vp = [v for v in (r.score_vs_par() for r in scored) if v is not None]
-    sg_totals  = [r.sg_total   for r in scored if r.sg_total   is not None]
+    sg_totals  = [normalize_to_18(r.sg_total, r.holes_played) for r in scored if r.sg_total is not None]
     putts_list = [r.total_putts for r in scored if r.total_putts is not None]
     gir_rates  = [
         r.gir_count / r.holes_played
@@ -755,7 +762,7 @@ def _build_historical_context(round_, prev_rounds: list) -> dict:
             'date':         r.date_played.strftime('%d %b %Y'),
             'course':       r.course.name if r.course else 'Unknown',
             'score_vs_par': r.score_vs_par(),
-            'sg_total':     r.sg_total,
+            'sg_total':     normalize_to_18(r.sg_total, r.holes_played),
         }
         for r in recent if r.total_score is not None
     ]
@@ -810,6 +817,7 @@ def view_report(round_id):
     # For free users, paid SG fields are set to None so they are never
     # included in the rendered HTML — the gate is server-side, not CSS-only.
     sg_putting_data = strokes_gained_putting(holes)
+    holes_played_for_sg = round_.holes_played or len(holes)
 
     if round_.sg_off_tee is not None:
         sg_off_tee  = round_.sg_off_tee
@@ -831,6 +839,17 @@ def view_report(round_id):
             sg_atg      = None
             sg_putting  = {'total': None, 'bands': {}}
             sg_total    = None
+
+    # SG totals are sums over the holes actually played, so a 6-hole round
+    # needs to be projected to its 18-hole equivalent (x3) before it's
+    # comparable to a full round — the same normalization the dashboard and
+    # analytics pages already apply to stored SG. Per-hole values below
+    # (hole_sg, shot_circles) are left untouched — they're already per-hole.
+    sg_off_tee  = normalize_to_18(sg_off_tee,  holes_played_for_sg)
+    sg_approach = normalize_to_18(sg_approach, holes_played_for_sg)
+    sg_atg      = normalize_to_18(sg_atg,      holes_played_for_sg)
+    sg_total    = normalize_to_18(sg_total,    holes_played_for_sg)
+    sg_putting  = {**sg_putting, 'total': normalize_to_18(sg_putting['total'], holes_played_for_sg)}
 
     sg_data = {
         'sg_off_tee':  sg_off_tee,

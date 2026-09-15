@@ -178,6 +178,22 @@ _SCRAMBLE_BANDS = {
 }
 
 
+def normalize_to_18(value, holes_played):
+    """
+    Scale a round-level SG total to its 18-hole equivalent.
+
+    SG totals are sums over however many holes were actually played, so a
+    6-hole round and an 18-hole round aren't directly comparable — the
+    6-hole round needs to be projected up (x3) to sit on the same scale.
+    Per-hole SG values (shot circles, per-hole breakdowns) are NOT run
+    through this — only round-level aggregates (sg_off_tee, sg_approach,
+    sg_atg, sg_putting, sg_total).
+    """
+    if value is None or not holes_played:
+        return value
+    return round(value * 18 / holes_played, 2)
+
+
 def _parse_yards(value):
     """Safely parse a yards value that may be stored as string, int, or band key."""
     if value is None:

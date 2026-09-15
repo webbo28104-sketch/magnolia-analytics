@@ -1856,7 +1856,7 @@ body::before {
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_off_tee, sg_ott_ok) }}">{{ sgfmt(sg_data.sg_off_tee) if sg_ott_ok else '—' }}</div>
       <div class="sg-sub">{{ fw_pct }}% fairways</div>
-      {{ hcplabel(sg_data.sg_off_tee, sg_ott_ok, round.holes_played) }}
+      {{ hcplabel(sg_data.sg_off_tee, sg_ott_ok) }}
     </div>
     <div class="sg-card">
       <div class="sg-cat">
@@ -1866,7 +1866,7 @@ body::before {
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_approach, sg_app_ok) }}">{{ sgfmt(sg_data.sg_approach) if sg_app_ok else '—' }}</div>
       <div class="sg-sub">{{ gir_pct }}% GIR</div>
-      {{ hcplabel(sg_data.sg_approach, sg_app_ok, round.holes_played) }}
+      {{ hcplabel(sg_data.sg_approach, sg_app_ok) }}
     </div>
     <div class="sg-card">
       <div class="sg-cat">
@@ -1876,7 +1876,7 @@ body::before {
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_atg, sg_atg_ok) }}">{{ sgfmt(sg_data.sg_atg) if sg_atg_ok else '—' }}</div>
       <div class="sg-sub">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}% scramble</div>
-      {{ hcplabel(sg_data.sg_atg, sg_atg_ok, round.holes_played) }}
+      {{ hcplabel(sg_data.sg_atg, sg_atg_ok) }}
     </div>
     <div class="sg-card">
       <div class="sg-cat">
@@ -1886,7 +1886,7 @@ body::before {
       </div>
       <div class="sg-val" style="color:{{ rankclr(sg_data.sg_putting.total, sg_putt_ok) }}">{{ sgfmt(sg_data.sg_putting.total) if sg_putt_ok else '—' }}</div>
       <div class="sg-sub">{{ round.total_putts }} total putts</div>
-      {{ hcplabel(sg_data.sg_putting.total, sg_putt_ok, round.holes_played) }}
+      {{ hcplabel(sg_data.sg_putting.total, sg_putt_ok) }}
     </div>
   </div>
   <div class="sg-bars fu d7">

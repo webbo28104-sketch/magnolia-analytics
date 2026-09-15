@@ -54,11 +54,15 @@ def _build_report_prompt(round_) -> str:
     holes_played = round_.holes_played or 18
     gir_pct = round(round_.gir_count / holes_played * 100) if round_.gir_count is not None else 0
 
-    sg_off_tee = round_.sg_off_tee or 0
-    sg_approach = round_.sg_approach or 0
-    sg_atg = round_.sg_atg or 0
-    sg_putting = round_.sg_putting or 0
-    sg_total = round_.sg_total or 0
+    # Round-level SG is a sum over however many holes were played, so it's
+    # projected to its 18-hole equivalent before display — a 6-hole round's
+    # SG gets multiplied by 3 to sit on the same scale as a full round.
+    from app.utils.strokes_gained import normalize_to_18
+    sg_off_tee = normalize_to_18(round_.sg_off_tee, holes_played) or 0
+    sg_approach = normalize_to_18(round_.sg_approach, holes_played) or 0
+    sg_atg = normalize_to_18(round_.sg_atg, holes_played) or 0
+    sg_putting = normalize_to_18(round_.sg_putting, holes_played) or 0
+    sg_total = normalize_to_18(round_.sg_total, holes_played) or 0
 
     return f"""You are the performance analysis engine for Magnolia Analytics, a premium golf tracking platform.
 
