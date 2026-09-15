@@ -1979,6 +1979,22 @@ body::before {
               <div class="sg-det-row"><span class="sg-det-k">Distance</span><span class="sg-det-v">{{ _c.detail }}</span></div>
             </div>
           </div>
+          {% elif _c.sg is none %}
+          {# Shot played but SG not computable (missing data) — neutral grey dot #}
+          <div class="sg-dot-wrap">
+            <button class="sg-dot sg-dot-gimme"
+                    onclick="toggleSgDet('{{ _dot_id }}',this)"
+                    aria-label="{{ _c.label }}: SG unavailable">
+              <span class="sg-dot-label">{{ _c.label }}</span>
+              <span class="sg-dot-val">—</span>
+            </button>
+            <div class="sg-det-panel" id="{{ _dot_id }}">
+              <div class="sg-det-head">{{ _c.label }}</div>
+              <div class="sg-det-val" style="color:rgba(180,180,180,0.8);">—</div>
+              <div class="sg-det-row"><span class="sg-det-k">Note</span><span class="sg-det-v">SG not computable — missing distance data</span></div>
+              <div class="sg-det-row"><span class="sg-det-k">Detail</span><span class="sg-det-v">{{ _c.detail }}</span></div>
+            </div>
+          </div>
           {% else %}
           {% set _sv = _c.sg %}
           <div class="sg-dot-wrap">
@@ -2094,18 +2110,18 @@ body::before {
   </div>
 
   <!-- COACHING NARRATIVE -->
+  {# narrative is None when the AI provider is unavailable (no key, out of
+     credits, rate limited, etc) — in that case the whole AI narrative
+     section is simply omitted rather than showing an error. #}
+  {% if narrative %}
   <div class="sec-divider"></div>
   <div class="sec-label fu d7">Coaching Analysis</div>
   <div class="ai-block fu d7">
     <div class="ai-eyebrow">Performance Insights</div>
     <div class="ai-body">
-      {% if narrative and narrative != 'Your round data has been saved. Add your Anthropic API key to activate the personalised coaching narrative.' %}
         {% for para in narrative.split('\n\n') %}
           {% if para.strip() %}<p>{{ para.strip() }}</p>{% endif %}
         {% endfor %}
-      {% else %}
-        <p>{{ narrative }}</p>
-      {% endif %}
     </div>
     <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(201,168,76,0.45);margin:20px 0 12px;padding-top:16px;border-top:1px solid rgba(201,168,76,0.12);">Practice Priorities</div>
     {% if weakest_sg == 'Off the Tee' %}
@@ -2176,6 +2192,7 @@ body::before {
     </div>
     {% endif %}
   </div>{# /ai-block #}
+  {% endif %}{# /narrative #}
 
   <!-- FOOTER -->
   <div class="rpt-footer fu d9">

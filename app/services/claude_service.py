@@ -1,18 +1,23 @@
 """
-Claude API service for Magnolia Analytics.
+DeepSeek API service for Magnolia Analytics.
+
+Uses DeepSeek's OpenAI-compatible chat completions endpoint
+(https://api.deepseek.com) via the `openai` SDK.
 
 Two entry points:
 
   generate_report(round_)
     Called immediately after a round is completed (from rounds.py).
     Creates/updates the Report record and generates html_content for email
-    delivery. Uses a lightweight placeholder if no API key is set.
+    delivery. Uses a lightweight placeholder if no API key is set, or if the
+    API call fails for any reason (including out-of-credit errors).
 
   generate_narrative(round_, sg_data, historical_ctx)
     Called lazily on first report page view (from reports.py).
     Generates a multi-paragraph plain-text coaching narrative and caches it in
-    Report.narrative_text. On failure, writes a graceful fallback string so
-    the page always renders cleanly.
+    Report.narrative_text. On failure (including out-of-credit errors),
+    returns None so the coaching tab simply hides the AI narrative section
+    instead of surfacing an error to the user.
 """
 
 import os
@@ -22,7 +27,17 @@ from flask import current_app
 from app import db
 from app.models.report import Report
 
-_MODEL = 'claude-sonnet-4-20250514'
+_MODEL = 'deepseek-chat'
+_BASE_URL = 'https://api.deepseek.com'
+
+
+def _get_api_key() -> str:
+    return os.environ.get('DEEPSEEK_API_KEY', '')
+
+
+def _client():
+    import openai
+    return openai.OpenAI(api_key=_get_api_key(), base_url=_BASE_URL)
 
 # ---------------------------------------------------------------------------
 # Internal helpers — report generation (email / legacy HTML blob)
@@ -136,7 +151,7 @@ def _placeholder_html(round_) -> str:
   </div>
   <div class="note">
     <strong>Your round data has been saved.</strong><br>
-    Add your Anthropic API key to activate the full personalised coaching report — strokes gained breakdown, putting analysis, narrative, and practice priorities.
+    Add your DeepSeek API key to activate the full personalised coaching report — strokes gained breakdown, putting analysis, narrative, and practice priorities.
   </div>
 </div>
 <div class="footer">Magnolia Analytics · Track every shot. Understand every round.</div>
@@ -154,7 +169,7 @@ def generate_report(round_) -> Report:
     Generates html_content for email delivery.
     Called from rounds.py immediately after round submission.
     """
-    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    api_key = _get_api_key()
     html_content = None
     prompt_tokens = 0
     completion_tokens = 0
@@ -162,30 +177,32 @@ def generate_report(round_) -> Report:
 
     if api_key:
         try:
-            import anthropic
-            client = anthropic.Anthropic(api_key=api_key)
+            client = _client()
             prompt_text = _build_report_prompt(round_)
             current_app.logger.info(
-                '[claude] generate_report start prompt=%d chars model=%s',
+                '[deepseek] generate_report start prompt=%d chars model=%s',
                 len(prompt_text), _MODEL
             )
             t0 = time.time()
-            msg = client.messages.create(
+            resp = client.chat.completions.create(
                 model=_MODEL,
                 max_tokens=1500,
                 messages=[{'role': 'user', 'content': prompt_text}]
             )
             elapsed = time.time() - t0
+            usage = resp.usage
             current_app.logger.info(
-                '[claude] generate_report done elapsed=%.1fs input_tokens=%d output_tokens=%d',
-                elapsed, msg.usage.input_tokens, msg.usage.output_tokens
+                '[deepseek] generate_report done elapsed=%.1fs input_tokens=%d output_tokens=%d',
+                elapsed, usage.prompt_tokens, usage.completion_tokens
             )
-            html_content = msg.content[0].text
-            prompt_tokens = msg.usage.input_tokens
-            completion_tokens = msg.usage.output_tokens
+            html_content = resp.choices[0].message.content
+            prompt_tokens = usage.prompt_tokens
+            completion_tokens = usage.completion_tokens
             model_used = _MODEL
         except Exception as e:
-            current_app.logger.exception('[claude] generate_report api error: %s', e)
+            # Covers out-of-credit / rate-limit / auth / network errors alike —
+            # always degrade to the placeholder rather than let this 500.
+            current_app.logger.exception('[deepseek] generate_report api error: %s', e)
             html_content = None
             model_used = f'placeholder (api error: {str(e)[:80]})'
 
@@ -212,13 +229,6 @@ def generate_report(round_) -> Report:
 # ---------------------------------------------------------------------------
 # Public API — narrative (live report page, lazy-loaded on first view)
 # ---------------------------------------------------------------------------
-
-_NARRATIVE_FALLBACK = (
-    "Your round data has been saved and your stats are live above. "
-    "To activate the personalised coaching narrative, add your Anthropic API key "
-    "as the ANTHROPIC_API_KEY environment variable and reload this page."
-)
-
 
 def _build_narrative_prompt(round_, sg_data: dict, historical_ctx: dict) -> str:
     """
@@ -500,7 +510,7 @@ def generate_context_summary(round_, weather, calendar_ctx: dict) -> str:
 
     Returns the summary string (or a safe fallback on any failure).
     """
-    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    api_key = _get_api_key()
     if not api_key:
         return ''   # empty string → card is hidden in template
 
@@ -570,26 +580,27 @@ Rules:
 Output only the sentences. Begin immediately."""
 
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
-        msg = client.messages.create(
+        client = _client()
+        resp = client.chat.completions.create(
             model=_MODEL,
             max_tokens=200,
             messages=[{'role': 'user', 'content': prompt}],
         )
-        summary = msg.content[0].text.strip()
+        summary = resp.choices[0].message.content.strip()
 
         report = round_.report
         if report:
             report.summary_text = summary
             report.model_used = _MODEL
-            report.prompt_tokens     = (report.prompt_tokens or 0) + msg.usage.input_tokens
-            report.completion_tokens = (report.completion_tokens or 0) + msg.usage.output_tokens
+            report.prompt_tokens     = (report.prompt_tokens or 0) + resp.usage.prompt_tokens
+            report.completion_tokens = (report.completion_tokens or 0) + resp.usage.completion_tokens
             report.generated_at = datetime.utcnow()
 
         return summary
 
     except Exception as e:
+        # Covers out-of-credit / rate-limit / auth / network errors alike.
+        current_app.logger.warning('[deepseek] generate_context_summary api error: %s', e)
         return ''   # empty string → card hidden; don't expose error in UI
 
 
@@ -603,17 +614,19 @@ def generate_narrative(round_, sg_data: dict, historical_ctx: dict) -> str:
     historical_ctx: assembled by reports._build_historical_context — contains
     round count, historical averages, and recent form (when >= 20 rounds exist).
 
-    Returns the narrative string (either from Claude or the fallback).
+    Returns the narrative string on success, or None on any failure (no API
+    key set, out of credits, rate limited, network error, etc). Callers/
+    templates should treat None as "hide the AI narrative section" rather
+    than surfacing an error — the rest of the report still renders normally.
     """
-    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    api_key = _get_api_key()
 
     if not api_key:
-        return _NARRATIVE_FALLBACK
+        return None
 
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
-        msg = client.messages.create(
+        client = _client()
+        resp = client.chat.completions.create(
             model=_MODEL,
             max_tokens=900,
             messages=[{
@@ -621,24 +634,23 @@ def generate_narrative(round_, sg_data: dict, historical_ctx: dict) -> str:
                 'content': _build_narrative_prompt(round_, sg_data, historical_ctx)
             }]
         )
-        narrative = msg.content[0].text.strip()
+        narrative = resp.choices[0].message.content.strip()
 
         # Update report metadata
         report = round_.report
         if report:
             report.narrative_text = narrative
             report.model_used = _MODEL
-            report.prompt_tokens = (report.prompt_tokens or 0) + msg.usage.input_tokens
-            report.completion_tokens = (report.completion_tokens or 0) + msg.usage.output_tokens
+            report.prompt_tokens = (report.prompt_tokens or 0) + resp.usage.prompt_tokens
+            report.completion_tokens = (report.completion_tokens or 0) + resp.usage.completion_tokens
             report.generated_at = datetime.utcnow()
             # Caller commits
 
         return narrative
 
     except Exception as e:
-        fallback = (
-            f"Your round data has been saved. "
-            f"The personalised coaching narrative could not be generated at this time "
-            f"(error: {str(e)[:60]}). Please reload the page to try again."
-        )
-        return fallback
+        # Covers out-of-credit / rate-limit / auth / network errors alike —
+        # never let this bubble up into a 500. The coaching tab hides the
+        # narrative section cleanly instead.
+        current_app.logger.warning('[deepseek] generate_narrative api error: %s', e)
+        return None

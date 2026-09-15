@@ -452,61 +452,57 @@ def _build_shot_circles(h, course_hole_map: dict) -> list:
             })
 
         elif t == 'ott':
-            if not hole_yardage:
-                continue
-            exp_end = _exp_end(i)
-            if exp_end is None:
-                continue
-            sg = round(expected_ott(hole_yardage) - 1 - exp_end, 3)
             outcome = h.tee_shot or 'Tee shot'
+            sg = None
+            if hole_yardage:
+                exp_end = _exp_end(i)
+                if exp_end is not None:
+                    sg = round(expected_ott(hole_yardage) - 1 - exp_end, 3)
             circles.append({'label': 'OTT', 'sg': sg, 'is_gimme': False,
                              'detail': outcome.replace(',', ' ').title()})
 
         elif t == 'app':
             d = shot.get('distance')
-            if not d:
-                continue
-            # Lie: after a trees OTT (or any OTT with a stored lie on this shot),
-            # prefer the shot's own recorded lie so the approach is evaluated on
-            # where the ball actually ended up, not the tee-shot outcome.
-            prev = shots[i - 1] if i > 0 else None
-            if prev and prev.get('type') == 'ott':
-                primary = (h.tee_shot or '').split(',')[0]
-                if primary == 'trees':
-                    lie = shot.get('lie') or 'fairway'
+            sg = None
+            if d:
+                # Lie: after a trees OTT (or any OTT with a stored lie on this shot),
+                # prefer the shot's own recorded lie so the approach is evaluated on
+                # where the ball actually ended up, not the tee-shot outcome.
+                prev = shots[i - 1] if i > 0 else None
+                if prev and prev.get('type') == 'ott':
+                    primary = (h.tee_shot or '').split(',')[0]
+                    if primary == 'trees':
+                        lie = shot.get('lie') or 'fairway'
+                    else:
+                        lie = _tee_shot_lie(h.tee_shot) if h.tee_shot else 'fairway'
                 else:
-                    lie = _tee_shot_lie(h.tee_shot) if h.tee_shot else 'fairway'
-            else:
-                lie = shot.get('lie') or 'fairway'
-            exp_end = _exp_end(i)
-            if exp_end is None:
-                continue
-            sg = round(expected_approach(float(d), lie) - 1 - exp_end, 3)
+                    lie = shot.get('lie') or 'fairway'
+                exp_end = _exp_end(i)
+                if exp_end is not None:
+                    sg = round(expected_approach(float(d), lie) - 1 - exp_end, 3)
             circles.append({'label': 'App', 'sg': sg, 'is_gimme': False,
-                             'detail': f"{d}y"})
+                             'detail': f"{d}y" if d else 'Approach'})
 
         elif t == 'atg':
             d   = shot.get('distance')
             lie = shot.get('lie') or 'rough'
-            if not d:
-                continue
-            exp_end = _exp_end(i)
-            if exp_end is None:
-                continue
-            sg = round(expected_scramble(float(d), lie) - 1 - exp_end, 3)
+            sg = None
+            if d:
+                exp_end = _exp_end(i)
+                if exp_end is not None:
+                    sg = round(expected_scramble(float(d), lie) - 1 - exp_end, 3)
             circles.append({'label': 'ATG', 'sg': sg, 'is_gimme': False,
-                             'detail': f"{d}y · {lie}"})
+                             'detail': f"{d}y · {lie}" if d else lie})
 
         elif t == 'putt':
             d = shot.get('putt_distance')
-            if not d:
-                continue    # no distance — can't compute individual SG
-            exp_end = _exp_end(i)
-            if exp_end is None:
-                continue
-            sg = round(expected_putts(float(d)) - 1 - exp_end, 3)
+            sg = None
+            if d:
+                exp_end = _exp_end(i)
+                if exp_end is not None:
+                    sg = round(expected_putts(float(d)) - 1 - exp_end, 3)
             circles.append({'label': 'Putt', 'sg': sg, 'is_gimme': False,
-                             'detail': f"{d}ft"})
+                             'detail': f"{d}ft" if d else 'Putt'})
 
     return circles
 
@@ -954,22 +950,34 @@ def view_report(round_id):
     summary_text = None
     narrative    = None
     if user_is_pro:
-        if not report.summary_text:
-            summary_text = generate_context_summary(round_, weather, calendar_ctx)
-            report.summary_text = summary_text
-        else:
-            summary_text = report.summary_text
+        try:
+            if not report.summary_text:
+                summary_text = generate_context_summary(round_, weather, calendar_ctx)
+                report.summary_text = summary_text
+            else:
+                summary_text = report.summary_text
 
-        # Clear stale narrative when version is behind current
-        if (report.narrative_version or 0) < NARRATIVE_VERSION:
-            report.narrative_text = None
+            # Clear stale narrative when version is behind current
+            if (report.narrative_version or 0) < NARRATIVE_VERSION:
+                report.narrative_text = None
 
-        if not report.narrative_text:
-            narrative = generate_narrative(round_, sg_data, historical_ctx)
-            report.narrative_text     = narrative
-            report.narrative_version  = NARRATIVE_VERSION
-        else:
-            narrative = report.narrative_text
+            if not report.narrative_text:
+                narrative = generate_narrative(round_, sg_data, historical_ctx)
+                report.narrative_text = narrative
+                # Only stamp the version once a narrative was actually generated —
+                # if the API is unavailable (e.g. out of credits) narrative is
+                # None and we want the next page view to retry rather than
+                # permanently give up on this round.
+                if narrative:
+                    report.narrative_version = NARRATIVE_VERSION
+            else:
+                narrative = report.narrative_text
+        except Exception as e:
+            # Never let a coaching-content failure take down the whole report
+            # page — just hide the AI section for this view.
+            logger.exception('[view_report] AI content generation failed: %s', e)
+            summary_text = summary_text or None
+            narrative = report.narrative_text or None
 
     db.session.commit()
 

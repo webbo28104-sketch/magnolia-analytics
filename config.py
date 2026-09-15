@@ -8,8 +8,8 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///magnolia_dev.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Claude API
-    ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+    # DeepSeek API
+    DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 
     # SendGrid
     SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
