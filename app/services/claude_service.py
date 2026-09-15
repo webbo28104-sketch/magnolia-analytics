@@ -204,7 +204,10 @@ def generate_report(round_) -> Report:
             # always degrade to the placeholder rather than let this 500.
             current_app.logger.exception('[deepseek] generate_report api error: %s', e)
             html_content = None
-            model_used = f'placeholder (api error: {str(e)[:80]})'
+            # model_used is varchar(100) in the DB — hard-truncate the whole
+            # string (not just the exception fragment) so a long error message
+            # can never overflow the column and poison the DB session.
+            model_used = f'placeholder (api error: {str(e)[:80]})'[:100]
 
     if not html_content:
         html_content = _placeholder_html(round_)
