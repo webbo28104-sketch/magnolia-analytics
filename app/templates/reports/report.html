@@ -237,6 +237,21 @@ body::before {
 .pri-item { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:14px 16px; display:flex; align-items:flex-start; gap:14px; }
 .pri-n { font-family:'Inter',system-ui,sans-serif; font-size:22px; font-weight:500; color:var(--gold); opacity:.3; line-height:1; flex-shrink:0; width:22px; }
 .pri-title { font-size:11px; font-weight:500; letter-spacing:.04em; margin-bottom:4px; }
+.coach-widget { background:var(--cream-ghost); border:1px solid var(--border); border-radius:4px; padding:16px; }
+.coach-w-log { display:flex; flex-direction:column; gap:10px; max-height:340px; overflow-y:auto; margin-bottom:12px; }
+.coach-w-log:empty { display:none; }
+.coach-w-welcome { font-size:12.5px; color:var(--cream-faint); line-height:1.6; font-style:italic; }
+.coach-w-msg { max-width:85%; padding:9px 13px; border-radius:12px; font-size:13px; line-height:1.55; white-space:pre-wrap; }
+.coach-w-msg--user { align-self:flex-end; background:rgba(201,168,76,0.16); color:var(--cream); border-bottom-right-radius:3px; }
+.coach-w-msg--coach { align-self:flex-start; background:rgba(245,240,232,0.05); color:rgba(245,240,232,0.85); border:1px solid var(--border); border-bottom-left-radius:3px; }
+.coach-w-msg--typing { align-self:flex-start; color:var(--cream-faint); font-size:12px; font-style:italic; }
+.coach-w-bar { display:flex; gap:8px; }
+.coach-w-input { flex:1; background:rgba(245,240,232,0.04); border:1px solid var(--border); border-radius:6px; padding:10px 12px; font-size:13px; color:var(--cream); font-family:'Inter',system-ui,sans-serif; }
+.coach-w-input::placeholder { color:var(--cream-faint); }
+.coach-w-input:focus { outline:none; border-color:var(--gold); }
+.coach-w-send { background:var(--gold); color:var(--green-900,#0d2218); border:none; border-radius:6px; padding:0 18px; font-size:12px; font-weight:700; cursor:pointer; letter-spacing:.04em; }
+.coach-w-send:hover { background:var(--gold-light); }
+.coach-w-send:disabled { opacity:.5; cursor:default; }
 .pri-desc  { font-size:10px; color:rgba(245,240,232,0.42); line-height:1.55; font-family:'Inter',system-ui,sans-serif; }
 .mini-pair { display:flex; gap:8px; margin-top:12px; }
 .mini-c { flex:1; background:var(--gold-dim); border:1px solid var(--border); border-radius:3px; padding:8px; text-align:center; }
@@ -2194,6 +2209,19 @@ body::before {
   </div>{# /ai-block #}
   {% endif %}{# /narrative #}
 
+  <!-- ASK YOUR COACH -->
+  <div class="sec-divider"></div>
+  <div class="sec-label fu d7">Ask Your Coach</div>
+  <div class="coach-widget fu d7">
+    <div class="coach-w-log" id="coachWLog">
+      <div class="coach-w-welcome" id="coachWWelcome">Got a question about this round? Ask below — miss patterns, a specific hole, what to work on next.</div>
+    </div>
+    <div class="coach-w-bar">
+      <input type="text" class="coach-w-input" id="coachWInput" placeholder="e.g. why was my approach play off today?" maxlength="2000">
+      <button type="button" class="coach-w-send" id="coachWSend">Send</button>
+    </div>
+  </div>
+
   <!-- FOOTER -->
   <div class="rpt-footer fu d9">
     <div class="ft-brand">Magnolia Analytics</div>
@@ -3086,5 +3114,79 @@ function smDrawSummaryCard(ctx, d) {
   }
 })();
 </script>
+
+{% if user_is_pro %}
+<script>
+(function () {
+  var roundId = {{ round.id }};
+  var log     = document.getElementById('coachWLog');
+  var input   = document.getElementById('coachWInput');
+  var sendBtn = document.getElementById('coachWSend');
+  if (!log || !input || !sendBtn) return;
+
+  var welcome = document.getElementById('coachWWelcome');
+
+  function appendMsg(role, content) {
+    if (welcome) { welcome.remove(); welcome = null; }
+    var div = document.createElement('div');
+    div.className = 'coach-w-msg coach-w-msg--' + (role === 'coach' ? 'coach' : 'user');
+    div.textContent = content;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function appendTyping() {
+    var div = document.createElement('div');
+    div.className = 'coach-w-msg coach-w-msg--typing';
+    div.id = 'coachWTyping';
+    div.textContent = 'Thinking…';
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+  function removeTyping() {
+    var t = document.getElementById('coachWTyping');
+    if (t) t.remove();
+  }
+
+  function send() {
+    var text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    sendBtn.disabled = true;
+    appendMsg('user', text);
+    appendTyping();
+    fetch('/coach/round/' + roundId + '/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        removeTyping();
+        sendBtn.disabled = false;
+        appendMsg('coach', data.reply || "Sorry — couldn't get that. Try again in a moment.");
+      })
+      .catch(function () {
+        removeTyping();
+        sendBtn.disabled = false;
+        appendMsg('coach', "Sorry — couldn't get that. Try again in a moment.");
+      });
+  }
+
+  sendBtn.addEventListener('click', send);
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); send(); }
+  });
+
+  // Load any prior conversation for this round
+  fetch('/coach/round/' + roundId + '/messages')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      (data.messages || []).forEach(function (m) { appendMsg(m.role, m.content); });
+    })
+    .catch(function () {});
+}());
+</script>
+{% endif %}
 </body>
 </html>

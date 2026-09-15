@@ -3,6 +3,36 @@
 
 {% block head %}
 <style>
+/* ── My Coach promo card ───────────────────────────────────────────── */
+.coach-promo-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, var(--green-800, #1B4332), var(--green-700, #2d6a4f));
+  border-radius: var(--radius-lg, 16px);
+  padding: 18px 22px;
+  margin: 18px 0;
+  text-decoration: none;
+  box-shadow: var(--shadow, 0 2px 12px rgba(27, 67, 50, 0.08));
+  transition: transform .15s, box-shadow .15s;
+}
+.coach-promo-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg, 0 8px 32px rgba(27, 67, 50, 0.14)); }
+.coach-promo-icon {
+  font-size: 26px;
+  width: 46px; height: 46px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.1);
+  border-radius: 50%;
+}
+.coach-promo-body { flex: 1; min-width: 0; }
+.coach-promo-title { color: var(--gold-light, #e8c97a); font-weight: 700; font-size: 15px; margin-bottom: 3px; }
+.coach-promo-sub { color: rgba(255,255,255,0.72); font-size: 12.5px; line-height: 1.5; }
+.coach-promo-arrow { color: rgba(255,255,255,0.5); font-size: 20px; flex-shrink: 0; }
+@media (max-width: 640px) {
+  .coach-promo-sub { display: none; }
+}
+
 /* ── Round delete button & inline confirm ─────────────────────────── */
 .round-delete-btn {
   background: none;
@@ -389,6 +419,16 @@
       {% endif %}
     </div>
   </div>
+
+  <!-- My Coach promo -->
+  <a href="{{ url_for('coach.index') }}" class="coach-promo-card">
+    <div class="coach-promo-icon">⛳</div>
+    <div class="coach-promo-body">
+      <div class="coach-promo-title">Ask Your Coach</div>
+      <div class="coach-promo-sub">Talk through your game, your trends, or last week's round — saved so you can pick the conversation back up any time.</div>
+    </div>
+    <div class="coach-promo-arrow">→</div>
+  </a>
 
   <!-- Continue Round banner (Task 11) -->
   {% if in_progress_rounds %}

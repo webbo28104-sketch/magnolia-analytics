@@ -33,6 +33,7 @@ def create_app(config_name='default'):
     from app.routes.admin import admin_bp
     from app.routes.payments import payments_bp
     from app.routes.analytics import analytics_bp
+    from app.routes.coach import coach_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -45,6 +46,7 @@ def create_app(config_name='default'):
     app.register_blueprint(profile_bp, url_prefix='/profile')
     app.register_blueprint(waitlist_bp)
     app.register_blueprint(payments_bp)
+    app.register_blueprint(coach_bp, url_prefix='/coach')
 
     # Recompute stale stats for the user on every login (covers login + register)
     user_logged_in.connect(_recompute_stale_on_login, app)
@@ -88,6 +90,7 @@ def create_app(config_name='default'):
         from app.models.waitlist import WaitingList         # noqa
         from app.models.access_code import AccessCode       # noqa
         from app.models.admin_setting import AdminSetting   # noqa
+        from app.models.coach_chat import CoachChat, CoachMessage  # noqa
         db.create_all()
         _run_column_migrations()
         _backfill_course_coordinates(app)
