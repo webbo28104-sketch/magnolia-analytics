@@ -1,0 +1,9 @@
+name = "magnolia-domain-proxy"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = false
+
+routes = [
+  { pattern = "magnoliaanalytics.golf/*", zone_name = "magnoliaanalytics.golf" },
+  { pattern = "www.magnoliaanalytics.golf/*", zone_name = "magnoliaanalytics.golf" },
+]

@@ -8,6 +8,7 @@ from app.utils.strokes_gained import normalize_to_18, _parse_yards
 from app.utils.round_stats import build_course_hole_map, compute_all_stats, CURRENT_ALGO_VERSION
 from app.utils.shot_sg import CATEGORIES, CATEGORY_LABELS
 from app.utils import sg_breakdown as bd
+from app.utils import sg_evidence as ev
 from app.utils.clubs import club_label
 from app.utils.round_history import shots_for_round, history, per_shot_averages
 from app.utils.personal_bests import check_recent_personal_best
@@ -319,6 +320,8 @@ def view_report(round_id):
                                         before=round_.date_played)
     hist_avgs = per_shot_averages(hist_shots)
 
+    sd_by_cat = ev.category_sd(hist_shots + shots)
+
     # Free tier: only Off the Tee detail is included in the page at all.
     cats_allowed = CATEGORIES if user_is_pro else ('ott',)
     vis_shots = [s for s in shots if s['cat'] in cats_allowed]
@@ -337,13 +340,33 @@ def view_report(round_id):
             'per': round(totals[c] / n, 3) if (allowed and n) else None,
             'avg': hist_avgs[c]['per'] if allowed else None,
         })
+    for cat in cats:
+        if cat['allowed']:
+            cat['rel'] = ev.reliability(cat['per'], cat['n'] or 0, sd_by_cat[cat['cat']])
+            prev_vals = []
+            for _, d in hist_datas:
+                k = d['counts'][cat['cat']]
+                if k:
+                    prev_vals.append(d['totals'][cat['cat']] / k)
+            cat['pattern'] = ev.pattern(cat['per'], prev_vals) if cat['per'] is not None else None
+    cat_total_n = sum(c['n'] or 0 for c in cats if c['allowed'])
+    cat_total_sg = round(sum(c['total'] or 0 for c in cats if c['allowed']), 2)
     sg_total = round_data['sg_total'] if user_is_pro else None
     shots_measured = sum(counts.values())
 
-    breakdown = {dim: bd.rows(vis_shots, dim, vis_hist)
-                 for dim in ('app_dist', 'app_lie', 'app_club', 'ott_club', 'ott_result', 'ott_len',
-                             'atg_dist', 'atg_lie', 'putt_dist', 'club_all')}
+    # Evidence: how much data sits behind each number, and is it a pattern?
+    dims = ('app_dist', 'app_lie', 'app_club', 'ott_club', 'ott_result', 'ott_len',
+            'atg_dist', 'atg_lie', 'putt_dist', 'club_all')
+    hist_vals = {dim: ev.per_round_values(hist_datas, dim) for dim in dims}
+    breakdown = {dim: ev.annotate(bd.rows(vis_shots, dim, vis_hist), sd_by_cat, hist_vals) for dim in dims}
     leaks, strengths = bd.leaks_and_strengths(vis_shots, vis_hist)
+    ev.annotate(leaks, sd_by_cat, hist_vals)
+    ev.annotate(strengths, sd_by_cat, hist_vals)
+    pattern_rounds = [(round_, round_data)] + hist_datas
+    if user_is_pro:
+        recur_weak, recur_strong = ev.recurring_patterns(pattern_rounds, sd_by_cat)
+    else:
+        recur_weak, recur_strong = [], []
 
     insights = {
         'app': _share_line(breakdown['app_dist'], totals['app'], 'yds', 'approach') if user_is_pro else None,
@@ -362,6 +385,13 @@ def view_report(round_id):
                     s['sg'] = None
     hole_sgs = [h['sg'] for h in hole_rows if h['sg'] is not None]
     hole_scale = max([abs(v) for v in hole_sgs] + [1.0])
+    # Hole chart geometry: zero line placed in proportion to the biggest gain
+    # and biggest loss, so the chart uses its full height and 0 is labelled.
+    max_pos = max([v for v in hole_sgs if v > 0] + [0.25])
+    max_neg = max([-v for v in hole_sgs if v < 0] + [0.25])
+    hchart = {'h': 140, 'zero': round(140 * max_pos / (max_pos + max_neg), 1),
+              'max_pos': round(max_pos, 1), 'max_neg': round(max_neg, 1),
+              'scale': 140 / (max_pos + max_neg)}
     waterfall = _waterfall(round_data, cats_allowed) if user_is_pro else None
 
     # Tee shot distances by club (estimated: hole length minus distance left)
@@ -428,7 +458,9 @@ def view_report(round_id):
         shots_measured=shots_measured,
         waterfall=waterfall, leaks=leaks, strengths=strengths,
         bd=breakdown, insights=insights,
-        hole_rows=hole_rows, hole_scale=hole_scale,
+        hole_rows=hole_rows, hole_scale=hole_scale, hchart=hchart,
+        cat_total_n=cat_total_n, cat_total_sg=cat_total_sg,
+        recur_weak=recur_weak, recur_strong=recur_strong, pattern_rounds_n=len(pattern_rounds),
         avg_tee_travel=avg_tee_travel,
         scramble=scramble, gir_pct=gir_pct, fw_pct=fw_pct,
         hist_rounds=len(hist_datas),

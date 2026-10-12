@@ -8,6 +8,7 @@ from app.utils.strokes_gained import normalize_to_18
 from app.utils.shot_sg import CATEGORIES, CATEGORY_LABELS
 from app.utils.round_history import shots_for_round
 from app.utils import sg_breakdown as bd
+from app.utils import sg_evidence as ev
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,9 @@ def _trend(rounds):
     dots = [{'x': round(x(i), 1), 'y': round(y(v), 1), 'v': round(v, 1),
              'date': r.date_played.strftime('%d %b'), 'id': r.id} for i, (r, v) in enumerate(pts)]
     ticks = [round(hi - (hi - lo) * k / 2, 1) for k in range(3)]
-    return {'line': line, 'avg': ' '.join(avg), 'dots': dots, 'ticks': ticks, 'n': len(pts)}
+    return {'line': line, 'avg': ' '.join(avg), 'dots': dots, 'ticks': ticks, 'n': len(pts),
+            'zero': round(y(0), 1) if lo < 0 < hi else None,
+            'best': max(vals), 'worst': min(vals), 'latest': vals[-1]}
 
 
 @dashboard_bp.route('/')
@@ -142,6 +145,13 @@ def index():
                 'spark': _spark(spark_vals), 'href': url_for(ANALYTICS_LINKS[c]),
             })
         leaks, _ = bd.leaks_and_strengths(cur_shots, prev_shots, n_leaks=4, n_strengths=0)
+        sd = ev.category_sd(cur_shots + prev_shots)
+        cur_pairs = [(r, datas[r.id]) for r in cur]
+        for l in leaks:
+            l['rel'] = ev.reliability(l['per'], l['n'], sd.get(ev.DIM_CAT.get(l['dim']), 0.5))
+            l['pattern'] = ev.pattern(None, ev.per_round_values(cur_pairs, l['dim']).get(l['key'], []))
+        for cat in cats:
+            cat['rel'] = ev.reliability(cat['per'], cat['n'], sd[cat['cat']])
         trend = _trend(all_complete[:TREND_ROUNDS])
 
     # ── Recent rounds table ──────────────────────────────────────────────

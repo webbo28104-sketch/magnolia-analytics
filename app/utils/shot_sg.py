@@ -48,6 +48,20 @@ CATEGORY_LABELS = {
 }
 
 
+def expected_short_game(distance_yds, lie):
+    """
+    Tour expected strokes for a shot around the green, by lie:
+    bunker → ATG bunker baseline; rough → rough baseline (chips from rough are
+    harder than from tight lies); fringe/fairway → ATG fairway baseline.
+    Beyond 50 yds the approach baselines take over (expected_scramble).
+    """
+    if lie == 'bunker':
+        return expected_scramble(distance_yds, 'bunker')
+    if lie == 'rough':
+        return expected_approach(distance_yds, 'rough')
+    return expected_scramble(distance_yds, 'fairway')
+
+
 def _num(value):
     """Parse a positive number from shot JSON (int, float, numeric string); else None."""
     if value is None or value == '':
@@ -210,7 +224,7 @@ def compute_hole(h, yardage=None) -> dict:
             rec['lie'] = lie
             rec['dist'] = d
             if d:
-                rec['exp'] = expected_scramble(d, 'bunker' if lie == 'bunker' else 'rough')
+                rec['exp'] = expected_short_game(d, lie)
         elif t == 'putt':
             rec['cat'] = 'putt'
             rec['lie'] = 'green'

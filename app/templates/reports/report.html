@@ -14,7 +14,7 @@
 :root {
   --bg: #0b0d0c; --panel: #111413; --rule: rgba(255,255,255,.08); --rule-soft: rgba(255,255,255,.05);
   --text: #ecefed; --dim: #9aa29e; --faint: #7a827e; --gold: #c9a84c;
-  --gain: #5ee0a0; --loss: #ff6a3d; --zero: rgba(255,255,255,.16);
+  --gain: #5ee0a0; --loss: #ff6a3d; --zero: rgba(255,255,255,.28);
   --mono: 'Geist Mono', ui-monospace, monospace; --sans: 'Geist', system-ui, sans-serif;
 }
 * { box-sizing: border-box; }
@@ -33,13 +33,12 @@ a { color: var(--text); text-decoration: none; }
 
 .hero { padding: 8px 20px 22px; display: flex; flex-direction: column; gap: 14px; }
 .hero-meta { font-family: var(--mono); font-size: 11px; color: var(--dim); letter-spacing: .02em; text-transform: uppercase; }
-.hero-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
-.hero-score { display: flex; align-items: baseline; gap: 10px; }
-.hero-score .gross { font-size: 72px; font-weight: 600; letter-spacing: -.05em; line-height: .85; }
-.hero-score .vp { font-family: var(--mono); font-size: 18px; color: var(--dim); }
-.hero-sg { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; text-align: right; }
-.hero-sg .v { font-family: var(--mono); font-size: 30px; font-weight: 500; letter-spacing: -.03em; line-height: 1; }
-.hero-sg .s { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.hero-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: end; }
+.hero-block { display: flex; flex-direction: column; gap: 4px; }
+.hero-block.r { align-items: flex-end; text-align: right; }
+.big { font-size: 64px; font-weight: 600; letter-spacing: -.05em; line-height: .9; }
+.big-sg { font-family: var(--mono); font-size: 32px; font-weight: 500; letter-spacing: -.03em; line-height: 1; }
+.sub { font-size: 12px; color: var(--dim); line-height: 1.45; }
 .pb { margin: 0 20px 16px; padding: 10px 14px; border: 1px solid rgba(201,168,76,.4); font-size: 13px; }
 .pb b { color: var(--gold); font-weight: 600; }
 
@@ -51,63 +50,82 @@ a { color: var(--text); text-decoration: none; }
 
 .sec { padding: 24px 20px; border-bottom: 1px solid var(--rule); display: flex; flex-direction: column; gap: 12px; }
 .sec:last-child { border-bottom: 0; }
-.sec-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.sec-title { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.02em; }
+.sec-desc { margin: -6px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--dim); }
 .note { margin: 0; font-size: 12px; line-height: 1.55; color: var(--dim); }
-.note .mono { color: var(--text); }
-.insight { margin: 0; font-size: 13px; line-height: 1.55; color: var(--text); }
+.insight { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--text); border-left: 2px solid var(--gold); padding-left: 10px; }
+
+details.howto { border: 1px solid var(--rule); padding: 0 14px; }
+details.howto summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-size: 13px; font-weight: 500; list-style: none; }
+details.howto summary::after { content: '+'; margin-left: auto; color: var(--dim); font-family: var(--mono); }
+details.howto[open] summary::after { content: '−'; }
+details.howto ul { margin: 0 0 14px; padding-left: 18px; font-size: 13px; line-height: 1.6; color: var(--dim); }
+details.howto li b { color: var(--text); font-weight: 500; }
 
 .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .kpis.k4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .kpi { display: flex; flex-direction: column; gap: 4px; padding: 0 0 0 14px; border-left: 1px solid var(--rule); min-width: 0; }
 .kpi:first-child { padding-left: 0; border-left: 0; }
 .kpi .v { font-family: var(--mono); font-size: 24px; font-weight: 500; letter-spacing: -.03em; }
-.kpi .s { font-family: var(--mono); font-size: 10px; color: var(--faint); text-transform: uppercase; }
-@media (max-width: 420px) { .kpis.k4 { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 16px; } .kpis.k4 .kpi:nth-child(3) { padding-left: 0; border-left: 0; } }
+.kpi .s { font-size: 11px; color: var(--dim); line-height: 1.4; }
+@media (max-width: 440px) { .kpis.k4 { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 16px; } .kpis.k4 .kpi:nth-child(3) { padding-left: 0; border-left: 0; } }
 
-/* Diverging bar table */
-.tbl { display: flex; flex-direction: column; }
-.tr { display: grid; gap: 10px; align-items: center; min-height: 38px; border-top: 1px solid var(--rule-soft); }
-.tr.head { min-height: 0; border-top: 0; padding-bottom: 6px; font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: var(--faint); text-transform: uppercase; }
-.tr .r { text-align: right; }
-.tr .lbl { font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tr .lbl.m { font-family: var(--mono); font-size: 12px; }
-.tr .num { font-family: var(--mono); font-size: 13px; text-align: right; }
-.tr .n { font-family: var(--mono); font-size: 11px; text-align: right; color: var(--faint); }
-.tr.low { opacity: .45; }
+/* Breakdown rows: label | chart | per shot | total, then a detail line */
+.brow { border-top: 1px solid var(--rule-soft); padding: 8px 0 7px; }
+.brow.thin .bmain { opacity: .5; }
+.bmain { display: grid; grid-template-columns: 78px minmax(0, 1fr) 54px 54px; gap: 10px; align-items: center; }
+.bmain .lbl { font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bmain .lbl.m { font-family: var(--mono); font-size: 12px; }
+.bmain .num { font-family: var(--mono); font-size: 13px; text-align: right; }
+.bdetail { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 3px; padding-left: 88px; font-size: 11px; color: var(--faint); line-height: 1.45; }
+.bdetail .pat { color: var(--dim); }
+.bdetail .pat.recurring { color: #ff9a76; }
+.bdetail .pat.one-off { color: #c9ceca; }
+.bdetail .pat.improving { color: #8fe9bd; }
+.bhead { display: grid; grid-template-columns: 78px minmax(0, 1fr) 54px 54px; gap: 10px; padding-bottom: 6px; font-family: var(--mono); font-size: 10px; letter-spacing: .05em; color: var(--faint); text-transform: uppercase; }
+.bhead .r { text-align: right; }
+.axis3 { display: flex; justify-content: space-between; }
 .track { position: relative; height: 22px; display: block; }
-.track .zero { position: absolute; left: 50%; top: 2px; bottom: 2px; width: 1px; background: var(--zero); }
+.track .zero { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--zero); }
 .track .bar { position: absolute; top: 6px; height: 10px; }
-.track .stem { position: absolute; top: 10px; height: 2px; }
-.track .dot { position: absolute; top: 6px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; box-shadow: 0 0 0 3px var(--bg); }
-.track .avg { position: absolute; top: 3px; height: 16px; width: 2px; margin-left: -1px; background: var(--faint); }
-.axis { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--faint); }
-.legend { display: flex; gap: 14px; font-family: var(--mono); font-size: 10px; color: var(--faint); align-items: center; }
-.legend i { display: inline-block; margin-right: 5px; vertical-align: middle; }
+.track .ci { position: absolute; top: 10px; height: 2px; background: rgba(236,239,237,.35); }
+.track .ci::before, .track .ci::after { content: ''; position: absolute; top: -3px; width: 1px; height: 8px; background: rgba(236,239,237,.35); }
+.track .ci::before { left: 0; } .track .ci::after { right: 0; }
+.track .avg { position: absolute; top: 2px; height: 18px; width: 2px; margin-left: -1px; background: var(--gold); }
+.conf { display: inline-flex; align-items: center; gap: 4px; }
+.conf i { display: inline-block; width: 4px; height: 9px; background: rgba(255,255,255,.14); }
+.conf i.on { background: var(--text); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11px; color: var(--dim); align-items: center; }
+.legend i { display: inline-block; margin-right: 6px; vertical-align: middle; }
 
 /* Waterfall */
-.wf-row { display: grid; grid-template-columns: 100px minmax(0, 1fr) 52px; gap: 10px; align-items: center; height: 34px; }
-.wf-row .lbl { font-size: 12px; }
+.wf-row { display: grid; grid-template-columns: 104px minmax(0, 1fr) 52px; gap: 10px; align-items: center; height: 34px; }
+.wf-row .lbl { font-size: 12.5px; }
 .wf-row .num { font-family: var(--mono); font-size: 13px; text-align: right; }
 .wf-track { position: relative; height: 100%; }
-.wf-track .base { position: absolute; top: 0; bottom: 0; left: 0; width: 1px; background: var(--rule); }
+.wf-track .grid { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--rule-soft); }
 .wf-track .seg { position: absolute; top: 9px; height: 16px; }
 .wf-track .link { position: absolute; top: 25px; height: 9px; width: 1px; background: rgba(255,255,255,.3); }
-.wf-axis { position: relative; height: 14px; font-family: var(--mono); font-size: 10px; color: var(--faint); }
+.wf-axis { position: relative; height: 16px; font-family: var(--mono); font-size: 10px; color: var(--faint); }
 .wf-axis span { position: absolute; transform: translateX(-50%); }
 
-/* Leak list */
-.lk { display: grid; grid-template-columns: 22px minmax(0, 1fr) 54px 54px 54px; gap: 8px; align-items: center; min-height: 54px; border-top: 1px solid var(--rule-soft); }
-.lk .rk { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+/* Leaks */
+.lk { border-top: 1px solid var(--rule-soft); padding: 10px 0; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 4px 10px; }
+.lk .rk { font-family: var(--mono); font-size: 11px; color: var(--faint); padding-top: 2px; }
 .lk .t { font-size: 14px; font-weight: 500; letter-spacing: -.01em; }
-.lk .m { font-size: 11px; color: var(--dim); }
-.lk .num { font-family: var(--mono); font-size: 13px; text-align: right; }
+.lk .nums { text-align: right; font-family: var(--mono); font-size: 13px; }
+.lk .nums small { display: block; font-size: 11px; color: var(--dim); }
+.lk .why { grid-column: 2 / 4; font-size: 12px; color: var(--dim); line-height: 1.5; }
 
 /* Hole chart */
-.hchart { position: relative; height: 150px; display: grid; gap: 3px; }
-.hchart .zl { position: absolute; left: 0; right: 0; top: 66px; height: 1px; background: rgba(255,255,255,.2); }
-.hcol { position: relative; height: 100%; }
+.hchart-wrap { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 6px; }
+.hy { position: relative; font-family: var(--mono); font-size: 10px; color: var(--faint); }
+.hy span { position: absolute; right: 0; transform: translateY(-50%); }
+.hchart { position: relative; display: grid; gap: 3px; }
+.hchart .zl { position: absolute; left: 0; right: 0; height: 1px; background: var(--zero); }
+.hcol { position: relative; }
 .hcol .b { position: absolute; left: 1px; right: 1px; }
-.hcol .hn { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; font-family: var(--mono); font-size: 9px; color: var(--faint); }
+.hx { display: grid; gap: 3px; margin-left: 40px; font-family: var(--mono); font-size: 9px; color: var(--faint); text-align: center; }
 
 /* Scorecard */
 .sc-wrap { overflow-x: auto; }
@@ -122,6 +140,15 @@ a { color: var(--text); text-decoration: none; }
 .sp.bogey { box-shadow: inset 0 0 0 1px var(--dim); }
 .sp.double { color: var(--bg); background: var(--loss); }
 
+/* Category table */
+.ctab { width: 100%; border-collapse: collapse; }
+.ctab th { font-family: var(--mono); font-weight: 400; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); text-align: right; padding: 0 0 8px 8px; }
+.ctab th:first-child { text-align: left; padding-left: 0; }
+.ctab td { border-top: 1px solid var(--rule-soft); padding: 10px 0 10px 8px; text-align: right; font-family: var(--mono); font-size: 13px; vertical-align: top; }
+.ctab td:first-child { text-align: left; padding-left: 0; font-family: var(--sans); font-size: 14px; }
+.ctab td small { display: block; font-family: var(--sans); font-size: 11px; color: var(--faint); margin-top: 2px; line-height: 1.4; }
+.ctab tr.total td { border-top: 1px solid var(--rule); font-weight: 600; }
+
 /* Hole-by-hole shots */
 .hole { border-top: 1px solid var(--rule); padding: 14px 0 6px; }
 .hole:first-child { border-top: 0; }
@@ -134,7 +161,6 @@ a { color: var(--text); text-decoration: none; }
 .shot .tx { color: var(--dim); min-width: 0; }
 .shot .sg { font-family: var(--mono); font-size: 13px; text-align: right; }
 
-/* Upgrade + coaching */
 .lock { margin: 24px 20px; padding: 24px; border: 1px solid rgba(201,168,76,.4); display: flex; flex-direction: column; gap: 12px; }
 .lock h3 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
 .lock p { margin: 0; font-size: 14px; color: var(--dim); line-height: 1.5; }
@@ -154,7 +180,6 @@ a { color: var(--text); text-decoration: none; }
 .coach-w-send { height: 46px; padding: 0 18px; background: var(--text); color: var(--bg); border: 0; font-weight: 600; font-size: 13px; cursor: pointer; font-family: var(--sans); }
 .coach-w-send:disabled { opacity: .5; }
 
-/* Share modal palette */
 .sm-sheet { background: #111413 !important; border-color: rgba(255,255,255,.14) !important; border-radius: 0 !important; }
 .sm-title { color: var(--text) !important; font-family: var(--sans) !important; }
 .sm-social-btn { border-radius: 0 !important; background: transparent !important; border-color: rgba(255,255,255,.14) !important; color: var(--text) !important; }
@@ -172,25 +197,53 @@ a { color: var(--text); text-decoration: none; }
 {#- ── Formatting macros ── #}
 {% macro f(v, d=2) -%}{% if v is none %}—{% else %}{% set rv = v | round(d) %}{% if rv > 0 %}+{{ '%.*f' | format(d, rv) }}{% elif rv < 0 %}−{{ '%.*f' | format(d, -rv) }}{% else %}{{ '%.*f' | format(d, 0) }}{% endif %}{% endif %}{%- endmacro %}
 {% macro c(v) -%}{% if v is none %}{% elif v >= 0 %}pos{% else %}neg{% endif %}{%- endmacro %}
-{% macro clamp(v, s) -%}{{ [[v / s, -1.0] | max, 1.0] | min }}{%- endmacro %}
-{% macro bar(v, s) -%}
-  {%- set w = ([(v | abs) / s, 1.0] | min) * 50 -%}
-  {%- if v >= 0 -%}left: 50%; width: {{ '%.2f' | format(w) }}%; background: var(--gain);{%- else -%}right: 50%; width: {{ '%.2f' | format(w) }}%; background: var(--loss);{%- endif -%}
+{% macro x(v, s) -%}{{ '%.2f' | format(50 + ([[v / s, -1.0] | max, 1.0] | min) * 50) }}{%- endmacro %}
+{% macro meter(rel) -%}
+  {%- set lv = {'thin': 1, 'early': 2, 'developing': 3, 'solid': 4}[rel.tier] -%}
+  <span class="conf" title="{{ rel.tier_label }}" aria-label="Confidence: {{ rel.tier_label }}">{% for i in range(4) %}<i class="{{ 'on' if i < lv }}"></i>{% endfor %}</span>
 {%- endmacro %}
-{% macro xpos(v, s) -%}{{ '%.2f' | format(50 + ([[v / s, -1.0] | max, 1.0] | min) * 50) }}{%- endmacro %}
-{% macro lolli(r, s) -%}
-  {%- set x = 50 + ([[r.per / s, -1.0] | max, 1.0] | min) * 50 -%}
-  {%- set a = [50, x] | min -%}{%- set b = [50, x] | max -%}
-  <span class="zero"></span>
-  <span class="stem" style="left: {{ '%.2f' | format(a) }}%; width: {{ '%.2f' | format(b - a) }}%; background: {{ 'var(--gain)' if r.per >= 0 else 'var(--loss)' }};"></span>
-  {%- if r.avg is not none %}<span class="avg" style="left: {{ xpos(r.avg, s) }}%;" title="Your 10-round average {{ f(r.avg, 2) }}"></span>{% endif %}
-  <span class="dot" style="left: {{ '%.2f' | format(x) }}%; background: {{ 'var(--gain)' if r.per >= 0 else 'var(--loss)' }};"></span>
+{#- One chart row: bar = SG per shot, whisker = 95% range, gold tick = 10-round average -#}
+{% macro bchart(r, s) -%}
+  {%- set w = ([(r.per | abs) / s, 1.0] | min) * 50 -%}
+  <span class="track" role="img" aria-label="{{ r.label }}: {{ f(r.per) }} strokes per shot{% if r.avg is not none %}, your average {{ f(r.avg) }}{% endif %}">
+    <span class="zero"></span>
+    <span class="bar" style="{{ 'left' if r.per >= 0 else 'right' }}: 50%; width: {{ '%.2f' | format(w) }}%; background: {{ 'var(--gain)' if r.per >= 0 else 'var(--loss)' }};"></span>
+    {%- if r.rel and r.rel.ci is not none and r.n > 1 %}{% set a = x(r.rel.lo, s) | float %}{% set b = x(r.rel.hi, s) | float %}<span class="ci" style="left: {{ a }}%; width: {{ '%.2f' | format(b - a) }}%;"></span>{% endif %}
+    {%- if r.avg is not none %}<span class="avg" style="left: {{ x(r.avg, s) }}%;"></span>{% endif %}
+  </span>
+{%- endmacro %}
+{% macro brows(rows, s, unit='shot', mono=False) -%}
+  <div class="bhead"><span>{{ caller() if caller is defined else '' }}</span><span class="axis3"><span>−{{ s }}</span><span>0</span><span>+{{ s }}</span></span><span class="r">Per {{ unit }}</span><span class="r">Total</span></div>
+  {% for r in rows %}
+  <div class="brow {{ 'thin' if r.rel and r.rel.tier == 'thin' }}">
+    <div class="bmain">
+      <span class="lbl {{ 'm' if mono }}">{{ r.label }}</span>
+      {{ bchart(r, s) }}
+      <span class="num {{ c(r.per) }}">{{ f(r.per) }}</span>
+      <span class="num {{ c(r.sg) }}">{{ f(r.sg) }}</span>
+    </div>
+    <div class="bdetail">
+      <span>{{ r.n }} {{ unit }}{{ 's' if r.n != 1 }}{% if r.holed is defined and r.holed is not none %} · {{ r.holed }} holed{% if r.tour_make %} (Tour holes {{ r.tour_make }}%){% endif %}{% endif %}</span>
+      {% if r.rel %}<span>{{ meter(r.rel) }} {{ r.rel.tier_label }}{% if r.rel.ci is not none and r.n > 1 %} · ±{{ '%.2f' | format(r.rel.ci) }}{% endif %}</span>{% endif %}
+      {% if r.avg is not none %}<span>your usual {{ f(r.avg) }}/{{ unit }}</span>{% endif %}
+      {% if r.pattern and r.pattern.kind in ('recurring', 'one-off', 'improving') %}<span class="pat {{ r.pattern.kind }}">{{ r.pattern.text }}</span>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
 {%- endmacro %}
 {% macro locked(title) -%}
 <div class="lock">
   <h3>{{ title }}</h3>
   <p>Strokes gained per shot for approach, short game and putting, broken down by distance, lie and club, plus coaching on every round. Available with Magnolia Pro.</p>
   <div><a class="btn" href="{{ url_for('main.pricing') }}">See Pro</a></div>
+</div>
+{%- endmacro %}
+{% macro chartkey() -%}
+<div class="legend">
+  <span><i style="width:12px;height:8px;background:var(--loss)"></i>Lost to Tour</span>
+  <span><i style="width:12px;height:8px;background:var(--gain)"></i>Gained on Tour</span>
+  <span><i style="width:14px;height:2px;background:rgba(236,239,237,.5)"></i>Likely range (95%)</span>
+  <span><i style="width:2px;height:12px;background:var(--gold)"></i>Your 10-round average</span>
 </div>
 {%- endmacro %}
 
@@ -205,21 +258,21 @@ a { color: var(--text); text-decoration: none; }
   </div>
 
   <header class="hero">
-    <span class="hero-meta">{{ round.date_played.strftime('%d %b %Y') }} · {{ course_name }}{% if round.tee_set %} · {{ round.tee_set }}{% endif %} · {{ holes_played }} holes</span>
+    <span class="hero-meta">{{ round.date_played.strftime('%d %b %Y') }} · {{ course_name }}{% if round.tee_set %} · {{ round.tee_set }} tees{% endif %} · {{ holes_played }} holes</span>
     <div class="hero-row">
-      <div class="hero-score">
-        <span class="gross">{{ round.total_score }}</span>
-        <span class="vp">{{ score_vs_par_label }}</span>
+      <div class="hero-block">
+        <span class="label">Score</span>
+        <span class="big">{{ round.total_score }}</span>
+        <span class="sub">{{ score_vs_par_label }} to par {{ par }}</span>
       </div>
-      <div class="hero-sg">
-        <span class="label">SG vs Tour · {{ holes_played }} holes</span>
+      <div class="hero-block r">
+        <span class="label">Strokes gained vs Tour</span>
         {% if sg_total is not none %}
-        <span class="v {{ c(sg_total) }}">{{ f(sg_total) }}</span>
-        <span class="s">{% if shots_measured %}{{ f(sg_total / shots_measured, 2) }} / SHOT · {% endif %}{{ shots_measured }} SHOTS MEASURED</span>
-        {% if sg_pace18 is not none %}<span class="s">18-HOLE PACE {{ f(sg_pace18, 1) }}</span>{% endif %}
+        <span class="big-sg {{ c(sg_total) }}">{{ f(sg_total) }}</span>
+        <span class="sub">over the {{ holes_played }} holes played · {% if shots_measured %}{{ f(sg_total / shots_measured, 3) }} per shot across {{ shots_measured }} measured shots{% endif %}{% if sg_pace18 is not none %}<br>18-hole pace {{ f(sg_pace18, 1) }}{% endif %}</span>
         {% else %}
-        <span class="v {{ c(cat_by.ott.total) }}">{{ f(cat_by.ott.total) }}</span>
-        <span class="s">OFF THE TEE · FULL SG WITH PRO</span>
+        <span class="big-sg {{ c(cat_by.ott.total) }}">{{ f(cat_by.ott.total) }}</span>
+        <span class="sub">off the tee only · full strokes gained with Pro</span>
         {% endif %}
       </div>
     </div>
@@ -240,25 +293,36 @@ a { color: var(--text); text-decoration: none; }
   {# ═════════════════════════ OVERVIEW ═════════════════════════ #}
   <div class="panel active" id="tab-overview" role="tabpanel">
 
+    <section class="sec" style="padding-bottom:4px;border-bottom:0">
+      <details class="howto">
+        <summary>How to read this report</summary>
+        <ul>
+          <li><b>Strokes gained (SG)</b> compares every shot with what a PGA Tour pro averages from the same distance and lie. <b>0 = Tour average.</b> −0.30 means that shot cost you 0.3 strokes more than a Tour pro; negative numbers are normal for every amateur.</li>
+          <li><b>Per shot</b> is the average across the shots in that group; <b>Total</b> is all of them added up. Category totals add up to your round total.</li>
+          <li><b>The confidence bars</b> (▮▮▮▮) show how much data is behind a number: 1 bar = fewer than 3 shots, too few to judge; 4 bars = 30+ shots, solid. The <b>± range</b> is where the true average probably sits; if the whole range is below 0, the loss is more than normal shot-to-shot luck.</li>
+          <li><b>Gold tick</b> = your own average over your previous 10 rounds, so you can see whether today was normal for you.</li>
+          <li><b>Recurring</b> means the same thing also cost you strokes in most of your recent rounds: worth practising. <b>Unusual for you</b> means it is normally fine: probably a bad day, not a pattern.</li>
+        </ul>
+      </details>
+    </section>
+
     {% if waterfall %}
     {% set lost = waterfall.score - waterfall.expected %}
     <section class="sec">
-      <div class="sec-h">
-        <span class="label">Where the {{ '%.1f' | format(lost | abs) }} strokes {{ 'went' if lost >= 0 else 'came from' }}</span>
-        <span class="label faint">Strokes</span>
-      </div>
+      <h2 class="sec-title">Your score vs a Tour pro</h2>
+      <p class="sec-desc">A Tour pro would average {{ '%.1f' | format(waterfall.expected) }} strokes on {% if waterfall.complete %}these {{ waterfall.holes }} holes{% else %}the {{ waterfall.holes }} of {{ waterfall.holes_total }} holes where every shot was measured{% endif %}. Each bar shows how many strokes you lost (red) or gained (green) against that in one part of the game, ending at your score.</p>
       <div>
         <div class="wf-row">
-          <span class="lbl dim">Tour expects</span>
-          <span class="wf-track"><span class="base"></span>
-            <span class="seg" style="left: 0; width: {{ waterfall.exp_pct }}%; background: rgba(255,255,255,.14);"></span>
+          <span class="lbl dim">Tour average</span>
+          <span class="wf-track">{% for t in waterfall.ticks %}<span class="grid" style="left: {{ t.pct }}%;"></span>{% endfor %}
+            <span class="seg" style="left: 0; width: {{ waterfall.exp_pct }}%; background: rgba(255,255,255,.18);"></span>
             <span class="link" style="left: {{ waterfall.exp_pct }}%;"></span></span>
           <span class="num dim">{{ '%.1f' | format(waterfall.expected) }}</span>
         </div>
         {% for s in waterfall.steps %}
         <div class="wf-row">
           <span class="lbl">{{ s.label }}</span>
-          <span class="wf-track"><span class="base"></span>
+          <span class="wf-track">{% for t in waterfall.ticks %}<span class="grid" style="left: {{ t.pct }}%;"></span>{% endfor %}
             <span class="seg" style="left: {{ s.left }}%; width: {{ s.width }}%; background: {{ 'var(--loss)' if s.value >= 0 else 'var(--gain)' }};"></span>
             <span class="link" style="left: {{ s.link }}%;"></span></span>
           <span class="num {{ 'neg' if s.value > 0 else 'pos' }}">{{ '+' if s.value > 0 else '−' if s.value < 0 else '' }}{{ '%.1f' | format(s.value | abs) }}</span>
@@ -266,74 +330,91 @@ a { color: var(--text); text-decoration: none; }
         {% endfor %}
         <div class="wf-row">
           <span class="lbl" style="font-weight:600">Your score</span>
-          <span class="wf-track"><span class="base"></span>
+          <span class="wf-track">{% for t in waterfall.ticks %}<span class="grid" style="left: {{ t.pct }}%;"></span>{% endfor %}
             <span class="seg" style="left: 0; width: {{ waterfall.score_pct }}%; background: var(--text);"></span></span>
           <span class="num" style="font-weight:500">{{ waterfall.score }}</span>
         </div>
         <div class="wf-row" style="height:18px">
-          <span></span>
+          <span class="label" style="font-size:10px">Strokes</span>
           <span class="wf-axis">{% for t in waterfall.ticks %}<span style="left: {{ t.pct }}%;">{{ t.v }}</span>{% endfor %}</span>
           <span></span>
         </div>
       </div>
-      <p class="note">A Tour pro would average {{ '%.1f' | format(waterfall.expected) }} on {% if waterfall.complete %}these {{ waterfall.holes }} holes{% else %}the {{ waterfall.holes }} of {{ waterfall.holes_total }} holes with every shot measured{% endif %}. Red bars are strokes you lost to that in each part of the game, green bars are strokes you gained. Together they add up exactly to your score. Strokes gained is measured against the Tour, not par, so a negative number is normal for every amateur.</p>
+      <p class="note">Strokes gained is measured against the Tour, not par. Right column: strokes lost (+) or gained (−) per category.</p>
     </section>
     {% endif %}
 
     <section class="sec">
-      <div class="sec-h">
-        <span class="label">SG per shot by category</span>
-        <span class="legend"><span><i style="width:2px;height:10px;background:var(--faint)"></i>10-RD AVG</span></span>
-      </div>
-      <div class="tbl">
-        <div class="tr head" style="grid-template-columns: 96px minmax(0,1fr) 56px 56px 30px;">
-          <span>Category</span><span style="display:flex;justify-content:space-between"><span>−0.25</span><span>0</span><span>+0.25</span></span><span class="r">/shot</span><span class="r">Total</span><span class="r">N</span>
-        </div>
-        {% for cat in cats %}
-        <div class="tr" style="grid-template-columns: 96px minmax(0,1fr) 56px 56px 30px;">
-          <span class="lbl">{{ cat.label }}</span>
-          {% if cat.allowed and cat.per is not none %}
-          <span class="track"><span class="zero"></span><span class="bar" style="{{ bar(cat.per, 0.25) }}"></span>
-            {% if cat.avg is not none %}<span class="avg" style="left: {{ xpos(cat.avg, 0.25) }}%;"></span>{% endif %}</span>
-          <span class="num {{ c(cat.per) }}">{{ f(cat.per) }}</span>
-          <span class="num {{ c(cat.total) }}">{{ f(cat.total) }}</span>
-          <span class="n">{{ cat.n }}</span>
-          {% elif cat.allowed %}
-          <span class="dim" style="font-size:12px">No measured shots</span><span></span><span></span><span></span>
-          {% else %}
-          <span class="dim" style="font-size:12px">Pro</span><span></span><span></span><span></span>
+      <h2 class="sec-title">Round totals by category</h2>
+      <p class="sec-desc">Strokes gained added up for each part of the game, the average per shot, and how that compares with your own previous 10 rounds.</p>
+      <table class="ctab">
+        <thead><tr><th>Category</th><th>Shots</th><th>Per shot</th><th>Total</th><th>Your usual</th></tr></thead>
+        <tbody>
+          {% for cat in cats %}
+          <tr>
+            <td>{{ cat.label }}
+              {% if cat.allowed and cat.rel %}<small>{{ meter(cat.rel) }} {{ cat.rel.tier_label }}{% if cat.rel.ci is not none and cat.n > 1 %} · ±{{ '%.2f' | format(cat.rel.ci) }}{% endif %}{% if cat.pattern and cat.pattern.kind in ('recurring', 'one-off', 'improving') %}<br>{{ cat.pattern.text }}{% endif %}</small>{% elif not cat.allowed %}<small>Pro</small>{% endif %}</td>
+            <td>{{ cat.n if cat.allowed else '—' }}</td>
+            <td class="{{ c(cat.per) }}">{{ f(cat.per) if cat.allowed else '—' }}</td>
+            <td class="{{ c(cat.total) }}">{{ f(cat.total) if cat.allowed else '—' }}</td>
+            <td class="faint">{{ f(cat.avg) if cat.allowed and cat.avg is not none else '—' }}</td>
+          </tr>
+          {% endfor %}
+          {% if sg_total is not none %}
+          <tr class="total"><td>All shots</td><td>{{ cat_total_n }}</td><td class="{{ c(sg_total) }}">{{ f(sg_total / cat_total_n if cat_total_n else none) }}</td><td class="{{ c(cat_total_sg) }}">{{ f(cat_total_sg) }}</td><td></td></tr>
           {% endif %}
-        </div>
-        {% endfor %}
-      </div>
+        </tbody>
+      </table>
+      <p class="note">"Your usual" is your average strokes gained per shot in that category across your previous 10 rounds.</p>
     </section>
 
     {% if leaks %}
     <section class="sec">
-      <div class="sec-h"><span class="label">Biggest leaks</span><span class="label faint">Total · /shot · 10-rd</span></div>
+      <h2 class="sec-title">Where strokes went today</h2>
+      <p class="sec-desc">The groups of shots that cost the most strokes this round, with how much data is behind each and whether it is a pattern or a one-off.</p>
       <div>
         {% for l in leaks %}
         <div class="lk">
           <span class="rk">{{ '%02d' | format(loop.index) }}</span>
-          <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="t">{{ l.title }}</span><span class="m">{{ l.meta }}</span></div>
-          <span class="num neg">{{ f(l.sg) }}</span>
-          <span class="num">{{ f(l.per) }}</span>
-          <span class="num faint">{{ f(l.avg) if l.avg is not none else '—' }}</span>
+          <div style="min-width:0"><div class="t">{{ l.title }}</div><div class="faint" style="font-size:11px">{{ l.meta }}</div></div>
+          <div class="nums"><span class="neg">{{ f(l.sg) }}</span><small>{{ f(l.per) }} per {{ 'putt' if l.dim == 'putt_dist' else 'shot' }}</small></div>
+          <div class="why">{{ meter(l.rel) }} {{ l.rel.tier_label }}{% if l.rel.clear == 'loss' %}, beyond normal variation{% elif l.n > 1 %}, could still be luck{% endif %}.{% if l.pattern %} {{ l.pattern.text }}{% endif %}</div>
         </div>
         {% endfor %}
       </div>
+    </section>
+    {% endif %}
+
+    {% if recur_weak or recur_strong %}
+    <section class="sec">
+      <h2 class="sec-title">Patterns across your last {{ pattern_rounds_n }} rounds</h2>
+      <p class="sec-desc">Things that keep happening: each needs at least 3 rounds of data and the same result in most of them. This is what's worth practising (or trusting).</p>
+      {% for group, items, cls in [('Keeps costing you', recur_weak, 'neg'), ('Reliably good', recur_strong, 'pos')] %}
+      {% if items %}
+      <span class="label" style="margin-top:4px">{{ group }}</span>
+      <div>
+        {% for p in items %}
+        <div class="lk" style="grid-template-columns: minmax(0,1fr) auto;">
+          <div style="min-width:0"><div class="t">{{ p.title }}</div></div>
+          <div class="nums"><span class="{{ cls }}">{{ f(p.per_round) }}</span><small>per round played</small></div>
+          <div class="why" style="grid-column: 1 / 3">{{ 'Lost' if cls == 'neg' else 'Gained' }} strokes in {{ p.neg if cls == 'neg' else p.pos }} of {{ p.played }} rounds · {{ f(p.per) }} per shot over {{ p.n }} shots · {{ meter(p.rel) }} {{ p.rel.tier_label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endfor %}
     </section>
     {% endif %}
 
     {% if strengths %}
     <section class="sec">
-      <div class="sec-h"><span class="label">Strengths</span><span class="label faint">Total · /shot</span></div>
+      <h2 class="sec-title">What went well today</h2>
       <div>
         {% for s in strengths %}
-        <div class="lk" style="grid-template-columns: minmax(0,1fr) 54px 54px;">
-          <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="t">{{ s.title }}</span><span class="m">{{ s.meta }}</span></div>
-          <span class="num pos">{{ f(s.sg) }}</span>
-          <span class="num">{{ f(s.per) }}</span>
+        <div class="lk" style="grid-template-columns: minmax(0,1fr) auto;">
+          <div style="min-width:0"><div class="t">{{ s.title }}</div><div class="faint" style="font-size:11px">{{ s.meta }}</div></div>
+          <div class="nums"><span class="pos">{{ f(s.sg) }}</span><small>{{ f(s.per) }} per {{ 'putt' if s.dim == 'putt_dist' else 'shot' }}</small></div>
+          <div class="why" style="grid-column: 1 / 3">{{ meter(s.rel) }} {{ s.rel.tier_label }}.{% if s.pattern %} {{ s.pattern.text }}{% endif %}</div>
         </div>
         {% endfor %}
       </div>
@@ -345,37 +426,42 @@ a { color: var(--text); text-decoration: none; }
     {% set out_sg = hole_rows | selectattr('hole_number', 'le', 9) | map(attribute='sg') | sum %}
     {% set in_sg = hole_rows | selectattr('hole_number', 'gt', 9) | map(attribute='sg') | sum %}
     <section class="sec">
-      <div class="sec-h">
-        <span class="label">SG by hole</span>
-        <span class="label faint">{% if split.front %}Out {{ f(out_sg, 1) }}{% endif %}{% if split.front and split.back %} · {% endif %}{% if split.back %}In {{ f(in_sg, 1) }}{% endif %}</span>
-      </div>
-      <div class="hchart" style="grid-template-columns: repeat({{ n_h }}, minmax(0, 1fr));">
-        <span class="zl"></span>
-        {% for h in hole_rows %}
-        {% set px = ((h.sg | abs) / hole_scale * 60) %}
-        <div class="hcol" title="Hole {{ h.hole_number }}: {{ f(h.sg) }}">
-          <span class="b" style="top: {{ '%.1f' | format(66 - px if h.sg >= 0 else 66) }}px; height: {{ '%.1f' | format([px, 1] | max) }}px; background: {{ 'var(--gain)' if h.sg >= 0 else 'var(--loss)' }};{% if not h.complete %} opacity: .5;{% endif %}"></span>
-          <span class="hn">{{ h.hole_number }}</span>
+      <h2 class="sec-title">Strokes gained on each hole</h2>
+      <p class="sec-desc">Bars above the line gained strokes on a Tour pro, bars below lost them.{% if split.front and split.back %} Front nine {{ f(out_sg, 1) }}, back nine {{ f(in_sg, 1) }}.{% endif %} Faded bars are holes with a shot missing a distance.</p>
+      <div class="hchart-wrap">
+        <div class="hy" style="height: {{ hchart.h }}px">
+          <span style="top: 0">{{ f(hchart.max_pos, 1) }}</span>
+          <span style="top: {{ hchart.zero }}px">0</span>
+          <span style="top: {{ hchart.h }}px">{{ f(-hchart.max_neg, 1) }}</span>
         </div>
-        {% endfor %}
+        <div class="hchart" style="height: {{ hchart.h }}px; grid-template-columns: repeat({{ n_h }}, minmax(0, 1fr));" role="img" aria-label="Strokes gained per hole">
+          <span class="zl" style="top: {{ hchart.zero }}px"></span>
+          {% for h in hole_rows %}
+          {% set px = (h.sg | abs) * hchart.scale %}
+          <div class="hcol" title="Hole {{ h.hole_number }}: {{ f(h.sg) }} strokes">
+            <span class="b" style="top: {{ '%.1f' | format(hchart.zero - px if h.sg >= 0 else hchart.zero) }}px; height: {{ '%.1f' | format([px, 1] | max) }}px; background: {{ 'var(--gain)' if h.sg >= 0 else 'var(--loss)' }};{% if not h.complete %} opacity: .45;{% endif %}"></span>
+          </div>
+          {% endfor %}
+        </div>
       </div>
+      <div class="hx" style="grid-template-columns: repeat({{ n_h }}, minmax(0, 1fr));">{% for h in hole_rows %}<span>{{ h.hole_number }}</span>{% endfor %}</div>
       {% set ranked = hole_rows | sort(attribute='sg') %}
-      <div class="axis"><span>Worst: {% for h in ranked[:3] %}{{ h.hole_number }} ({{ f(h.sg, 1) }}){% if not loop.last %} · {% endif %}{% endfor %}</span><span>Best: {{ ranked[-1].hole_number }} ({{ f(ranked[-1].sg, 1) }})</span></div>
+      <p class="note">Hardest holes: {% for h in ranked[:3] %}{{ h.hole_number }} ({{ f(h.sg, 1) }}){% if not loop.last %}, {% endif %}{% endfor %}. Best: {{ ranked[-1].hole_number }} ({{ f(ranked[-1].sg, 1) }}).</p>
     </section>
     {% endif %}
 
     <section class="sec">
-      <span class="label">Round stats</span>
+      <h2 class="sec-title">Round stats</h2>
       <div class="kpis k4">
-        <div class="kpi"><span class="label">Fairways</span><span class="v">{{ round.fairways_hit if round.fairways_hit is not none else '—' }}/{{ round.fairways_available or 0 }}</span><span class="s">{{ fw_pct if fw_pct is not none else '—' }}%</span></div>
-        <div class="kpi"><span class="label">Greens</span><span class="v">{{ round.gir_count if round.gir_count is not none else '—' }}/{{ holes_data | length }}</span><span class="s">{{ gir_pct if gir_pct is not none else '—' }}%</span></div>
+        <div class="kpi"><span class="label">Fairways hit</span><span class="v">{{ round.fairways_hit if round.fairways_hit is not none else '—' }}/{{ round.fairways_available or 0 }}</span><span class="s">{{ fw_pct if fw_pct is not none else '—' }}% of par 4s and 5s</span></div>
+        <div class="kpi"><span class="label">Greens in reg.</span><span class="v">{{ round.gir_count if round.gir_count is not none else '—' }}/{{ holes_data | length }}</span><span class="s">{{ gir_pct if gir_pct is not none else '—' }}% of holes</span></div>
         <div class="kpi"><span class="label">Putts</span><span class="v">{{ round.total_putts if round.total_putts is not none else '—' }}</span><span class="s">{{ holes_data | selectattr('putts', 'ge', 3) | list | length }} three-putts</span></div>
-        <div class="kpi"><span class="label">Scrambling</span><span class="v">{{ scramble.saves }}/{{ scramble.attempts }}</span><span class="s">{{ scramble.save_pct if scramble.save_pct is not none else '—' }}%</span></div>
+        <div class="kpi"><span class="label">Scrambling</span><span class="v">{{ scramble.saves }}/{{ scramble.attempts }}</span><span class="s">par or better after missing the green</span></div>
       </div>
     </section>
 
     <section class="sec">
-      <span class="label">Scorecard</span>
+      <h2 class="sec-title">Scorecard</h2>
       <div class="sc-wrap">
         <table class="sc">
           <thead><tr><th>Hole</th><th>Par</th><th>Yds</th><th>Score</th><th>Putts</th><th>GIR</th><th>SG</th></tr></thead>
@@ -399,6 +485,7 @@ a { color: var(--text); text-decoration: none; }
           </tbody>
         </table>
       </div>
+      <p class="note">GIR ● = green in regulation. SG = strokes gained on the hole vs a Tour pro.</p>
     </section>
   </div>
 
@@ -406,49 +493,34 @@ a { color: var(--text); text-decoration: none; }
   {% set ott = cat_by.ott %}
   <div class="panel" id="tab-tee" role="tabpanel">
     <section class="sec">
+      <h2 class="sec-title">Off the tee</h2>
+      <p class="sec-desc">Tee shots on par 4s and 5s, plus any recovery punch-out after a tee shot into the trees.</p>
       <div class="kpis">
-        <div class="kpi"><span class="label">SG off tee</span><span class="v {{ c(ott.total) }}">{{ f(ott.total) }}</span><span class="s">{{ ott.n or 0 }} shots</span></div>
-        <div class="kpi"><span class="label">Per shot</span><span class="v">{{ f(ott.per) }}</span><span class="s">10-rd {{ f(ott.avg) }}</span></div>
-        <div class="kpi"><span class="label">Fairways</span><span class="v">{{ round.fairways_hit if round.fairways_hit is not none else '—' }}/{{ round.fairways_available or 0 }}</span><span class="s">{% if avg_tee_travel %}avg {{ avg_tee_travel }} yds{% else %}{{ fw_pct if fw_pct is not none else '—' }}%{% endif %}</span></div>
+        <div class="kpi"><span class="label">Total SG</span><span class="v {{ c(ott.total) }}">{{ f(ott.total) }}</span><span class="s">{{ ott.n or 0 }} shots this round</span></div>
+        <div class="kpi"><span class="label">Per shot</span><span class="v {{ c(ott.per) }}">{{ f(ott.per) }}</span><span class="s">your usual {{ f(ott.avg) }}</span></div>
+        <div class="kpi"><span class="label">Fairways</span><span class="v">{{ round.fairways_hit if round.fairways_hit is not none else '—' }}/{{ round.fairways_available or 0 }}</span><span class="s">{% if avg_tee_travel %}avg tee shot ~{{ avg_tee_travel }} yds{% else %}{{ fw_pct if fw_pct is not none else '—' }}%{% endif %}</span></div>
       </div>
-      {% if insights.ott %}<p class="note">{{ insights.ott }}</p>{% endif %}
+      {% if insights.ott %}<p class="insight">{{ insights.ott }}</p>{% endif %}
     </section>
 
     {% if bd.ott_club %}
     <section class="sec">
-      <div class="sec-h"><span class="label">By club</span><span class="label faint">Avg dist · FW · /shot · total</span></div>
-      <div class="tbl">
-        {% for r in bd.ott_club %}
-        <div class="tr" style="grid-template-columns: 52px minmax(0,1fr) 54px 40px 56px 50px;">
-          <span class="lbl m" style="font-weight:500">{{ r.label }}</span>
-          <span class="dim" style="font-size:12px">{{ r.n }} tee shot{{ 's' if r.n != 1 }}</span>
-          <span class="num dim">{{ r.avg_travel ~ 'y' if r.avg_travel else '—' }}</span>
-          <span class="n">{{ r.fairways }}/{{ r.n }}</span>
-          <span class="num {{ c(r.per) }}">{{ f(r.per) }}</span>
-          <span class="num {{ c(r.sg) }}">{{ f(r.sg) }}</span>
-        </div>
-        {% endfor %}
-      </div>
-      <p class="note">Distance is estimated as hole length minus the distance left for your next shot, so doglegs read a little short.</p>
+      <h2 class="sec-title">By club</h2>
+      <p class="sec-desc">Strokes gained per tee shot with each club, and roughly how far it went (hole length minus the distance left).</p>
+      {% call brows(bd.ott_club, 0.8, 'shot', True) %}Club{% endcall %}
+      <p class="note">{% for r in bd.ott_club %}{{ r.label }}: {{ r.fairways }}/{{ r.n }} fairways{% if r.avg_travel %}, ~{{ r.avg_travel }} yds{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+      {{ chartkey() }}
     </section>
     {% else %}
     <section class="sec"><p class="note">Turn on club logging in <a href="{{ url_for('bag.index') }}" style="text-decoration:underline">My Bag</a> to see SG and distance for each club off the tee.</p></section>
     {% endif %}
 
-    {% for dim, title in [('ott_result', 'By result'), ('ott_len', 'By hole length (yds)')] %}
+    {% for dim, title, desc in [('ott_result', 'By where it finished', 'How much each result cost or gained per tee shot, compared with a Tour pro hitting from the same tee.'), ('ott_len', 'By hole length (yds)', 'Are you losing more on long holes or short ones?')] %}
     {% if bd[dim] %}
     <section class="sec">
-      <div class="sec-h"><span class="label">{{ title }}</span><span class="label faint">N · /shot</span></div>
-      <div class="tbl">
-        {% for r in bd[dim] %}
-        <div class="tr" style="grid-template-columns: 96px minmax(0,1fr) 26px 56px;">
-          <span class="lbl {{ 'm' if dim == 'ott_len' }}">{{ r.label }}</span>
-          <span class="track"><span class="zero"></span><span class="bar" style="{{ bar(r.per, 0.8) }}"></span>{% if r.avg is not none %}<span class="avg" style="left: {{ xpos(r.avg, 0.8) }}%;"></span>{% endif %}</span>
-          <span class="n">{{ r.n }}</span>
-          <span class="num {{ c(r.per) }}">{{ f(r.per) }}</span>
-        </div>
-        {% endfor %}
-      </div>
+      <h2 class="sec-title">{{ title }}</h2>
+      <p class="sec-desc">{{ desc }}</p>
+      {% call brows(bd[dim], 0.8, 'shot', dim == 'ott_len') %}{{ 'Result' if dim == 'ott_result' else 'Yds' }}{% endcall %}
     </section>
     {% endif %}
     {% endfor %}
@@ -459,51 +531,32 @@ a { color: var(--text); text-decoration: none; }
   {% if user_is_pro %}
     {% set app = cat_by.app %}
     <section class="sec">
+      <h2 class="sec-title">Approach</h2>
+      <p class="sec-desc">Full shots into the green (more than 30 yards out, plus par-3 tee shots).</p>
       <div class="kpis">
-        <div class="kpi"><span class="label">SG approach</span><span class="v {{ c(app.total) }}">{{ f(app.total) }}</span><span class="s">{{ app.n }} shots</span></div>
-        <div class="kpi"><span class="label">Per shot</span><span class="v">{{ f(app.per) }}</span><span class="s">10-rd {{ f(app.avg) }}</span></div>
-        <div class="kpi"><span class="label">Greens</span><span class="v">{{ round.gir_count }}/{{ holes_data | length }}</span><span class="s">{{ gir_pct }}%</span></div>
+        <div class="kpi"><span class="label">Total SG</span><span class="v {{ c(app.total) }}">{{ f(app.total) }}</span><span class="s">{{ app.n }} shots this round</span></div>
+        <div class="kpi"><span class="label">Per shot</span><span class="v {{ c(app.per) }}">{{ f(app.per) }}</span><span class="s">your usual {{ f(app.avg) }}</span></div>
+        <div class="kpi"><span class="label">Greens in reg.</span><span class="v">{{ round.gir_count }}/{{ holes_data | length }}</span><span class="s">{{ gir_pct }}% of holes</span></div>
       </div>
     </section>
 
     {% if bd.app_dist %}
     <section class="sec">
-      <div class="sec-h">
-        <span class="label">SG per shot by distance</span>
-        <span class="legend"><span><i style="width:7px;height:7px;border-radius:50%;background:var(--text)"></i>TODAY</span><span><i style="width:2px;height:10px;background:var(--faint)"></i>10-RD</span></span>
-      </div>
-      <div class="tbl">
-        <div class="tr head" style="grid-template-columns: 62px minmax(0,1fr) 50px 24px;"><span>Yds</span><span class="axis"><span>−0.5</span><span>0</span><span>+0.5</span></span><span class="r">Total</span><span class="r">N</span></div>
-        {% for r in bd.app_dist %}
-        <div class="tr {{ 'low' if r.n < 2 }}" style="grid-template-columns: 62px minmax(0,1fr) 50px 24px;">
-          <span class="lbl m">{{ r.label }}</span>
-          <span class="track">{{ lolli(r, 0.5) }}</span>
-          <span class="num {{ c(r.sg) }}">{{ f(r.sg) }}</span>
-          <span class="n">{{ r.n }}</span>
-        </div>
-        {% endfor %}
-      </div>
+      <h2 class="sec-title">By distance to the flag</h2>
+      <p class="sec-desc">Average strokes gained per approach shot from each distance band. Faded rows have fewer than 3 shots behind them.</p>
+      {% call brows(bd.app_dist, 0.5, 'shot', True) %}Yards{% endcall %}
+      {{ chartkey() }}
       {% if insights.app %}<p class="insight">{{ insights.app }}</p>{% endif %}
-      <p class="note">Faded rows have a single shot, so treat them as noise until more rounds come in.</p>
     </section>
     {% endif %}
 
-    {% for dim, title, unit in [('app_lie', 'By lie', ''), ('app_club', 'By club', 'Avg start')] %}
+    {% for dim, title, desc in [('app_lie', 'By lie', 'Where you hit the approach from.'), ('app_club', 'By club', 'Strokes gained per approach shot with each club; average start distance in the detail line.')] %}
     {% if bd[dim] %}
     <section class="sec">
-      <div class="sec-h"><span class="label">{{ title }}</span><span class="label faint">{{ unit ~ ' · ' if unit }}N · /shot · total</span></div>
-      <div class="tbl">
-        {% for r in bd[dim] %}
-        <div class="tr" style="grid-template-columns: {{ '52px' if dim == 'app_club' else '84px' }} minmax(0,1fr) {% if dim == 'app_club' %}52px {% endif %}26px 56px 50px;">
-          <span class="lbl {{ 'm' if dim == 'app_club' }}" {% if dim == 'app_club' %}style="font-weight:500"{% endif %}>{{ r.label }}</span>
-          <span class="track"><span class="zero"></span><span class="bar" style="{{ bar(r.per, 0.5) }}"></span>{% if r.avg is not none %}<span class="avg" style="left: {{ xpos(r.avg, 0.5) }}%;"></span>{% endif %}</span>
-          {% if dim == 'app_club' %}<span class="num dim">{{ r.avg_dist ~ 'y' if r.avg_dist else '—' }}</span>{% endif %}
-          <span class="n">{{ r.n }}</span>
-          <span class="num {{ c(r.per) }}">{{ f(r.per) }}</span>
-          <span class="num {{ c(r.sg) }}">{{ f(r.sg) }}</span>
-        </div>
-        {% endfor %}
-      </div>
+      <h2 class="sec-title">{{ title }}</h2>
+      <p class="sec-desc">{{ desc }}</p>
+      {% call brows(bd[dim], 0.5, 'shot', dim == 'app_club') %}{{ 'Lie' if dim == 'app_lie' else 'Club' }}{% endcall %}
+      {% if dim == 'app_club' %}<p class="note">{% for r in bd.app_club if r.avg_dist %}{{ r.label }} from ~{{ r.avg_dist }} yds{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
     </section>
     {% endif %}
     {% endfor %}
@@ -517,26 +570,19 @@ a { color: var(--text); text-decoration: none; }
   {% if user_is_pro %}
     {% set atg = cat_by.atg %}{% set putt = cat_by.putt %}
     <section class="sec">
+      <h2 class="sec-title">Short game and putting</h2>
       <div class="kpis" style="grid-template-columns: repeat(2, minmax(0,1fr));">
-        <div class="kpi"><span class="label">SG around green</span><span class="v {{ c(atg.total) }}">{{ f(atg.total) }}</span><span class="s">{{ atg.n }} shots · {{ f(atg.per) }}/shot</span></div>
-        <div class="kpi"><span class="label">SG putting</span><span class="v {{ c(putt.total) }}">{{ f(putt.total) }}</span><span class="s">{{ putt.n }} putts · {{ f(putt.per) }}/putt</span></div>
+        <div class="kpi"><span class="label">Around the green</span><span class="v {{ c(atg.total) }}">{{ f(atg.total) }}</span><span class="s">{{ atg.n }} shots · {{ f(atg.per) }} per shot · your usual {{ f(atg.avg) }}</span></div>
+        <div class="kpi"><span class="label">Putting</span><span class="v {{ c(putt.total) }}">{{ f(putt.total) }}</span><span class="s">{{ putt.n }} putts · {{ f(putt.per) }} per putt · your usual {{ f(putt.avg) }}</span></div>
       </div>
     </section>
 
-    {% for dim, title in [('atg_dist', 'Around the green · by distance (yds)'), ('atg_lie', 'Around the green · by lie')] %}
+    {% for dim, title, desc in [('atg_dist', 'Around the green · by distance (yds)', 'Chips, pitches and bunker shots within about 50 yards.'), ('atg_lie', 'Around the green · by lie', 'Chipping from rough is harder for everyone, so it is judged against the Tour average from rough.')] %}
     {% if bd[dim] %}
     <section class="sec">
-      <div class="sec-h"><span class="label">{{ title }}</span><span class="label faint">N · /shot</span></div>
-      <div class="tbl">
-        {% for r in bd[dim] %}
-        <div class="tr" style="grid-template-columns: 76px minmax(0,1fr) 26px 56px;">
-          <span class="lbl {{ 'm' if dim == 'atg_dist' }}">{{ r.label }}</span>
-          <span class="track"><span class="zero"></span><span class="bar" style="{{ bar(r.per, 0.5) }}"></span>{% if r.avg is not none %}<span class="avg" style="left: {{ xpos(r.avg, 0.5) }}%;"></span>{% endif %}</span>
-          <span class="n">{{ r.n }}</span>
-          <span class="num {{ c(r.per) }}">{{ f(r.per) }}</span>
-        </div>
-        {% endfor %}
-      </div>
+      <h2 class="sec-title">{{ title }}</h2>
+      <p class="sec-desc">{{ desc }}</p>
+      {% call brows(bd[dim], 0.5, 'shot', dim == 'atg_dist') %}{{ 'Yards' if dim == 'atg_dist' else 'Lie' }}{% endcall %}
       {% if dim == 'atg_dist' and insights.atg %}<p class="insight">{{ insights.atg }}</p>{% endif %}
     </section>
     {% endif %}
@@ -544,29 +590,12 @@ a { color: var(--text); text-decoration: none; }
 
     {% if bd.putt_dist %}
     <section class="sec">
-      <div class="sec-h">
-        <span class="label">Putting · by first-putt distance</span>
-        <span class="legend"><span><i style="width:2px;height:10px;background:var(--text)"></i>TOUR MAKE %</span></span>
-      </div>
-      <div class="tbl">
-        <div class="tr head" style="grid-template-columns: 54px minmax(0,1fr) 26px 56px;"><span>Feet</span><span>Holed in one</span><span class="r">N</span><span class="r">/putt</span></div>
-        {% for r in bd.putt_dist %}
-        {% set pct = (r.holed / r.n * 100) if r.n else 0 %}
-        <div class="tr" style="grid-template-columns: 54px minmax(0,1fr) 26px 56px; min-height: 44px;">
-          <span class="lbl m">{{ r.label }}</span>
-          <span class="track" style="height: 30px">
-            <span style="position:absolute;left:0;right:0;top:6px;height:10px;background:rgba(255,255,255,.06)"></span>
-            <span style="position:absolute;left:0;top:6px;height:10px;width:{{ '%.1f' | format(pct) }}%;background:{{ 'var(--gain)' if r.per >= 0 else 'var(--loss)' }}"></span>
-            {% if r.tour_make is not none %}<span style="position:absolute;top:2px;height:18px;width:2px;margin-left:-1px;left:{{ r.tour_make }}%;background:var(--text)"></span>{% endif %}
-            <span class="mono faint" style="position:absolute;left:0;top:19px;font-size:9px">{{ r.holed }}/{{ r.n }} · {{ pct | round | int }}%{% if r.tour_make is not none %} · TOUR {{ r.tour_make }}%{% endif %}</span>
-          </span>
-          <span class="n">{{ r.n }}</span>
-          <span class="num {{ c(r.per) }}">{{ f(r.per) }}</span>
-        </div>
-        {% endfor %}
-      </div>
+      <h2 class="sec-title">Putting · by first-putt distance (ft)</h2>
+      <p class="sec-desc">Each row is where a putt started. Strokes gained compares how many putts you took from there with a Tour pro. The detail line shows how many you holed and the Tour make rate from that range.</p>
+      {% call brows(bd.putt_dist, 0.5, 'putt', True) %}Feet{% endcall %}
+      {{ chartkey() }}
       {% if insights.putt %}<p class="insight">{{ insights.putt }}</p>{% endif %}
-      <p class="note">Each row is a starting distance. When a follow-up putt had no distance logged, the putts are valued together from the first putt.</p>
+      <p class="note">If you didn't log the distance of a follow-up putt, the putts are valued together from the first one.</p>
     </section>
     {% endif %}
   {% else %}
@@ -577,13 +606,14 @@ a { color: var(--text); text-decoration: none; }
   {# ═════════════════════════ HOLES ═════════════════════════ #}
   <div class="panel" id="tab-holes" role="tabpanel">
     <section class="sec">
-      <div class="sec-h"><span class="label">Every shot</span><span class="label faint">SG per shot</span></div>
+      <h2 class="sec-title">Every shot</h2>
+      <p class="sec-desc">Each shot with its club, where it was played from and its strokes gained against a Tour pro from the same spot. The hole total is on the right of each hole.</p>
       <div>
         {% for h in hole_rows %}
         <div class="hole">
           <div class="hole-h">
             <span class="t">Hole {{ h.hole_number }}<span>PAR {{ h.par }}{% if h.yardage %} · {{ h.yardage }} YDS{% endif %} · {{ h.score_label | upper }}</span></span>
-            <span class="mono {{ c(h.sg) }}" style="font-size:14px">{{ f(h.sg) if h.sg is not none else '' }}</span>
+            <span class="mono {{ c(h.sg) }}" style="font-size:14px" title="Strokes gained on this hole">{{ f(h.sg) if h.sg is not none else '' }}</span>
           </div>
           {% for s in h.shots %}
           <div class="shot">
@@ -596,26 +626,18 @@ a { color: var(--text); text-decoration: none; }
         </div>
         {% endfor %}
       </div>
-      <p class="note">A dash means a distance was missing, so that shot can't be valued. "incl. above" means the shot is valued together with the one before it.</p>
+      <p class="note">— means a distance was missing so that shot can't be valued. "incl. above" means the shot is valued together with the one before it.</p>
     </section>
   </div>
 
   {# ═════════════════════════ CLUBS ═════════════════════════ #}
   <div class="panel" id="tab-clubs" role="tabpanel">
     <section class="sec">
-      <div class="sec-h"><span class="label">SG per shot by club · this round</span><a class="label" href="{{ url_for('bag.index') }}" style="color:var(--gold)">My bag</a></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><h2 class="sec-title">By club · this round</h2><a class="label" href="{{ url_for('bag.index') }}" style="color:var(--gold)">My bag</a></div>
+      <p class="sec-desc">Strokes gained per shot with every club you logged today, across tee, approach and short-game shots.</p>
       {% if bd.club_all %}
-      <div class="tbl">
-        {% for r in bd.club_all %}
-        <div class="tr" style="grid-template-columns: 52px minmax(0,1fr) 26px 56px 50px;">
-          <span class="lbl m" style="font-weight:500">{{ r.label }}</span>
-          <span class="track"><span class="zero"></span><span class="bar" style="{{ bar(r.per, 0.5) }}"></span>{% if r.avg is not none %}<span class="avg" style="left: {{ xpos(r.avg, 0.5) }}%;"></span>{% endif %}</span>
-          <span class="n">{{ r.n }}</span>
-          <span class="num {{ c(r.per) }}">{{ f(r.per) }}</span>
-          <span class="num {{ c(r.sg) }}">{{ f(r.sg) }}</span>
-        </div>
-        {% endfor %}
-      </div>
+      {% call brows(bd.club_all, 0.5, 'shot', True) %}Club{% endcall %}
+      {{ chartkey() }}
       {% else %}
       <p class="note">No clubs were logged this round. Pick your 14 in <a href="{{ url_for('bag.index') }}" style="text-decoration:underline">My Bag</a> and switch on club logging to see strokes gained for every club.</p>
       {% endif %}
@@ -626,10 +648,10 @@ a { color: var(--text); text-decoration: none; }
   <div class="panel" id="tab-coaching" role="tabpanel">
   {% if user_is_pro %}
     {% if summary_text %}
-    <section class="sec"><span class="label">Conditions</span><p class="note" style="font-size:14px;color:var(--text)">{{ summary_text }}</p></section>
+    <section class="sec"><h2 class="sec-title">Conditions</h2><p class="note" style="font-size:14px;color:var(--text)">{{ summary_text }}</p></section>
     {% endif %}
     <section class="sec">
-      <span class="label">Coach's read</span>
+      <h2 class="sec-title">Coach's read</h2>
       {% if narrative %}
       <div class="narr">{% for para in narrative.split('\n\n') if para.strip() %}<p>{{ para.strip() }}</p>{% endfor %}</div>
       {% else %}
@@ -637,7 +659,7 @@ a { color: var(--text); text-decoration: none; }
       {% endif %}
     </section>
     <section class="sec">
-      <span class="label">Ask your coach</span>
+      <h2 class="sec-title">Ask your coach</h2>
       <div class="coach-widget">
         <div class="coach-w-log" id="coachWLog">
           <div class="coach-w-welcome" id="coachWWelcome">Ask about any shot, hole or comparison. For example: how far was my second putt on 7, or how did my driving compare with my last five rounds?</div>

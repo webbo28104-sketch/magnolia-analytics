@@ -63,10 +63,26 @@
   .del-no { background: none; color: var(--text-muted); border: 1px solid rgba(255,255,255,.16); height: 28px; padding: 0 10px; cursor: pointer; }
   .upsell { border: 1px solid rgba(201,168,76,.4); padding: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; font-size: 14px; color: var(--text-muted); }
   .empty { border-top: 1px solid var(--border); padding: 40px 0; display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
+  .sec-t { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.02em; }
+  .sec-d { margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.5; max-width: 720px; }
+  .row.hdr { min-height: 0; padding-bottom: 6px; border-top: 0; font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #7a827e; }
+  .row.hdr .r { text-align: right; }
+  .chart .dot { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #9aa29e; }
+  .chart .dot:hover { background: var(--ink); }
+  .conf { display: inline-flex; gap: 2px; vertical-align: middle; }
+  .conf i { display: inline-block; width: 3px; height: 8px; background: rgba(255,255,255,.16); }
+  .conf i.on { background: var(--ink); }
+  details.howto { border: 1px solid var(--border); padding: 0 16px; }
+  details.howto summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-size: 13px; font-weight: 500; list-style: none; }
+  details.howto summary::after { content: '+'; margin-left: auto; color: var(--text-muted); font-family: var(--font-mono); }
+  details.howto[open] summary::after { content: '\2212'; }
+  details.howto ul { margin: 0 0 14px; padding-left: 18px; font-size: 13px; line-height: 1.6; color: var(--text-muted); }
+  details.howto b { color: var(--ink); font-weight: 500; }
 </style>
 {% endblock %}
 
 {% macro f(v, d=2) -%}{% if v is none %}—{% else %}{% set rv = v | round(d) %}{% if rv > 0 %}+{{ '%.*f' | format(d, rv) }}{% elif rv < 0 %}−{{ '%.*f' | format(d, -rv) }}{% else %}{{ '%.*f' | format(d, 0) }}{% endif %}{% endif %}{%- endmacro %}
+{% macro meter(rel) -%}{%- set lv = {'thin': 1, 'early': 2, 'developing': 3, 'solid': 4}[rel.tier] -%}<span class="conf" title="{{ rel.tier_label }}">{% for i in range(4) %}<i class="{{ 'on' if i < lv }}"></i>{% endfor %}</span>{%- endmacro %}
 {% macro c(v) -%}{% if v is none %}{% elif v >= 0 %}pos{% else %}neg{% endif %}{%- endmacro %}
 
 {% block content %}
@@ -108,22 +124,31 @@
   {% endfor %}
 
   {% if total_complete %}
+  <details class="howto">
+    <summary>How to read these numbers</summary>
+    <ul>
+      <li><b>Strokes gained (SG)</b> compares every shot you log with what a PGA Tour pro averages from the same distance and lie. 0 = Tour average; negative is normal for every amateur. What matters is whether your numbers move towards 0 over time.</li>
+      <li><b>SG per round</b> is scaled to 18 holes so 9-hole rounds compare fairly. <b>SG per shot</b> is the average across every measured shot.</li>
+      <li><b>Last {{ window }}</b> = your most recent {{ window }} rounds; changes compare them with the {{ window }} before.</li>
+      <li><b>Confidence bars</b> show how much data is behind a number. Patterns need several rounds before they mean much.</li>
+    </ul>
+  </details>
   <section class="kpis">
-    <div class="kpi"><span class="lbl">Scoring average</span><span class="v">{{ kpi.scoring_avg if kpi.scoring_avg is not none else '—' }}</span><span class="s">{{ kpi.scoring_n }} eighteen-hole round{{ 's' if kpi.scoring_n != 1 }} in last {{ window }}</span></div>
+    <div class="kpi"><span class="lbl">Scoring average</span><span class="v">{{ kpi.scoring_avg if kpi.scoring_avg is not none else '—' }}</span><span class="s">Average gross score over your {{ kpi.scoring_n }} most recent 18-hole round{{ 's' if kpi.scoring_n != 1 }}</span></div>
     {% if user_is_pro %}
-    <div class="kpi"><span class="lbl">SG vs Tour / round</span><span class="v {{ c(kpi.sg_round) }}">{{ f(kpi.sg_round) }}</span>
-      <span class="s">18-hole basis · last {{ window }}{% if kpi.sg_round_delta is not none %} · <span class="{{ c(kpi.sg_round_delta) }}">{{ f(kpi.sg_round_delta, 1) }} on previous {{ window }}</span>{% endif %}</span></div>
-    <div class="kpi"><span class="lbl">SG / shot</span><span class="v">{{ f(kpi.sg_shot, 3) }}</span><span class="s">{{ kpi.shots }} shots measured</span></div>
+    <div class="kpi"><span class="lbl">Strokes gained / round</span><span class="v {{ c(kpi.sg_round) }}">{{ f(kpi.sg_round) }}</span>
+      <span class="s">vs a Tour pro, per 18 holes, last {{ window }} rounds{% if kpi.sg_round_delta is not none %}. <span class="{{ c(kpi.sg_round_delta) }}">{{ f(kpi.sg_round_delta, 1) }}</span> compared with the {{ window }} before{% endif %}</span></div>
+    <div class="kpi"><span class="lbl">Strokes gained / shot</span><span class="v {{ c(kpi.sg_shot) }}">{{ f(kpi.sg_shot, 3) }}</span><span class="s">Average over {{ kpi.shots }} measured shots in the last {{ window }} rounds</span></div>
     {% endif %}
-    <div class="kpi"><span class="lbl">Rounds logged</span><span class="v">{{ total_complete }}</span><span class="s"><a href="{{ url_for('bag.index') }}" style="color:var(--text-muted)">My bag →</a></span></div>
+    <div class="kpi"><span class="lbl">Rounds logged</span><span class="v">{{ total_complete }}</span><span class="s">All time · <a href="{{ url_for('bag.index') }}" style="color:var(--text-muted);text-decoration:underline">my bag</a></span></div>
   </section>
   {% endif %}
 
   {% if trend %}
   <section>
-    <div class="sec-h">
-      <span class="lbl">SG vs Tour per round · 18-hole basis · last {{ trend.n }}</span>
-      <span class="legend"><span><i style="width:6px;height:6px;border-radius:50%;background:#9aa29e"></i>Round</span><span><i style="width:14px;height:2px;background:var(--gold)"></i>5-round average</span></span>
+    <div class="sec-h" style="flex-direction:column;align-items:flex-start;gap:4px">
+      <h2 class="sec-t">Strokes gained per round</h2>
+      <p class="sec-d">Each grey point is one round (scaled to 18 holes, vs a Tour pro); click one to open its report. The gold line is the average of your last 5 rounds, which shows the trend. Higher is better. Latest {{ f(trend.latest, 1) }}, best {{ f(trend.best, 1) }}, worst {{ f(trend.worst, 1) }}.</p>
     </div>
     <div class="chart">
       {% for t in trend.ticks %}<span class="yt" style="top: {{ 20 + loop.index0 * 100 }}px">{{ f(t, 1) }}</span>{% endfor %}
@@ -131,32 +156,42 @@
         <line x1="0" y1="20" x2="1000" y2="20" stroke="rgba(255,255,255,.06)" vector-effect="non-scaling-stroke"></line>
         <line x1="0" y1="120" x2="1000" y2="120" stroke="rgba(255,255,255,.06)" vector-effect="non-scaling-stroke"></line>
         <line x1="0" y1="220" x2="1000" y2="220" stroke="rgba(255,255,255,.06)" vector-effect="non-scaling-stroke"></line>
+        {% if trend.zero is not none %}<line x1="0" y1="{{ trend.zero }}" x2="1000" y2="{{ trend.zero }}" stroke="rgba(255,255,255,.35)" stroke-dasharray="6 6" vector-effect="non-scaling-stroke"></line>{% endif %}
         <polyline points="{{ trend.line }}" fill="none" stroke="rgba(154,162,158,.55)" stroke-width="1" vector-effect="non-scaling-stroke"></polyline>
         <polyline points="{{ trend.avg }}" fill="none" stroke="#c9a84c" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>
       </svg>
+      {% for d in trend.dots %}<a href="{{ url_for('reports.view_report', round_id=d.id) }}" class="dot" style="left: calc(40px + (100% - 40px) * {{ d.x / 1000 }}); top: {{ d.y }}px" title="{{ d.date }}: {{ f(d.v, 1) }}" aria-label="{{ d.date }} round, {{ f(d.v, 1) }} strokes gained"></a>{% endfor %}
     </div>
-    <div class="chart-x"><span>{{ trend.dots[0].date }}</span><span>{{ trend.dots[-1].date }}</span></div>
+    <div class="chart-x"><span>{{ trend.dots[0].date }}</span><span class="faint">Rounds, oldest to newest · strokes gained per 18 holes{% if trend.zero is not none %} · dashed line = Tour average{% endif %}</span><span>{{ trend.dots[-1].date }}</span></div>
   </section>
   {% endif %}
 
   {% if cats or leaks %}
   <div class="two">
     <section>
-      <div class="sec-h"><span class="lbl">SG / shot by category</span><span class="lbl faint">Last {{ window }} · vs previous</span></div>
+      <div class="sec-h" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <h2 class="sec-t">By category · last {{ window }} rounds</h2>
+        <p class="sec-d">Average strokes gained per shot in each part of your game. The small line shows how it has moved round by round. Change = compared with the {{ window }} rounds before.</p>
+      </div>
+      <div class="row hdr" style="grid-template-columns: minmax(0,1fr) 90px 64px 58px;"><span>Category</span><span>Per-round trend</span><span class="r">Per shot</span><span class="r">Change</span></div>
       {% for cat in cats %}
-      <a class="row" href="{{ cat.href }}" style="grid-template-columns: minmax(0,1fr) 90px 64px 54px;">
-        <span style="display:flex;flex-direction:column;gap:2px"><span class="t">{{ cat.label }}</span><span class="m">{{ f(cat.per_round, 1) }} per round · {{ cat.n }} shots</span></span>
-        {% if cat.spark %}<svg viewBox="0 0 90 24" style="width:90px;height:24px" role="img" aria-label="{{ cat.label }} trend"><polyline points="{{ cat.spark }}" fill="none" stroke="#9aa29e" stroke-width="1.5"></polyline></svg>{% else %}<span></span>{% endif %}
-        <span class="num">{{ f(cat.per, 3) }}</span>
-        <span class="num {{ c(cat.delta) }}" style="font-size:12px">{{ f(cat.delta, 3) if cat.delta is not none else '' }}</span>
+      <a class="row" href="{{ cat.href }}" style="grid-template-columns: minmax(0,1fr) 90px 64px 58px;">
+        <span style="display:flex;flex-direction:column;gap:2px"><span class="t">{{ cat.label }}</span><span class="m">{{ f(cat.per_round, 1) }} per round · {{ cat.n }} shots{% if cat.rel %} · {{ meter(cat.rel) }} {{ cat.rel.tier_label }}{% endif %}</span></span>
+        {% if cat.spark %}<svg viewBox="0 0 90 24" style="width:90px;height:24px" role="img" aria-label="{{ cat.label }} per-round trend"><polyline points="{{ cat.spark }}" fill="none" stroke="#9aa29e" stroke-width="1.5"></polyline></svg>{% else %}<span class="m">—</span>{% endif %}
+        <span class="num {{ c(cat.per) }}">{{ f(cat.per, 3) }}</span>
+        <span class="num {{ c(cat.delta) }}" style="font-size:12px">{{ f(cat.delta, 3) if cat.delta is not none else '—' }}</span>
       </a>
       {% endfor %}
     </section>
     <section>
-      <div class="sec-h"><span class="lbl">Biggest leaks · last {{ window }}</span><span class="lbl faint">N · /shot · total</span></div>
+      <div class="sec-h" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <h2 class="sec-t">Biggest leaks · last {{ window }} rounds</h2>
+        <p class="sec-d">The groups of shots that cost you the most strokes in total, and how often they did it.</p>
+      </div>
+      <div class="row hdr" style="grid-template-columns: minmax(0,1fr) 40px 58px 60px;"><span>Shots</span><span class="r">Count</span><span class="r">Per shot</span><span class="r">Total</span></div>
       {% for l in leaks %}
-      <div class="row" style="grid-template-columns: minmax(0,1fr) 36px 56px 60px;">
-        <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="t">{{ l.title }}</span><span class="m">{% if l.avg is not none %}previous {{ window }}: {{ f(l.avg, 2) }}/shot{% else %}{{ l.meta }}{% endif %}</span></span>
+      <div class="row" style="grid-template-columns: minmax(0,1fr) 40px 58px 60px;">
+        <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="t">{{ l.title }}</span><span class="m">{% if l.pattern %}{{ l.pattern.text }}{% endif %}{% if l.rel %} {{ meter(l.rel) }} {{ l.rel.tier_label }}{% endif %}</span></span>
         <span class="n">{{ l.n }}</span>
         <span class="num">{{ f(l.per) }}</span>
         <span class="num neg" style="font-size:14px">{{ f(l.sg, 1) }}</span>
@@ -216,7 +251,7 @@
       </div>
       {% endfor %}
     </div></div>
-    <p class="m" style="font-size:11px;color:#7a827e;margin-top:10px">SG columns are for the holes actually played, so a 9-hole round shows its 9-hole total.</p>
+    <p class="m" style="font-size:11px;color:#7a827e;margin-top:10px">SG = total strokes gained vs a Tour pro for the holes actually played (a 9-hole round shows its 9-hole total). Tee, App (approach), Short (around the green) and Putt split that total by category. Official/Casual sets whether the round counts towards your official handicap.</p>
     {% else %}
     <div class="empty">
       <p style="margin:0;color:var(--text-muted)">No rounds logged yet.</p>
