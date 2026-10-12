@@ -40,3 +40,12 @@ logs/
 # Coverage
 .coverage
 htmlcov/
+.vercel
+
+.vercel
+.env*
+
+# Agent skill installs (local tooling)
+.agents/
+.claude/skills/
+skills-lock.json

@@ -1,0 +1,10 @@
+.claude
+.env
+*.db
+__pycache__
+scripts
+recompute_sg.py
+seed.py
+send_test_emails.py
+setup.*
+start.*

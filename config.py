@@ -46,12 +46,21 @@ class DevelopmentConfig(Config):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///magnolia_dev.db')
 
 
+def _db_url():
+    """DATABASE_URL normalised for SQLAlchemy + psycopg2 (Neon / Railway / Heroku styles)."""
+    url = os.environ.get('DATABASE_URL', '')
+    if url.startswith('postgres://'):
+        url = 'postgresql://' + url[len('postgres://'):]
+    if url.startswith('postgresql://'):
+        url = 'postgresql+psycopg2://' + url[len('postgresql://'):]
+    return url
+
+
 class ProductionConfig(Config):
     DEBUG = False
-    # Railway injects DATABASE_URL automatically
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', '').replace(
-        'postgres://', 'postgresql://'  # SQLAlchemy requires postgresql://
-    )
+    SQLALCHEMY_DATABASE_URI = _db_url()
+    # Serverless hosting: connections can go stale between invocations
+    SQLALCHEMY_ENGINE_OPTIONS = {'pool_pre_ping': True, 'pool_recycle': 280, 'pool_size': 2, 'max_overflow': 3}
 
 
 config = {
