@@ -12,6 +12,8 @@ var _shots     = [];
 var _penalties = 0;
 var _editIdx   = null;   // null = adding new, integer = editing existing
 var _activeType = null;
+var _club      = null;   // club key selected in the open panel (My Bag clubs)
+var _appLie    = null;   // 'fairway' | 'rough' | 'bunker' for the open approach panel
 
 // ── Global multi-pill delegated click handler ─────────────────────────────────
 document.addEventListener('click', function(e) {
@@ -156,7 +158,20 @@ function shotTypeLabel(type) {
   return { ott: 'OTT', app: 'App', atg: 'ATG', putt: 'Putt', gimme: 'Gimme' }[type] || type;
 }
 
+function clubLabel(key) {
+  if (!key) return '';
+  var c = (window.MAG_BAG || []).find(function (b) { return b.key === key; });
+  if (c) return c.label;
+  return /^\d+$/.test(key) ? key + '°' : key;
+}
+
 function shotSummary(shot) {
+  var text = _shotSummaryText(shot);
+  if (shot.club && shot.type !== 'putt' && shot.type !== 'gimme') return clubLabel(shot.club) + ' · ' + text;
+  return text;
+}
+
+function _shotSummaryText(shot) {
   switch (shot.type) {
     case 'ott': {
       const parts = [];
@@ -173,6 +188,7 @@ function shotSummary(shot) {
       if (shot.is_layup)          parts.push('Lay Up');
       else if (shot.lie === 'recovery') parts.push('Recovery');
       if (shot.distance) parts.push(shot.distance + 'y');
+      if (shot.lie && shot.lie !== 'recovery' && shot.lie !== 'fairway') parts.push(shot.lie.charAt(0).toUpperCase() + shot.lie.slice(1));
       if (shot.miss) parts.push('Miss ' + shot.miss.replace(',', '/'));
       return parts.join(' · ') || 'Approach';
     }
@@ -314,6 +330,127 @@ function openPanel(type, editing) {
       : (editing ? 'Update Shot' : 'Add Shot');
   }
   applyPanelContextWarn(type);
+  syncClubUI();
+  syncLieUI();
+  resetCaddy();
+  if (type === 'ott') requestCaddy('ott');
+  if (type === 'app' && document.getElementById('app-dist-exact')?.value) requestCaddy('app');
+}
+
+// ── Club row (My Bag) ─────────────────────────────────────────────────────────
+function buildClubRows() {
+  var bag = window.MAG_BAG || [];
+  document.querySelectorAll('[data-club-for]').forEach(function (box) {
+    var row = box.closest('.he-club-row');
+    if (!bag.length) { if (row) row.style.display = 'none'; return; }
+    var clubs = bag.filter(function (c) { return c.key !== 'P'; });
+    box.innerHTML = clubs.map(function (c) {
+      return '<button type="button" class="he-pill he-club-pill" data-club="' + c.key + '" title="' + c.name + '">' + c.label + '</button>';
+    }).join('');
+    if (row) row.style.display = '';
+  });
+}
+
+function syncClubUI() {
+  document.querySelectorAll('.he-club-pill').forEach(function (p) {
+    p.classList.toggle('is-active', p.dataset.club === _club);
+    p.setAttribute('aria-pressed', p.dataset.club === _club ? 'true' : 'false');
+  });
+}
+
+// ── Approach lie ─────────────────────────────────────────────────────────────
+// Default lie for a new approach, inferred from the shot before it (mirrors
+// _lie_after in app/utils/shot_sg.py).
+function defaultAppLie() {
+  var idx  = (_editIdx !== null) ? _editIdx : _shots.length;
+  var prev = idx > 0 ? _shots[idx - 1] : null;
+  if (!prev) return 'fairway';
+  if (prev.type === 'ott') {
+    if (prev.mod === 'bunker') return 'bunker';
+    if (prev.mod === 'penalty' || prev.mod === 'trees') return 'rough';
+    return prev.direction === 'fairway' ? 'fairway' : 'rough';
+  }
+  if (prev.type === 'app') return (prev.is_layup || !prev.miss) ? 'fairway' : 'rough';
+  if (prev.type === 'atg') return 'rough';
+  return 'fairway';
+}
+
+function syncLieUI() {
+  var row = document.getElementById('app-lie-row');
+  if (row) row.style.display = (_appShotType === 'recovery') ? 'none' : '';
+  document.querySelectorAll('.he-lie-pill').forEach(function (p) {
+    p.classList.toggle('is-active', p.dataset.lie === _appLie);
+    p.setAttribute('aria-pressed', p.dataset.lie === _appLie ? 'true' : 'false');
+  });
+}
+
+// ── Caddy ────────────────────────────────────────────────────────────────────
+var _caddyTimer = null;
+var _caddySeq   = 0;
+
+function resetCaddy() {
+  document.querySelectorAll('.he-caddy').forEach(function (el) { el.style.display = 'none'; el.innerHTML = ''; });
+}
+
+function scheduleCaddy(type) {
+  clearTimeout(_caddyTimer);
+  _caddyTimer = setTimeout(function () { requestCaddy(type); }, 450);
+}
+
+function requestCaddy(type) {
+  if (!window.CADDY_ENABLED || !window.CADDY_URL) return;
+  var box = document.getElementById('caddy-' + type);
+  if (!box) return;
+  var params = new URLSearchParams({ type: type });
+  if (type === 'app') {
+    var d = document.getElementById('app-dist-exact')?.value;
+    if (!d) { box.style.display = 'none'; return; }
+    params.set('distance', d);
+    if (_appLie) params.set('lie', _appLie);
+  } else if (window.HOLE_YARDAGE) {
+    params.set('hole_yardage', window.HOLE_YARDAGE);
+  }
+  var seq = ++_caddySeq;
+  fetch(window.CADDY_URL + '?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function (r) { return r.json(); })
+    .then(function (res) { if (seq === _caddySeq) renderCaddy(box, res, type); })
+    .catch(function () { box.style.display = 'none'; });
+}
+
+function _sg(v) {
+  if (v === null || v === undefined) return '—';
+  return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2);
+}
+
+function renderCaddy(box, res, type) {
+  if (!res || res.status === 'locked' || res.status === 'error' || res.status === 'need_distance') {
+    box.style.display = 'none';
+    return;
+  }
+  var wx = res.weather ? (Math.round(res.weather.temp_c) + '°C · wind ' + Math.round(res.weather.wind_kph) + ' km/h') : '';
+  if (res.status === 'learning') {
+    box.innerHTML = '<div class="he-caddy-h"><span>Caddy</span><span>' + wx + '</span></div>' +
+      '<p class="he-caddy-note">' + (res.message || ('Still learning your game: ' + res.logged + ' of ' + res.needed +
+      ' shots logged with a club. Keep tagging clubs and recommendations will appear here.')) + '</p>';
+    box.style.display = 'block';
+    return;
+  }
+  var b = res.best;
+  var sub = type === 'app'
+    ? (res.plays_like && res.plays_like !== res.distance ? 'Plays like ' + res.plays_like + ' yds today' : (b.avg_dist ? 'You average ' + b.avg_dist + ' yds' : ''))
+    : (b.avg_dist ? 'You average ' + b.avg_dist + ' yds' : '');
+  var stat = b.n ? (_sg(b.per) + ' SG/shot · ' + b.n + ' shot' + (b.n === 1 ? '' : 's') + (type === 'app' ? ' from here' : ' on similar holes'))
+                 : 'No shots from this distance yet';
+  var alts = (res.alts || []).map(function (a) {
+    return '<button type="button" class="he-caddy-alt" data-club="' + a.club + '"><span class="k">' + a.label + '</span>' +
+      '<span class="m">' + (a.n ? a.n + ' shots · ' + _sg(a.per) + '/shot' : (a.avg_dist ? 'avg ' + a.avg_dist + ' yds' : '')) + '</span></button>';
+  }).join('');
+  box.innerHTML =
+    '<div class="he-caddy-h"><span>Caddy</span><span>' + wx + '</span></div>' +
+    '<div class="he-caddy-main"><div><div class="he-caddy-club">' + b.label + '</div><div class="he-caddy-sub">' + sub + '</div></div>' +
+    '<button type="button" class="he-caddy-use" data-club="' + b.club + '">Use ' + b.label + '</button></div>' +
+    '<div class="he-caddy-stat">' + stat + '</div>' + (alts ? '<div class="he-caddy-alts">' + alts + '</div>' : '');
+  box.style.display = 'block';
 }
 
 function closePanel() {
@@ -338,10 +475,13 @@ function _syncAppShotType() {
   const layupNote = document.getElementById('app-layup-note');
   if (missRow)   missRow.style.display   = isLayup ? 'none'  : '';
   if (layupNote) layupNote.style.display = isLayup ? 'block' : 'none';
+  syncLieUI();
 }
 
 function clearPanel(type) {
   hidePanelWarn(type);
+  _club = null;
+  if (type === 'app') _appLie = defaultAppLie();
   if (type === 'ott') {
     _tsDir = null; _tsMod = null;
     if (_tsSyncUI) _tsSyncUI(false);
@@ -365,6 +505,10 @@ function clearPanel(type) {
 function populatePanel(shot) {
   const type = shot.type;
   hidePanelWarn(type);
+  _club = shot.club || null;
+  if (type === 'app') {
+    _appLie = (['fairway', 'rough', 'bunker'].indexOf(shot.lie) !== -1) ? shot.lie : defaultAppLie();
+  }
   if (type === 'ott') {
     _tsDir = shot.direction || null;
     _tsMod = shot.mod || null;
@@ -403,8 +547,10 @@ function collectPanelShot(type) {
     if (_appShotType === 'layup') {
       shot.is_layup = true;
       shot.miss     = null;
+      if (_appLie) shot.lie = _appLie;
     } else {
       if (_appShotType === 'recovery') shot.lie = 'recovery';
+      else if (_appLie) shot.lie = _appLie;
       shot.miss = document.getElementById('app-miss-input')?.value || null;
     }
   } else if (type === 'atg') {
@@ -418,6 +564,7 @@ function collectPanelShot(type) {
     const raw = document.getElementById('gimme-dist-exact')?.value;
     shot.gimme_distance = raw ? parseInt(raw) : null;
   }
+  if (_club && (type === 'ott' || type === 'app' || type === 'atg')) shot.club = _club;
   return shot;
 }
 
@@ -705,6 +852,27 @@ document.addEventListener('DOMContentLoaded', () => {
   if (penDisplay) penDisplay.textContent = _penalties;
 
   initTeeShotSVG();
+  buildClubRows();
+
+  // Club, lie and caddy clicks (delegated — club rows are built from the bag)
+  document.addEventListener('click', function (e) {
+    var pick = e.target.closest('.he-club-pill, .he-caddy-use, .he-caddy-alt');
+    if (pick) {
+      var key = pick.dataset.club;
+      _club = (pick.classList.contains('he-club-pill') && _club === key) ? null : key;
+      syncClubUI();
+      if (navigator.vibrate) navigator.vibrate(10);
+      return;
+    }
+    var lie = e.target.closest('.he-lie-pill');
+    if (lie) {
+      _appLie = lie.dataset.lie;
+      syncLieUI();
+      scheduleCaddy('app');
+      if (navigator.vibrate) navigator.vibrate(10);
+    }
+  });
+  document.getElementById('app-dist-exact')?.addEventListener('input', function () { scheduleCaddy('app'); });
 
   // Auto-open the predicted first panel on fresh holes only
   if (_shots.length === 0) _autoOpenNext();

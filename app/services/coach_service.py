@@ -16,7 +16,7 @@ import os
 from flask import current_app
 
 from app.models.round import Round
-from app.utils.strokes_gained import normalize_to_18
+from app.services.round_context import round_context, profile_context
 
 _MODEL = 'deepseek-chat'
 _BASE_URL = 'https://api.deepseek.com'
@@ -61,92 +61,28 @@ essay."""
 
 
 def _round_facts(round_: Round) -> str:
-    """Compact, factual dump of one round for the per-round chat's context."""
-    holes = round_.holes.order_by('hole_number').all()
+    """Full data for one round: shot-by-shot log, breakdowns, previous rounds."""
     user = round_.golfer
     course_name = round_.course.name if round_.course else 'Unknown Course'
-    holes_played = round_.holes_played or len(holes)
+    return f"""THE GOLFER: {user.full_name} (Handicap Index {user.handicap_index})
+THE ROUND YOU'RE DISCUSSING: {course_name}, {round_.date_played.strftime('%d %B %Y')}, {round_.tee_set or ''} tees
 
-    score_vs_par = round_.score_vs_par()
-    score_label = f'+{score_vs_par}' if score_vs_par and score_vs_par > 0 else str(score_vs_par or 'E')
+{round_context(round_)}
 
-    sg_off_tee  = normalize_to_18(round_.sg_off_tee,  holes_played)
-    sg_approach = normalize_to_18(round_.sg_approach, holes_played)
-    sg_atg      = normalize_to_18(round_.sg_atg,      holes_played)
-    sg_putting  = normalize_to_18(round_.sg_putting,  holes_played)
-    sg_total    = normalize_to_18(round_.sg_total,    holes_played)
-
-    hole_lines = []
-    for h in holes:
-        svp = h.score - h.par
-        label = {-2: 'Eagle', -1: 'Birdie', 0: 'Par', 1: 'Bogey', 2: 'Double', 3: 'Triple'}.get(svp, f'+{svp}')
-        hole_lines.append(
-            f"  H{h.hole_number:02d} Par{h.par}: {h.score} ({label}) | "
-            f"Tee:{h.tee_shot or '–'} GIR:{'Y' if h.gir else 'N'} "
-            f"Putts:{h.putts} FPD:{h.first_putt_distance or '?'}ft "
-            f"ApprDist:{h.approach_distance or '?'}yds(dist-to-hole) "
-            f"Miss:{h.approach_miss or '–'} Lie:{h.lie_type or '–'} "
-            f"2ndDist:{h.second_shot_distance or '–'}yds(dist-to-hole) Pen:{h.penalties}"
-        )
-
-    return f"""THE ROUND YOU'RE DISCUSSING
-----------------------------
-Golfer: {user.full_name} (Handicap {user.handicap_index})
-Course: {course_name}
-Date: {round_.date_played.strftime('%d %B %Y')}
-Holes played: {holes_played}
-Score: {round_.total_score} ({score_label} vs par)
-Putts: {round_.total_putts}
-FIR: {round_.fairways_hit}/{round_.fairways_available}
-GIR: {round_.gir_count}/{holes_played}
-Penalties: {round_.penalties}
-
-STROKES GAINED (projected to 18-hole equivalent, vs PGA Tour baseline — negative is normal for amateurs)
-SG Off Tee:      {f'{sg_off_tee:+.2f}' if sg_off_tee is not None else '—'}
-SG Approach:     {f'{sg_approach:+.2f}' if sg_approach is not None else '—'}
-SG Around Green: {f'{sg_atg:+.2f}' if sg_atg is not None else '—'}
-SG Putting:      {f'{sg_putting:+.2f}' if sg_putting is not None else '—'}
-SG Total:        {f'{sg_total:+.2f}' if sg_total is not None else '—'}
-
-HOLE-BY-HOLE (all distances = distance FROM THE HOLE at start of shot, not ball travel distance)
-{chr(10).join(hole_lines)}
-
-Answer the golfer's questions about this specific round using only the data above. You can \
-also draw general golf coaching knowledge (technique, strategy, practice advice) to explain \
-*why* something in the data happened or what to do about it."""
+You have every logged shot of this round above, plus the golfer's previous rounds. Answer questions about any shot, hole, distance, club or comparison directly from this data — e.g. "how far was my second putt on 7" is the putt 2 line under H7. Strokes gained is measured against the PGA Tour average, so negative numbers are normal for amateurs; judge performance against the golfer's own previous rounds. Only say you don't have something if it genuinely isn't in the data (for example a distance they didn't log), and say exactly what's missing. You can also draw on general golf coaching knowledge to explain why something happened or what to practise."""
 
 
 def _profile_facts(user, rounds: list) -> str:
-    """Compact dump of the golfer's round history for the dashboard general chat."""
-    lines = []
-    for r in rounds:
-        holes_played = r.holes_played or 18
-        svp = r.score_vs_par()
-        svp_label = f'+{svp}' if svp and svp > 0 else str(svp if svp is not None else '?')
-        sg_total = normalize_to_18(r.sg_total, holes_played)
-        course_name = r.course.name if r.course else 'Unknown'
-        lines.append(
-            f"  {r.date_played.strftime('%d %b %Y')} — {course_name} ({holes_played}h): "
-            f"{r.total_score} ({svp_label} par)"
-            + (f", SG {sg_total:+.2f}" if sg_total is not None else "")
-            + (f", {r.total_putts} putts" if r.total_putts is not None else "")
-        )
-
-    rounds_block = '\n'.join(lines) if lines else '  (no completed rounds logged yet)'
-
+    """Whole-history data for the dashboard general chat."""
     return f"""THE GOLFER YOU'RE COACHING
 ---------------------------
 Name: {user.full_name}
 Handicap Index: {user.handicap_index}
 Rounds on file: {len(rounds)}
 
-RECENT ROUNDS (most recent first, SG projected to 18-hole equivalent)
-{rounds_block}
+{profile_context(user)}
 
-Answer the golfer's questions using only the round data above (and, if they ask about a round \
-not listed here, say you don't have that one in front of you). You can also draw on general \
-golf coaching knowledge to explain patterns, technique, or practice advice. Keep track of what's \
-been discussed earlier in this conversation."""
+Answer from the data above: round summaries, breakdowns, club stats and full shot logs for the most recent rounds. Strokes gained is vs the PGA Tour average, so judge the golfer against their own history. If they ask about a round or shot that isn't in the data, say so plainly. Keep track of what's been discussed earlier in this conversation."""
 
 
 def _chat_completion(system_prompt: str, history_msgs: list) -> str | None:
@@ -157,7 +93,7 @@ def _chat_completion(system_prompt: str, history_msgs: list) -> str | None:
         client = _client()
         resp = client.chat.completions.create(
             model=_MODEL,
-            max_tokens=700,
+            max_tokens=900,
             messages=[{'role': 'system', 'content': system_prompt}] + history_msgs,
         )
         return resp.choices[0].message.content.strip()

@@ -140,6 +140,23 @@
   /* Panel inline warnings */
   .he-panel-warn { display:none;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.45);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:.78rem;color:#5c3d00;line-height:1.5; }
   .he-panel-warn.is-visible { display:block; }
+
+  /* Club row + caddy */
+  .he-club-pills { gap:6px; }
+  .he-club-pill { min-width:48px;padding:0 10px;font-family:'DM Mono',ui-monospace,monospace;font-size:.82rem; }
+  .he-caddy { border:1px solid rgba(201,168,76,.55);background:var(--he-surface);border-radius:10px;padding:12px 14px;margin:0 0 14px; }
+  .he-caddy-h { display:flex;justify-content:space-between;font-family:'DM Mono',ui-monospace,monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--he-muted);margin-bottom:8px; }
+  .he-caddy-h span:first-child { color:#9a7a1c;font-weight:600; }
+  .he-caddy-main { display:flex;justify-content:space-between;align-items:center;gap:10px; }
+  .he-caddy-club { font-size:1.9rem;font-weight:700;color:var(--he-green);line-height:1;letter-spacing:-.03em; }
+  .he-caddy-sub { font-size:.75rem;color:var(--he-muted);margin-top:4px; }
+  .he-caddy-use { height:40px;padding:0 14px;border-radius:999px;border:none;background:var(--he-green);color:var(--he-gold);font-weight:700;font-size:.8rem;cursor:pointer; }
+  .he-caddy-stat { font-family:'DM Mono',ui-monospace,monospace;font-size:.72rem;color:var(--he-green);margin-top:8px; }
+  .he-caddy-alts { display:flex;flex-direction:column;margin-top:8px;border-top:1px solid var(--he-border); }
+  .he-caddy-alt { display:flex;justify-content:space-between;align-items:center;min-height:36px;background:none;border:none;border-bottom:1px solid rgba(0,0,0,.05);padding:0;cursor:pointer;font:inherit;color:var(--he-green); }
+  .he-caddy-alt .k { font-family:'DM Mono',ui-monospace,monospace;font-weight:600;font-size:.85rem; }
+  .he-caddy-alt .m { font-size:.72rem;color:var(--he-muted); }
+  .he-caddy-note { margin:0;font-size:.78rem;color:var(--he-muted);line-height:1.5; }
 </style>
 {% endblock %}
 
@@ -195,6 +212,10 @@
   <script>
     window.INITIAL_SHOTS    = {{ existing_shots_json | tojson | safe }};
     window.INITIAL_PENALTIES = {{ init_penalties }};
+    window.MAG_BAG       = {{ bag | tojson }};
+    window.CADDY_ENABLED = {{ 'true' if caddy_enabled else 'false' }};
+    window.CADDY_URL     = {{ url_for('rounds.caddy', round_id=round.id) | tojson }};
+    window.HOLE_YARDAGE  = {{ course_yardage | tojson }};
   </script>
 
   <!-- Hidden form — data submitted here, UI is outside -->
@@ -264,6 +285,11 @@
         <button type="button" class="he-pill he-pill--multi" data-group="tee-mod" data-value="trees"   id="ts-trees-btn">Trees</button>
         <button type="button" class="he-pill he-pill--multi" data-group="tee-mod" data-value="penalty" id="ts-penalty-btn">Penalty</button>
       </div>
+      <div class="he-caddy" id="caddy-ott" style="display:none"></div>
+      <div class="he-panel-row he-club-row" style="display:none">
+        <label class="he-label">Club</label>
+        <div class="he-pills he-club-pills" data-club-for="ott"></div>
+      </div>
     </div>
 
     <!-- App panel -->
@@ -281,6 +307,19 @@
       <div class="he-panel-row">
         <label class="he-label">Distance to pin <span class="he-label-hint">yds · from this position before the shot</span></label>
         <input type="number" id="app-dist-exact" class="he-exact" placeholder="yds" min="1" max="600" inputmode="numeric">
+      </div>
+      <div class="he-panel-row" id="app-lie-row">
+        <label class="he-label">Lie <span class="he-label-hint">set from your last shot · change if needed</span></label>
+        <div class="he-pills">
+          <button type="button" class="he-pill he-lie-pill" data-lie="fairway">Fairway</button>
+          <button type="button" class="he-pill he-lie-pill" data-lie="rough">Rough</button>
+          <button type="button" class="he-pill he-lie-pill" data-lie="bunker">Bunker</button>
+        </div>
+      </div>
+      <div class="he-caddy" id="caddy-app" style="display:none"></div>
+      <div class="he-panel-row he-club-row" style="display:none">
+        <label class="he-label">Club</label>
+        <div class="he-pills he-club-pills" data-club-for="app"></div>
       </div>
       <div class="he-panel-row" id="app-miss-row">
         <label class="he-label">Miss direction <span class="he-label-hint">optional — leave blank if hit green</span></label>
@@ -313,6 +352,10 @@
           <button type="button" class="he-pill he-pill--multi" data-group="atg-lie" data-value="fringe">Fringe</button>
         </div>
         <input type="hidden" id="atg-lie-input" value="">
+      </div>
+      <div class="he-panel-row he-club-row" style="display:none">
+        <label class="he-label">Club</label>
+        <div class="he-pills he-club-pills" data-club-for="atg"></div>
       </div>
     </div>
 
@@ -391,5 +434,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/round_entry.js') }}?v=7"></script>
+<script src="{{ url_for('static', filename='js/round_entry.js') }}?v=8"></script>
 {% endblock %}

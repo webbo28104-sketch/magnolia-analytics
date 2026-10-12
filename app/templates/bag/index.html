@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block title %}My bag — Magnolia Analytics{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  .bag { --bg:#0b0d0c; --rule:rgba(255,255,255,.08); --rule-soft:rgba(255,255,255,.05); --text:#ecefed; --dim:#9aa29e; --faint:#7a827e; --gold:#c9a84c; --gain:#5ee0a0; --loss:#ff6a3d;
+         background: var(--bg); color: var(--text); font-family: 'Geist', system-ui, sans-serif; font-feature-settings: 'tnum'; min-height: 100%; }
+  .bag * { box-sizing: border-box; }
+  .bag-in { max-width: 720px; margin: 0 auto; padding: 24px 20px 64px; }
+  .bag h1 { margin: 0; font-size: 34px; font-weight: 600; letter-spacing: -.04em; color: var(--text); font-family: inherit; }
+  .bag .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+  .bag .label { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+  .bag .sec { padding: 24px 0; border-bottom: 1px solid var(--rule); display: flex; flex-direction: column; gap: 12px; }
+  .bag .sec:last-child { border-bottom: 0; }
+  .bag .row-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .bag .note { margin: 0; font-size: 12px; line-height: 1.55; color: var(--dim); }
+  .bag .toggle { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 56px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); cursor: pointer; }
+  .bag .toggle input { width: 22px; height: 22px; accent-color: var(--gold); flex: none; }
+  .bag .gap-row, .bag .sg-row { display: grid; gap: 10px; align-items: center; }
+  .bag .gap-row { grid-template-columns: 44px minmax(0,1fr) 48px; height: 28px; }
+  .bag .sg-row { grid-template-columns: 44px minmax(0,1fr) 36px 58px; min-height: 36px; border-top: 1px solid var(--rule-soft); }
+  .bag .club { font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 500; }
+  .bag .club.off { color: var(--faint); }
+  .bag .track { position: relative; height: 100%; display: block; }
+  .bag .r { text-align: right; }
+  .bag .n { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--faint); text-align: right; }
+  .bag .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .bag .chip { position: relative; }
+  .bag .chip input { position: absolute; opacity: 0; inset: 0; cursor: pointer; margin: 0; }
+  .bag .chip span { display: inline-flex; align-items: center; justify-content: center; min-width: 50px; height: 44px; padding: 0 10px; font-family: 'Geist Mono', monospace; font-size: 13px; border: 1px solid rgba(255,255,255,.16); color: var(--dim); }
+  .bag .chip input:checked + span { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
+  .bag .chip input:focus-visible + span { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .bag .save { height: 50px; border: 0; background: var(--gold); color: var(--bg); font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; }
+  .bag .count { font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--dim); }
+  .bag .count.over { color: var(--loss); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bag">
+<div class="bag-in">
+  <form method="POST" action="{{ url_for('bag.index') }}" id="bag-form">
+  <section class="sec" style="padding-top:8px">
+    <div class="row-h">
+      <h1>My bag</h1>
+      <span class="count" id="bag-count">{{ bag | length }} / {{ max_bag }} clubs</span>
+    </div>
+    <label class="toggle">
+      <span style="display:flex;flex-direction:column;gap:2px">
+        <span style="font-size:14px;font-weight:500">Log a club on every shot</span>
+        <span style="font-size:12px;color:var(--dim)">Adds a club row to shot entry and turns on the caddy</span>
+      </span>
+      <input type="checkbox" name="track_clubs" {{ 'checked' if track_clubs }}>
+    </label>
+  </section>
+
+  {% if rows and rows | selectattr('avg') | list %}
+  <section class="sec">
+    <div class="row-h">
+      <span class="label">Gapping · last {{ rounds_used }} rounds</span>
+      <span class="label" style="color:var(--faint);display:flex;gap:12px">
+        <span><i style="display:inline-block;width:14px;height:4px;background:rgba(236,239,237,.25);vertical-align:middle;margin-right:5px"></i>Middle 50%</span>
+        <span><i style="display:inline-block;width:2px;height:10px;background:var(--text);vertical-align:middle;margin-right:5px"></i>Avg</span>
+      </span>
+    </div>
+    <div class="gap-row" style="height:auto"><span></span><span class="mono" style="display:flex;justify-content:space-between;font-size:10px;color:var(--faint)"><span>{{ axis.lo }}</span><span>{{ axis.mid }}</span><span>{{ axis.hi }}</span></span><span></span></div>
+    <div>
+      {% for r in rows if r.avg %}
+      <div class="gap-row" title="{{ r.name }}: {{ r.n }} shots">
+        <span class="club {{ '' if r.in_bag else 'off' }}">{{ r.label }}</span>
+        <span class="track">
+          {% if r.x_lo is not none and r.x_hi is not none %}<span style="position:absolute;top:12px;height:4px;left:{{ r.x_lo }}%;width:{{ [r.x_hi - r.x_lo, 0.6] | max }}%;background:rgba(236,239,237,.25)"></span>{% endif %}
+          <span style="position:absolute;top:7px;height:14px;width:2px;margin-left:-1px;left:{{ r.x_avg }}%;background:var(--text)"></span>
+        </span>
+        <span class="mono r" style="font-size:12px;color:var(--dim)">{{ r.avg }}y</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% for n in notes %}<p class="note">{{ n }}</p>{% endfor %}
+    <p class="note">Distances are estimated from logged shots: the distance you started from minus the distance left for your next shot. Lay-ups and recovery shots are left out.</p>
+  </section>
+  {% endif %}
+
+  {% if pro and rows | selectattr('sg_per', 'ne', none) | list %}
+  <section class="sec">
+    <div class="row-h"><span class="label">SG per shot by club</span><span class="label" style="color:var(--faint)">N · /shot</span></div>
+    <div>
+      {% for r in rows if r.sg_per is not none %}
+      {% set w = ([(r.sg_per | abs) / 0.25, 1.0] | min) * 50 %}
+      <div class="sg-row">
+        <span class="club {{ '' if r.in_bag else 'off' }}">{{ r.label }}</span>
+        <span class="track" style="height:22px">
+          <span style="position:absolute;left:50%;top:2px;bottom:2px;width:1px;background:rgba(255,255,255,.16)"></span>
+          <span style="position:absolute;top:6px;height:10px;{{ 'left' if r.sg_per >= 0 else 'right' }}:50%;width:{{ '%.2f' | format(w) }}%;background:{{ 'var(--gain)' if r.sg_per >= 0 else 'var(--loss)' }}"></span>
+        </span>
+        <span class="n">{{ r.sg_n }}</span>
+        <span class="mono r" style="font-size:13px;color:{{ 'var(--gain)' if r.sg_per >= 0 else 'var(--loss)' }}">{{ '+' if r.sg_per > 0 else '−' if r.sg_per < 0 else '' }}{{ '%.2f' | format(r.sg_per | abs) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% elif not rows %}
+  <section class="sec"><p class="note">Once you've logged a few rounds with clubs, this page shows how far each club goes and how many strokes it gains or loses per shot.</p></section>
+  {% endif %}
+
+  <section class="sec">
+    <span class="label">Edit bag</span>
+    {% for g in groups %}
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="font-size:12px;color:var(--dim)">{{ g.name }}</span>
+      <div class="chips">
+        {% for c in g.clubs %}
+        <label class="chip" title="{{ c.name }}"><input type="checkbox" name="clubs" value="{{ c.key }}" {{ 'checked' if c.on }} aria-label="{{ c.name }}"><span>{{ c.label }}</span></label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+    <button type="submit" class="save">Save bag</button>
+  </section>
+  </form>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var form = document.getElementById('bag-form');
+  var count = document.getElementById('bag-count');
+  if (!form || !count) return;
+  function update() {
+    var n = form.querySelectorAll('input[name="clubs"]:checked').length;
+    count.textContent = n + ' / {{ max_bag }} clubs';
+    count.classList.toggle('over', n > {{ max_bag }});
+  }
+  form.addEventListener('change', update);
+  form.addEventListener('submit', function (e) {
+    var n = form.querySelectorAll('input[name="clubs"]:checked').length;
+    if (n > {{ max_bag }}) { e.preventDefault(); alert('A bag holds {{ max_bag }} clubs. Untick ' + (n - {{ max_bag }}) + ' to save.'); }
+  });
+  update();
+})();
+</script>
+{% endblock %}

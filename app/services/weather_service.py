@@ -189,3 +189,52 @@ def _cache_sentinel(report) -> None:
     """Store the unavailable sentinel to prevent repeated failed fetches."""
     if report:
         report.weather_json = _WEATHER_UNAVAILABLE
+
+
+# ---------------------------------------------------------------------------
+# Forecast (for the caddy during a round)
+# ---------------------------------------------------------------------------
+
+_FORECAST_CACHE = {}   # (lat, lng, date, hour) -> weather dict; process-local
+
+
+def fetch_forecast(lat: float, lng: float, day: date_type, hour: int = 12):
+    """
+    Hourly forecast for a location from the Open-Meteo forecast API (free,
+    no key). Returns the snapshot nearest `hour` in the same shape as
+    fetch_weather(), or None on failure. Cached in-process per hour.
+    """
+    if lat is None or lng is None:
+        return None
+    key = (round(lat, 3), round(lng, 3), day.isoformat(), hour)
+    if key in _FORECAST_CACHE:
+        return _FORECAST_CACHE[key]
+    params = urllib.parse.urlencode({
+        'latitude': lat, 'longitude': lng,
+        'start_date': day.isoformat(), 'end_date': day.isoformat(),
+        'hourly': 'temperature_2m,precipitation,windspeed_10m,winddirection_10m,weathercode',
+        'wind_speed_unit': 'kmh', 'timezone': 'auto',
+    })
+    url = f'https://api.open-meteo.com/v1/forecast?{params}'
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'MagnoliaAnalytics/1.0'})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read().decode())
+        hourly = data.get('hourly', {})
+        times = hourly.get('time', [])
+        if not times:
+            return None
+        target = f'{day.isoformat()}T{hour:02d}:00'
+        idx = next((i for i, t in enumerate(times) if t == target), len(times) // 2)
+        weather = {
+            'temp_c':    round(float(hourly['temperature_2m'][idx]), 1),
+            'wind_kph':  round(float(hourly['windspeed_10m'][idx]), 1),
+            'wind_dir':  round(float(hourly['winddirection_10m'][idx])) if hourly.get('winddirection_10m') else None,
+            'precip_mm': round(float(hourly['precipitation'][idx]), 1),
+            'condition': _wmo_label(hourly['weathercode'][idx]),
+        }
+        _FORECAST_CACHE[key] = weather
+        return weather
+    except Exception as exc:
+        logger.warning('fetch_forecast: failed for lat=%s lng=%s day=%s — %s', lat, lng, day, exc)
+        return None

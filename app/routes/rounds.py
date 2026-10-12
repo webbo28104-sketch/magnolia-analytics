@@ -11,6 +11,8 @@ from app.services.claude_service import generate_report
 from app.utils.round_stats import build_course_hole_map
 from app.services.sendgrid_service import send_report_email, send_personal_best
 from app.utils.round_stats import compute_all_stats
+from app.utils.shot_sg import reconstruct_shots
+from app.utils.clubs import club_label, club_name
 from app.utils.personal_bests import check_recent_personal_best
 from app.utils.access import is_pro
 from datetime import datetime, date
@@ -205,9 +207,9 @@ def enter_hole(round_id, hole_number):
         # GIR is True iff the player reached the green in regulation.
         # An ATG shot (scramble_distance) can occur on par 4/5 after a great drive
         # without missing the green — only approach_miss indicates a genuine miss.
-        hole.gir               = (hole.score - hole.putts) <= (hole.par - 2)
         hole.second_shot_distance = int(data['second_shot_distance']) if data.get('second_shot_distance') else None
         hole.putts             = int(data.get('putts', 2))
+        hole.gir               = (hole.score - hole.putts) <= (hole.par - 2)
         hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
         hole.last_putt_gimme   = data.get('last_putt_gimme') == 'true'
         hole.gimme_distance    = int(data['gimme_distance']) if data.get('gimme_distance') else None
@@ -241,48 +243,11 @@ def enter_hole(round_id, hole_number):
 
     import json as _json
 
-    def _reconstruct_shots(h):
-        """Build a shots_json-style list from legacy hole fields."""
-        shots = []
-        if h.tee_shot and h.par in (4, 5):
-            parts = (h.tee_shot or '').split(',')
-            direction = mod = None
-            if len(parts) == 1:
-                if parts[0] == 'fairway': direction = 'fairway'
-                elif parts[0] in ('left', 'right'): direction = parts[0]
-                elif parts[0] in ('bunker', 'penalty'): mod = parts[0]
-            elif len(parts) == 2:
-                mod, direction = parts[0], parts[1]
-            shots.append({'type': 'ott', 'direction': direction, 'mod': mod})
-        if h.approach_distance:
-            s = {'type': 'app', 'distance': h.approach_distance}
-            if h.approach_miss: s['miss'] = h.approach_miss
-            if h.lie_type: s['lie'] = h.lie_type.split(',')[0]
-            shots.append(s)
-        if h.approach_miss:  # missed green → had ATG
-            from app.utils.strokes_gained import _parse_yards
-            sdist = _parse_yards(h.scramble_distance) if h.scramble_distance else None
-            atg_lie = 'bunker' if 'bunker' in (h.lie_type or '') else 'rough'
-            shots.append({'type': 'atg', 'distance': sdist, 'lie': atg_lie})
-        total_putts = h.putts or 2
-        is_gimme = getattr(h, 'last_putt_gimme', False)
-        for i in range(total_putts):
-            is_last = (i == total_putts - 1)
-            if is_last and is_gimme:
-                s = {'type': 'gimme'}
-                if h.gimme_distance: s['gimme_distance'] = h.gimme_distance
-                shots.append(s)
-            else:
-                s = {'type': 'putt'}
-                if i == 0 and h.first_putt_distance: s['putt_distance'] = h.first_putt_distance
-                shots.append(s)
-        return shots
-
     if existing:
         if existing.shots_json:
             existing_shots_json = existing.shots_json
         else:
-            existing_shots_json = _json.dumps(_reconstruct_shots(existing))
+            existing_shots_json = _json.dumps(reconstruct_shots(existing))
     else:
         existing_shots_json = '[]'
 
@@ -303,7 +268,29 @@ def enter_hole(round_id, hole_number):
         show_hole_prompt=show_hole_prompt,
         course_edit_url=course_edit_url,
         existing_shots_json=existing_shots_json,
+        bag=[{'key': k, 'label': club_label(k), 'name': club_name(k)} for k in current_user.bag]
+            if current_user.track_clubs else [],
+        caddy_enabled=bool(current_user.track_clubs and current_user.bag and is_pro(current_user)),
     )
+
+
+@rounds_bp.route('/<int:round_id>/caddy')
+@login_required
+def caddy(round_id):
+    """Club recommendation for the shot being entered (JSON)."""
+    round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
+    if not is_pro(current_user):
+        return jsonify({'status': 'locked'})
+    from app.services.caddy_service import recommend
+    try:
+        dist = float(request.args['distance']) if request.args.get('distance') else None
+        hole_yds = float(request.args['hole_yardage']) if request.args.get('hole_yardage') else None
+        result = recommend(current_user, round_, request.args.get('type', 'app'),
+                           distance=dist, hole_yardage=hole_yds, lie=request.args.get('lie'))
+    except Exception as e:
+        current_app.logger.exception('[caddy] recommendation failed: %s', e)
+        result = {'status': 'error'}
+    return jsonify(result)
 
 
 @rounds_bp.route('/<int:round_id>/hole/<int:hole_number>/autosave', methods=['POST'])
@@ -349,9 +336,9 @@ def autosave_hole(round_id, hole_number):
     hole.approach_miss     = approach_miss
     hole.lie_type          = data.get('lie_type') or None
     hole.scramble_distance = data.get('scramble_distance') or None
-    hole.gir               = not bool(hole.approach_miss)
     hole.second_shot_distance = int(data['second_shot_distance']) if data.get('second_shot_distance') else None
     hole.putts             = int(data.get('putts', 2))
+    hole.gir               = (hole.score - hole.putts) <= (hole.par - 2)
     hole.first_putt_distance = int(data['first_putt_distance']) if data.get('first_putt_distance') else None
     hole.last_putt_gimme   = data.get('last_putt_gimme') == 'true'
     hole.gimme_distance    = int(data['gimme_distance']) if data.get('gimme_distance') else None

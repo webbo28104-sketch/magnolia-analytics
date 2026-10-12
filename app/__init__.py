@@ -34,6 +34,7 @@ def create_app(config_name='default'):
     from app.routes.payments import payments_bp
     from app.routes.analytics import analytics_bp
     from app.routes.coach import coach_bp
+    from app.routes.bag import bag_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -47,6 +48,7 @@ def create_app(config_name='default'):
     app.register_blueprint(waitlist_bp)
     app.register_blueprint(payments_bp)
     app.register_blueprint(coach_bp, url_prefix='/coach')
+    app.register_blueprint(bag_bp, url_prefix='/bag')
 
     # Recompute stale stats for the user on every login (covers login + register)
     user_logged_in.connect(_recompute_stale_on_login, app)
@@ -144,6 +146,8 @@ def _run_column_migrations():
         ('holes',     'gimme_distance',             'INTEGER'),
         ('reports',   'narrative_version',          'INTEGER'),
         ('courses',   'coords_unavailable',         'BOOLEAN DEFAULT FALSE'),
+        ('users',     'bag_json',                   'TEXT'),
+        ('users',     'track_clubs',                'BOOLEAN DEFAULT FALSE'),
     ]
     for table, column, col_type in migrations:
         try:

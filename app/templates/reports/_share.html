@@ -1,0 +1,462 @@
+<style>
+.sm-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);align-items:flex-end;justify-content:center}
+.sm-overlay.sm-open{display:flex}
+@media(min-width:560px){.sm-overlay{align-items:center}}
+.sm-sheet{background:#1a2e1a;border:1px solid #c9a84c;border-radius:16px 16px 0 0;width:100%;max-width:480px;padding:1.5rem 1.5rem 2rem;box-shadow:0 -4px 32px rgba(0,0,0,.5);animation:sm-slide-up .25s ease}
+@media(min-width:560px){.sm-sheet{border-radius:16px}}
+@keyframes sm-slide-up{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.sm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem}
+.sm-title{font-family:'Inter',system-ui,sans-serif;font-size:1.2rem;color:#c9a84c;letter-spacing:.04em}
+.sm-close{background:none;border:none;color:#8a9e8a;font-size:1.4rem;cursor:pointer;line-height:1;padding:.2rem .4rem;border-radius:4px;transition:color .15s}
+.sm-close:hover{color:#c9a84c}
+.sm-subtitle{color:#8a9e8a;font-size:.82rem;margin:.25rem 0 1.1rem;letter-spacing:.03em}
+.sm-social{display:flex;flex-direction:column;gap:.6rem}
+.sm-social-btn{display:flex;align-items:center;gap:.65rem;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:8px;color:#e8d9a0;padding:.7rem 1rem;font-size:.9rem;cursor:pointer;transition:background .15s,border-color .15s;width:100%;text-align:left}
+.sm-social-btn:hover{background:rgba(201,168,76,.16);border-color:rgba(201,168,76,.5)}
+.sm-divider{height:1px;background:rgba(201,168,76,.18);margin:1.1rem 0}
+.sm-pdf-section{display:flex;flex-direction:column;align-items:center;gap:.45rem}
+.sm-pdf-btn{display:flex;align-items:center;gap:.6rem;background:transparent;border:1px solid #c9a84c;border-radius:8px;color:#c9a84c;padding:.7rem 1.4rem;font-size:.9rem;font-weight:600;cursor:pointer;text-decoration:none;transition:background .15s,color .15s;letter-spacing:.03em}
+.sm-pdf-btn:hover{background:#c9a84c;color:#1a2e1a}
+.sm-pdf-hint{color:#8a9e8a;font-size:.75rem;text-align:center}
+</style>
+<!-- Share Modal -->
+<div id="share-modal" class="sm-overlay no-print" onclick="if(event.target===this)closeShareModal()" aria-modal="true" role="dialog" aria-label="Share round">
+  <div class="sm-sheet">
+    <div class="sm-header">
+      <span class="sm-title">Share Round</span>
+      <button class="sm-close" onclick="closeShareModal()" aria-label="Close">&times;</button>
+    </div>
+    <p class="sm-subtitle">Share your round or save the full report</p>
+    <div class="sm-social">
+      <button class="sm-social-btn" id="sm-btn-summary" onclick="smShareCard('summary',this)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Share Card
+      </button>
+      {% if user_is_pro %}
+      <button class="sm-social-btn" id="sm-btn-pdf" onclick="closeShareModal();setTimeout(window.print,200)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Full Report PDF
+      </button>
+      {% else %}
+      <a href="{{ url_for('main.pricing') }}" class="sm-social-btn" style="opacity:0.55;text-decoration:none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Full Report PDF — Upgrade
+      </a>
+      {% endif %}
+      <p id="sm-fallback-msg" style="display:none;font-size:.75rem;color:#8a9e8a;text-align:center;margin-top:.3rem"></p>
+    </div>
+    <div class="sm-divider"></div>
+    {% if user_is_pro %}
+    <div class="sm-pdf-section">
+      <button class="sm-pdf-btn" onclick="closeShareModal();setTimeout(window.print,200)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Save as PDF
+      </button>
+      <p class="sm-pdf-hint">Full scorecard &amp; stats &mdash; print-quality PDF</p>
+    </div>
+    {% else %}
+    <div class="sm-pdf-section">
+      <a href="{{ url_for('main.upgrade') }}" class="sm-pdf-btn" style="opacity:.55;pointer-events:auto;text-decoration:none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Save as PDF
+      </a>
+      <p class="sm-pdf-hint">PDF export is available with Magnolia Pro</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+<script>
+// ── Share card: 1080×1080 canvas renderer ────────────────────────────────
+function smDrawCard(ctx, d) {
+  var W = 1080, H = 1080, PAD = 60;
+
+  function goldBar(y) {
+    var g = ctx.createLinearGradient(0, y, W, y);
+    g.addColorStop(0,    'rgba(196,160,82,0)');
+    g.addColorStop(0.15, '#c4a052');
+    g.addColorStop(0.5,  '#e2c06a');
+    g.addColorStop(0.85, '#c4a052');
+    g.addColorStop(1,    'rgba(196,160,82,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y, W, 3);
+  }
+
+  // Background
+  ctx.fillStyle = '#0f1a10';
+  ctx.fillRect(0, 0, W, H);
+  goldBar(0);
+
+  // ── Header
+  ctx.letterSpacing = '3px';
+  ctx.font = '700 18px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(196,160,82,0.5)';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('MAGNOLIA ANALYTICS', PAD, 54);
+  ctx.letterSpacing = '0px';
+
+  var cName = d.courseName.length > 26 ? d.courseName.slice(0, 25) + '\u2026' : d.courseName;
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(245,240,232,0.92)';
+  ctx.font = '600 24px Inter,system-ui,sans-serif';
+  ctx.fillText(cName, W - PAD, 46);
+  ctx.fillStyle = 'rgba(245,240,232,0.45)';
+  ctx.font = '400 18px Inter,system-ui,sans-serif';
+  ctx.fillText(d.datePlayed, W - PAD, 70);
+
+  // Header separator
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD, 98); ctx.lineTo(W - PAD, 98); ctx.stroke();
+
+  // ── Hero left: gross score
+  var divX = 498;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 148px Inter,system-ui,sans-serif';
+  ctx.fillText(String(d.grossScore), PAD, 472);
+
+  ctx.fillStyle = 'rgba(245,240,232,0.92)';
+  ctx.font = '700 28px Inter,system-ui,sans-serif';
+  ctx.fillText(d.playerName, PAD, 518);
+
+  ctx.fillStyle = 'rgba(245,240,232,0.38)';
+  ctx.font = '400 20px Inter,system-ui,sans-serif';
+  ctx.fillText('Gross Score', PAD, 550);
+
+  // Vertical divider
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(divX, 110); ctx.lineTo(divX, 792); ctx.stroke();
+
+  // ── Hero right: vs-par
+  var rX = divX + 46;
+  var vp = d.vspar;
+  var vpColor = vp === 0 ? '#ffffff' : (vp < 0 ? '#34a85a' : '#e05240');
+  var vpStr   = vp === 0 ? 'E' : (vp > 0 ? '+' + vp : '' + vp);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = vpColor;
+  ctx.font = '900 80px Inter,system-ui,sans-serif';
+  ctx.fillText(vpStr, rX, 252);
+  ctx.fillStyle = 'rgba(245,240,232,0.38)';
+  ctx.font = '400 17px Inter,system-ui,sans-serif';
+  ctx.fillText('vs par', rX, 278);
+
+  // ── SG rows (ranked best→worst → green→red)
+  var sg     = [d.sgOffTee, d.sgApproach, d.sgAtg, d.sgPutting];
+  var sgLbls = ['Off the Tee', 'Approach', 'Around Green', 'Putting'];
+  var ranked = sg.slice().sort(function(a, b) { return b - a; });
+  var rankC  = ['#34a85a', '#8ab876', '#c49a5a', '#e05240'];
+  function sgClr(v) { var i = ranked.indexOf(v); return rankC[i < 0 ? 3 : i]; }
+
+  var sy = 322, rowH = 84, bW = 256, bH = 7, maxSG = 3;
+  for (var i = 0; i < 4; i++) {
+    var ry  = sy + i * rowH;
+    var v   = sg[i];
+    var c   = sgClr(v);
+    var pct = Math.min(Math.abs(v) / maxSG, 1);
+
+    // Category label
+    ctx.letterSpacing = '1px';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = 'rgba(245,240,232,0.48)';
+    ctx.font = '500 14px Inter,system-ui,sans-serif';
+    ctx.fillText(sgLbls[i].toUpperCase(), rX, ry);
+    ctx.letterSpacing = '0px';
+
+    // Value (right-aligned)
+    var vStr = (v >= 0 ? '+' : '') + v.toFixed(2);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+    ctx.fillStyle = c;
+    ctx.font = '700 20px Inter,system-ui,sans-serif';
+    ctx.fillText(vStr, W - PAD, ry);
+
+    // Bar track + fill
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(rX, ry + 26, bW, bH);
+    ctx.fillStyle = c;
+    ctx.fillRect(rX, ry + 26, Math.round(bW * pct), bH);
+  }
+
+  // ── Stats strip
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD, 822); ctx.lineTo(W - PAD, 822); ctx.stroke();
+
+  var fwStr  = d.fairwaysAvail > 0 ? d.fairwaysHit + '/' + d.fairwaysAvail : '\u2014';
+  var girStr = d.girCount + '/' + d.holesPlayed;
+  var scrStr = d.scrambleAttempts > 0 ? d.scrambleSaves + '/' + d.scrambleAttempts : '\u2014';
+  var cells  = [
+    { v: fwStr,              l: 'FAIRWAYS' },
+    { v: girStr,             l: 'GIR'      },
+    { v: String(d.totalPutts), l: 'PUTTS'  },
+    { v: scrStr,             l: 'SCRAMBLE' },
+  ];
+  var cW = (W - PAD * 2) / 4;
+
+  for (var j = 0; j < 4; j++) {
+    var cx = PAD + cW * j + cW / 2;
+    if (j > 0) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(PAD + cW * j, 842); ctx.lineTo(PAD + cW * j, 982); ctx.stroke();
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 36px Inter,system-ui,sans-serif';
+    ctx.fillText(cells[j].v, cx, 910);
+    ctx.fillStyle = 'rgba(245,240,232,0.42)';
+    ctx.font = '600 14px Inter,system-ui,sans-serif';
+    ctx.letterSpacing = '1px';
+    ctx.fillText(cells[j].l, cx, 958);
+    ctx.letterSpacing = '0px';
+  }
+
+  goldBar(H - 3);
+}
+
+// ── Summary card: Magnolia green 1080×1080 score card ────────────────────
+function smDrawSummaryCard(ctx, d) {
+  var W = 1080, H = 1080, PAD = 64;
+
+  function goldBar(y, h) {
+    var g = ctx.createLinearGradient(0, y, W, y);
+    g.addColorStop(0,    'rgba(196,160,82,0)');
+    g.addColorStop(0.15, '#c4a052');
+    g.addColorStop(0.5,  '#e2c06a');
+    g.addColorStop(0.85, '#c4a052');
+    g.addColorStop(1,    'rgba(196,160,82,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y, W, h || 4);
+  }
+
+  // Background — Magnolia green gradient
+  var bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#1f4d3a');
+  bg.addColorStop(1, '#0e2418');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  goldBar(0, 4);
+  goldBar(H - 4, 4);
+
+  // Brand
+  ctx.letterSpacing = '5px';
+  ctx.font = '700 16px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(201,168,76,0.65)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('MAGNOLIA ANALYTICS', W / 2, 50);
+  ctx.letterSpacing = '0px';
+
+  // Header rule
+  ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD, 82); ctx.lineTo(W - PAD, 82); ctx.stroke();
+
+  // Score eyebrow
+  ctx.letterSpacing = '3px';
+  ctx.font = '600 14px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(245,240,232,0.3)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('GROSS SCORE', W / 2, 116);
+  ctx.letterSpacing = '0px';
+
+  // Score — dominant number
+  ctx.font = '900 290px Inter,system-ui,sans-serif';
+  ctx.fillStyle = '#c9a84c';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(String(d.grossScore), W / 2, 430);
+
+  // vs-par pill — large
+  var vp     = d.vspar;
+  var vpColor = vp === 0 ? '#e0ddd8' : (vp < 0 ? '#7ecf9e' : '#e88a7a');
+  var vpStr   = vp === 0 ? 'Even' : (vp > 0 ? '+' + vp + ' over par' : Math.abs(vp) + ' under par');
+  ctx.font = '600 32px Inter,system-ui,sans-serif';
+  ctx.fillStyle = vpColor;
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(vpStr, W / 2, 492);
+
+  // Player name + course + date
+  ctx.font = '600 26px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(245,240,232,0.88)';
+  ctx.fillText(d.playerName, W / 2, 552);
+
+  var cName = d.courseName.length > 32 ? d.courseName.slice(0, 31) + '\u2026' : d.courseName;
+  ctx.font = '400 22px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(245,240,232,0.48)';
+  ctx.fillText(cName, W / 2, 590);
+
+  ctx.font = '400 18px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(245,240,232,0.28)';
+  ctx.fillText(d.datePlayed, W / 2, 624);
+
+  // Divider before stats strip
+  ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD, 666); ctx.lineTo(W - PAD, 666); ctx.stroke();
+
+  // Stats strip — three columns, big numbers
+  var girStr = d.girCount + '/' + d.holesPlayed;
+  var scrStr = d.scrambleAttempts > 0
+    ? d.scrambleSaves + '/' + d.scrambleAttempts
+    : '\u2014';
+  var cells = [
+    {v: String(d.totalPutts), l: 'PUTTS'},
+    {v: girStr,               l: 'GIR'},
+    {v: scrStr,               l: 'SCRAMBLE'},
+  ];
+  var cW = (W - PAD * 2) / 3;
+  for (var i = 0; i < 3; i++) {
+    var cx = PAD + cW * i + cW / 2;
+    if (i > 0) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(PAD + cW * i, 686); ctx.lineTo(PAD + cW * i, 1000); ctx.stroke();
+    }
+    // Big stat value
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 88px Inter,system-ui,sans-serif';
+    ctx.fillText(cells[i].v, cx, 810);
+    // Label
+    ctx.fillStyle = 'rgba(245,240,232,0.36)';
+    ctx.letterSpacing = '2px';
+    ctx.font = '600 14px Inter,system-ui,sans-serif';
+    ctx.fillText(cells[i].l, cx, 900);
+    ctx.letterSpacing = '0px';
+  }
+}
+
+// ── Share modal logic ─────────────────────────────────────────────────────
+(function(){
+  var _sd = {
+    grossScore:       {{ round.total_score or 0 }},
+    vspar:            {{ score_vs_par if score_vs_par is not none else 0 }},
+    courseName:       {{ course_name | tojson }},
+    datePlayed:       {{ round.date_played.strftime('%d %b %Y') | tojson }},
+    playerName:       {{ (user.first_name + ' ' + user.last_name) | tojson }},
+    fairwaysHit:      {{ round.fairways_hit or 0 }},
+    fairwaysAvail:    {{ round.fairways_available or 0 }},
+    girCount:         {{ round.gir_count or 0 }},
+    holesPlayed:      {{ round.holes_played or 18 }},
+    totalPutts:       {{ round.total_putts or 0 }},
+    scrambleSaves:    {{ scramble.saves }},
+    scrambleAttempts: {{ scramble.attempts }},
+    sgOffTee:         {{ sg_data.sg_off_tee  if sg_data.sg_off_tee  is not none else 0 }},
+    sgApproach:       {{ sg_data.sg_approach if sg_data.sg_approach is not none else 0 }},
+    sgAtg:            {{ sg_data.sg_atg      if sg_data.sg_atg      is not none else 0 }},
+    sgPutting:        {{ sg_data.sg_putting.total if sg_data.sg_putting.total is not none else 0 }},
+  };
+
+  function _buildShareText(d) {
+    var vsParStr = d.vspar === 0 ? 'E' : (d.vspar > 0 ? '+' + d.vspar : String(d.vspar));
+    function sgStr(v) { return (v >= 0 ? '+' : '') + Number(v).toFixed(2); }
+    return '\ud83c\udf3f Round at ' + d.courseName + '\n' +
+      d.grossScore + ' gross \u00b7 ' + vsParStr + ' \u00b7 ' + d.datePlayed + '\n\n' +
+      'Off the Tee  ' + sgStr(d.sgOffTee) + '\n' +
+      'Approach     ' + sgStr(d.sgApproach) + '\n' +
+      'Short Game   ' + sgStr(d.sgAtg) + '\n' +
+      'Putting      ' + sgStr(d.sgPutting) + '\n\n' +
+      'Analysed by Magnolia Analytics\n' +
+      'Know your game. magnoliaanalytics.golf';
+  }
+
+  window.openShareModal = function(){
+    document.getElementById('share-modal').classList.add('sm-open');
+    document.body.style.overflow = 'hidden';
+  };
+  window.closeShareModal = function(){
+    document.getElementById('share-modal').classList.remove('sm-open');
+    document.body.style.overflow = '';
+  };
+
+  window.smShareCard = function(type, btn) {
+    var origHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"\/><polyline points="12 6 12 12 16 14"\/><\/svg>\u00a0Generating\u2026';
+
+    var fallbackMsg = document.getElementById('sm-fallback-msg');
+    if (fallbackMsg) fallbackMsg.style.display = 'none';
+
+    var canvas = document.createElement('canvas');
+    canvas.width = 1080; canvas.height = 1080;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) { btn.innerHTML = origHTML; btn.disabled = false; return; }
+
+    var filename = 'magnolia-round-{{ round.id }}.png';
+
+    // Guard so the 500ms timer and fonts.ready don't both fire
+    var fired = false;
+    function generate() {
+      if (fired) return;
+      fired = true;
+
+      if (type === 'full') { smDrawCard(ctx, _sd); } else { smDrawSummaryCard(ctx, _sd); }
+
+      // Synchronous capture via toDataURL — avoids the extra async hop that
+      // canvas.toBlob() introduces. On iOS Safari that second async hop causes
+      // the user-gesture context to expire, producing empty / "no_name" files
+      // when navigator.share() is called from inside the toBlob callback.
+      var dataURL = canvas.toDataURL('image/png');
+      var raw = atob(dataURL.split(',')[1]);
+      var bytes = new Uint8Array(raw.length);
+      for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      var blob = new Blob([bytes], {type: 'image/png'});
+
+      if (!blob.size) { btn.innerHTML = origHTML; btn.disabled = false; return; }
+
+      function doDownload() {
+        var a = document.createElement('a');
+        a.download = filename;
+        a.href = URL.createObjectURL(blob);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+        if (fallbackMsg) {
+          fallbackMsg.textContent = 'Image saved to downloads \u2014 share from there';
+          fallbackMsg.style.display = '';
+        }
+        btn.innerHTML = origHTML;
+        btn.disabled = false;
+      }
+
+      var file = new File([blob], filename, {type: 'image/png'});
+      if (navigator.canShare && navigator.canShare({files: [file]})) {
+        navigator.share({
+          files: [file],
+          title: 'My Round \u2014 Magnolia Analytics',
+          text: _buildShareText(_sd)
+        }).then(function() {
+          btn.innerHTML = origHTML; btn.disabled = false;
+        }).catch(function(err) {
+          if (err && err.name !== 'AbortError') {
+            doDownload();
+          } else {
+            btn.innerHTML = origHTML; btn.disabled = false;
+          }
+        });
+      } else {
+        doDownload();
+      }
+    }
+
+    // Wait for fonts, fall back after 500 ms in case fonts.ready is delayed
+    document.fonts.ready.then(generate);
+    setTimeout(generate, 500);
+  };
+
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeShareModal(); });
+
+  // Auto-open share modal when navigated here with #share (e.g. from dashboard Share button)
+  if (window.location.hash === '#share') {
+    history.replaceState(null, '', window.location.pathname);
+    openShareModal();
+  }
+})();
+</script>

@@ -54,15 +54,13 @@ def _build_report_prompt(round_) -> str:
     holes_played = round_.holes_played or 18
     gir_pct = round(round_.gir_count / holes_played * 100) if round_.gir_count is not None else 0
 
-    # Round-level SG is a sum over however many holes were played, so it's
-    # projected to its 18-hole equivalent before display — a 6-hole round's
-    # SG gets multiplied by 3 to sit on the same scale as a full round.
-    from app.utils.strokes_gained import normalize_to_18
-    sg_off_tee = normalize_to_18(round_.sg_off_tee, holes_played) or 0
-    sg_approach = normalize_to_18(round_.sg_approach, holes_played) or 0
-    sg_atg = normalize_to_18(round_.sg_atg, holes_played) or 0
-    sg_putting = normalize_to_18(round_.sg_putting, holes_played) or 0
-    sg_total = normalize_to_18(round_.sg_total, holes_played) or 0
+    # SG for the holes actually played — never scaled up, so a 9-hole round
+    # reads as a 9-hole figure.
+    sg_off_tee = round_.sg_off_tee or 0
+    sg_approach = round_.sg_approach or 0
+    sg_atg = round_.sg_atg or 0
+    sg_putting = round_.sg_putting or 0
+    sg_total = round_.sg_total or 0
 
     return f"""You are the performance analysis engine for Magnolia Analytics, a premium golf tracking platform.
 
@@ -77,7 +75,7 @@ FIR: {round_.fairways_hit}/{round_.fairways_available} ({fw_pct}%)
 GIR: {round_.gir_count}/{holes_played} ({gir_pct}%)
 Penalties: {round_.penalties}
 
-STROKES GAINED
+STROKES GAINED vs PGA Tour, for the {holes_played} holes played (not scaled to 18)
 --------------
 Off Tee:      {sg_off_tee:+.2f}
 Approach:     {sg_approach:+.2f}
@@ -254,32 +252,29 @@ def _build_narrative_prompt(round_, sg_data: dict, historical_ctx: dict) -> str:
     user = round_.golfer
     course_name = round_.course.name if round_.course else 'Unknown Course'
 
-    # Hole summary
-    # IMPORTANT: All distance values (ApprDist, 2ndShotDist) represent the
-    # distance the player was FROM THE HOLE at the start of that shot —
-    # NOT how far the ball travelled. Example: holing out from 180 yards means
-    # ApprDist=180 (starting distance to hole), not the shot carry distance.
-    hole_lines = []
-    for h in holes:
-        svp = h.score - h.par
-        label = {-2: 'Eagle', -1: 'Birdie', 0: 'Par', 1: 'Bogey',
-                 2: 'Double', 3: 'Triple'}.get(svp, f'+{svp}')
-        hole_lines.append(
-            f"  H{h.hole_number:02d} Par{h.par}: {h.score} ({label}) | "
-            f"Tee:{h.tee_shot or '–'} GIR:{'Y' if h.gir else 'N'} "
-            f"Putts:{h.putts} FPD:{h.first_putt_distance or '?'}ft "
-            f"ApprDist:{h.approach_distance or '?'}yds(dist-to-hole) "
-            f"Miss:{h.approach_miss or '–'} Lie:{h.lie_type or '–'} "
-            f"2ndDist:{h.second_shot_distance or '–'}yds(dist-to-hole) Pen:{h.penalties}"
-        )
+    # Full shot-by-shot log and SG breakdowns (per-shot SG engine)
+    from app.services.round_context import shot_log_text, breakdown_text
+    from app.utils.round_history import shots_for_round, history as _history
+    _data = shots_for_round(round_)
+    _, _hist, _hist_shots = _history(round_.user_id, exclude_round_id=round_.id, limit=10,
+                                     before=round_.date_played)
+    shot_log = shot_log_text(round_, _data)
+    breakdowns = breakdown_text(_data['shots'], _hist_shots)
 
-    # SG values — sg_putting is a dict with 'total' key
-    sg_putting   = sg_data.get('sg_putting', {})
-    sg_off_tee   = sg_data.get('sg_off_tee', 0) or 0
-    sg_approach  = sg_data.get('sg_approach', 0) or 0
-    sg_atg       = sg_data.get('sg_atg', 0) or 0
-    sg_put_total = (sg_putting.get('total', 0) if isinstance(sg_putting, dict) else sg_putting) or 0
+    # SG values for the holes actually played (not scaled to 18)
+    _tot = sg_data.get('totals') or {}
+    _cnt = sg_data.get('counts') or {}
+    sg_off_tee   = _tot.get('ott', 0) or 0
+    sg_approach  = _tot.get('app', 0) or 0
+    sg_atg       = _tot.get('atg', 0) or 0
+    sg_put_total = _tot.get('putt', 0) or 0
     sg_total     = sg_data.get('sg_total', 0) or 0
+    _per = lambda c: (_tot.get(c, 0) / _cnt[c]) if _cnt.get(c) else None
+    leaks_txt = chr(10).join(f"  {r['title']}: {r['n']} shots, {r['sg']:+.2f} total, {r['per']:+.3f}/shot"
+                           + (f" (your previous-10 avg {r['avg']:+.3f}/shot)" if r.get('avg') is not None else '')
+                           for r in (sg_data.get('leaks') or [])) or '  (none)'
+    strengths_txt = chr(10).join(f"  {r['title']}: {r['n']} shots, {r['sg']:+.2f} total, {r['per']:+.3f}/shot"
+                               for r in (sg_data.get('strengths') or [])) or '  (none)'
 
     score_vs_par  = round_.score_vs_par()
     score_label   = f'+{score_vs_par}' if score_vs_par and score_vs_par > 0 else str(score_vs_par or 'E')
@@ -313,39 +308,30 @@ def _build_narrative_prompt(round_, sg_data: dict, historical_ctx: dict) -> str:
 
     round_count = historical_ctx.get('round_count', 1)
 
-    # Per-category SG vs player's own historical average (shown when 5+ rounds per category)
-    _cat_defs = [
-        ('sg_off_tee',  'SG Off Tee',      sg_off_tee),
-        ('sg_approach', 'SG Approach',     sg_approach),
-        ('sg_atg',      'SG Around Green', sg_atg),
-        ('sg_putting',  'SG Putting',      sg_put_total),
-    ]
+    # Per-category SG per shot vs the player's own previous-10-round average
+    _avgs = historical_ctx.get('per_shot_avgs') or {}
     per_cat_lines = []
-    for cat_key, cat_label, curr_val in _cat_defs:
-        avg = historical_ctx.get(f'avg_{cat_key}')
-        count = historical_ctx.get(f'{cat_key}_count', 0)
-        if avg is not None and curr_val is not None and count >= 5:
-            diff = round(curr_val - avg, 2)
-            if diff > 0.15:
-                rel = 'above your baseline'
-            elif diff < -0.15:
-                rel = 'below your baseline'
-            else:
-                rel = 'at your baseline'
+    for cat_key, cat_label in (('ott', 'SG Off Tee'), ('app', 'SG Approach'), ('atg', 'SG Around Green'), ('putt', 'SG Putting')):
+        avg = (_avgs.get(cat_key) or {}).get('per')
+        n_hist = (_avgs.get(cat_key) or {}).get('n', 0)
+        curr = _per(cat_key)
+        if avg is not None and curr is not None and n_hist >= 15:
+            diff = curr - avg
+            rel = 'above your baseline' if diff > 0.02 else 'below your baseline' if diff < -0.02 else 'at your baseline'
             per_cat_lines.append(
-                f"  {cat_label:<20s}  this round: {curr_val:+.2f}   your avg: {avg:+.2f}   diff: {diff:+.2f}  ({rel})"
-            )
+                f"  {cat_label:<16s} this round: {curr:+.3f}/shot ({_cnt.get(cat_key, 0)} shots)   "
+                f"your avg: {avg:+.3f}/shot   diff: {diff:+.3f}  ({rel})")
 
     per_cat_section = ''
     if per_cat_lines:
         per_cat_section = f"""
-PER-CATEGORY SG vs YOUR PERSONAL BASELINE  ({round_count} rounds of history)
+PER-CATEGORY SG PER SHOT vs YOUR PERSONAL BASELINE  (previous 10 rounds)
 ------------------------------------------------------------------------------
 {chr(10).join(per_cat_lines)}
 
 CRITICAL TONE RULE: Use these personal baselines — not the scratch (0) baseline — to set the emotional
-tone for each category. A player who typically loses -1.0 Off Tee and lost -0.9 this round is performing
-NORMALLY in that area, not poorly. Only flag a category as a concern if it is meaningfully BELOW their own
+tone for each category. A player who typically loses -0.06 per tee shot and lost -0.05 per tee shot this
+round is performing NORMALLY in that area, not poorly. Only flag a category as a concern if it is meaningfully BELOW their own
 average. Praise improvement when a category is meaningfully ABOVE their average. This is more important
 than whether the absolute SG value is positive or negative.
 """
@@ -433,20 +419,28 @@ FIR:       {round_.fairways_hit}/{round_.fairways_available} ({fw_pct}%)
 GIR:       {round_.gir_count}/{holes_played} ({gir_pct}%)
 Penalties: {round_.penalties}
 
-STROKES GAINED  (vs PGA Tour baseline — negative is normal for all amateurs)
+STROKES GAINED vs PGA Tour baseline, for the {holes_played} holes actually played (NOT scaled to 18 holes;
+negative is normal for all amateurs)
 -----------------------------------------------------------------------------
-SG Off Tee:      {sg_off_tee:+.2f}
-SG Approach:     {sg_approach:+.2f}
-SG Around Green: {sg_atg:+.2f}
-SG Putting:      {sg_put_total:+.2f}
+SG Off Tee:      {sg_off_tee:+.2f}  ({_cnt.get('ott', 0)} shots)
+SG Approach:     {sg_approach:+.2f}  ({_cnt.get('app', 0)} shots)
+SG Around Green: {sg_atg:+.2f}  ({_cnt.get('atg', 0)} shots)
+SG Putting:      {sg_put_total:+.2f}  ({_cnt.get('putt', 0)} putts)
 SG Total:        {sg_total:+.2f}
+Never describe these as 18-hole figures. If you mention SG Total, say it is for the {holes_played} holes played.
 
-HOLE-BY-HOLE (all distances = distance FROM THE HOLE at start of shot, not ball travel distance)
--------------------------------------------------------------------------------------------------
-Key: Tee=tee shot | GIR=green in regulation | FPD=first putt distance |
-ApprDist=approach dist-to-hole | Miss=approach miss direction(s) | Lie=lie type at miss |
-2ndDist=2nd shot dist-to-hole (par 5s) | Pen=penalty strokes
-{chr(10).join(hole_lines)}
+BIGGEST LEAKS THIS ROUND (ranked by strokes lost)
+{leaks_txt}
+
+STRENGTHS THIS ROUND
+{strengths_txt}
+
+SG BREAKDOWNS (with previous-10-round averages where available)
+{breakdowns}
+
+SHOT-BY-SHOT LOG (distances = distance to the flag at the START of each shot)
+-------------------------------------------------------------------------------
+{shot_log}
 {per_cat_section}{historical_section}
 {sample_guidance}
 
@@ -456,7 +450,7 @@ ANALYTICAL INSTRUCTIONS — follow all sections:
 - Lead with whichever SG category had the largest impact this round (most positive or most negative relative to the OTHER categories this round — not relative to zero)
 - Do NOT say a category is "poor" or "a weakness" because its SG value is negative; negative SG is expected for amateurs
 - Only flag a category as a concern if it is materially worse than the other three categories this round, OR if personal baseline data shows it below the player's own average
-- Back up every SG observation with specific hole evidence from the data above
+- Back up every SG observation with numbers: SG per shot, shot counts and distance bands from the breakdowns, plus specific holes from the shot log
 - If personal baseline data is available, compare each category to the player's OWN average — this is more meaningful than comparing to tour
 
 2. MISS PATTERN ANALYSIS
@@ -478,7 +472,7 @@ ANALYTICAL INSTRUCTIONS — follow all sections:
 
 5. PRACTICE RECOMMENDATIONS (end of narrative, exactly 2–3)
 - Rank by impact: the category or pattern with the most strokes to recover goes first
-- Be specific: cite hole numbers, shot counts, or distance bands from the data
+- Be specific and quantitative: name the distance band, lie or club, its SG per shot and total, and compare to the golfer's own average where shown
 - Calibrate to the player's level — do not recommend tour-level practice goals for a high handicapper
 - If the data is insufficient for a specific recommendation, say so; do not substitute generic advice
 - Write as a coach speaking directly to the player, not as a data summary

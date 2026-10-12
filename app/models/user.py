@@ -50,6 +50,10 @@ class User(UserMixin, db.Model):
     password_reset_token   = db.Column(db.String(100), nullable=True)
     password_reset_expires = db.Column(db.DateTime, nullable=True)
 
+    # My Bag — JSON list of club keys (app/utils/clubs.py), max 14
+    bag_json    = db.Column(db.Text, nullable=True)
+    track_clubs = db.Column(db.Boolean, default=False, nullable=True)  # show club picker in shot entry
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
@@ -66,6 +70,15 @@ class User(UserMixin, db.Model):
     @property
     def full_name(self):
         return f'{self.first_name} {self.last_name}'
+
+    @property
+    def bag(self) -> list:
+        import json
+        try:
+            clubs = json.loads(self.bag_json) if self.bag_json else []
+        except (ValueError, TypeError):
+            clubs = []
+        return clubs if isinstance(clubs, list) else []
 
     @property
     def is_premium(self):

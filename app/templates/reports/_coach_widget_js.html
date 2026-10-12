@@ -1,0 +1,73 @@
+{% if user_is_pro %}
+<script>
+(function () {
+  var roundId = {{ round.id }};
+  var log     = document.getElementById('coachWLog');
+  var input   = document.getElementById('coachWInput');
+  var sendBtn = document.getElementById('coachWSend');
+  if (!log || !input || !sendBtn) return;
+
+  var welcome = document.getElementById('coachWWelcome');
+
+  function appendMsg(role, content) {
+    if (welcome) { welcome.remove(); welcome = null; }
+    var div = document.createElement('div');
+    div.className = 'coach-w-msg coach-w-msg--' + (role === 'coach' ? 'coach' : 'user');
+    div.textContent = content;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function appendTyping() {
+    var div = document.createElement('div');
+    div.className = 'coach-w-msg coach-w-msg--typing';
+    div.id = 'coachWTyping';
+    div.textContent = 'Thinking…';
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+  function removeTyping() {
+    var t = document.getElementById('coachWTyping');
+    if (t) t.remove();
+  }
+
+  function send() {
+    var text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    sendBtn.disabled = true;
+    appendMsg('user', text);
+    appendTyping();
+    fetch('/coach/round/' + roundId + '/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        removeTyping();
+        sendBtn.disabled = false;
+        appendMsg('coach', data.reply || "Sorry — couldn't get that. Try again in a moment.");
+      })
+      .catch(function () {
+        removeTyping();
+        sendBtn.disabled = false;
+        appendMsg('coach', "Sorry — couldn't get that. Try again in a moment.");
+      });
+  }
+
+  sendBtn.addEventListener('click', send);
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); send(); }
+  });
+
+  // Load any prior conversation for this round
+  fetch('/coach/round/' + roundId + '/messages')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      (data.messages || []).forEach(function (m) { appendMsg(m.role, m.content); });
+    })
+    .catch(function () {});
+}());
+</script>
+{% endif %}

@@ -28,16 +28,11 @@ If stored values are absent (algo_version is NULL) the live fallback below
 is used until the recompute script is next run.
 """
 
-from app.utils.strokes_gained import (
-    strokes_gained_putting,
-    strokes_gained_off_tee,
-    strokes_gained_approach,
-    strokes_gained_around_green,
-)
+from app.utils.shot_sg import compute_round
 
 # Increment whenever computation logic changes.
 # Rounds with algo_version < CURRENT_ALGO_VERSION (or NULL) are stale.
-CURRENT_ALGO_VERSION = 4
+CURRENT_ALGO_VERSION = 5   # v5: category totals are sums of per-shot SG (app/utils/shot_sg.py)
 
 
 def build_course_hole_map(round_):
@@ -84,18 +79,17 @@ def compute_all_stats(round_):
     round_.fairways_hit       = sum(1 for h in fw_holes if h.tee_shot == 'fairway')
 
     # ── Strokes Gained ────────────────────────────────────────────────────
-    course_hole_map  = build_course_hole_map(round_)
-    sg_putting_data  = strokes_gained_putting(holes)
-    sg_ott           = strokes_gained_off_tee(holes, course_hole_map)
-    sg_app           = strokes_gained_approach(holes)
-    sg_atg           = strokes_gained_around_green(holes)
+    # Category totals are the sum of per-shot SG, so every breakdown on the
+    # report (distance, lie, club) adds up to these stored figures.
+    course_hole_map = build_course_hole_map(round_)
+    data            = compute_round(round_, course_hole_map)
+    totals          = data['totals']
 
-    round_.sg_putting  = round(sg_putting_data['total'],        3)
-    round_.sg_off_tee  = round(sg_ott,                          3)
-    round_.sg_approach = round(sg_app,                          3)
-    round_.sg_atg      = round(sg_atg,                          3)
-    round_.sg_total    = round(sg_ott + sg_app + sg_atg
-                               + sg_putting_data['total'],      3)
+    round_.sg_off_tee  = totals['ott']
+    round_.sg_approach = totals['app']
+    round_.sg_atg      = totals['atg']
+    round_.sg_putting  = totals['putt']
+    round_.sg_total    = data['sg_total']
 
     round_.algo_version = CURRENT_ALGO_VERSION
     return True
