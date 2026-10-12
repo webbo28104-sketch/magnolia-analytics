@@ -57,15 +57,15 @@
     {% elif not is_founding_member and pid_sm %}
       <a href="{{ url_for('payments.checkout', price_id=pid_sm) }}"
          style="display:block;width:100%;padding:14px;text-align:center;font-size:15px;font-weight:700;
-                font-family:inherit;border-radius:6px;background:var(--green-700,#2d6a4f);
-                color:#fff;text-decoration:none;box-sizing:border-box">
+                font-family:inherit;border-radius:6px;background:var(--gold);
+                color:#0b0d0c;text-decoration:none;box-sizing:border-box">
         Subscribe — £12.99/month →
       </a>
     {% else %}
       <a href="{{ url_for('main.pricing') }}"
          style="display:block;width:100%;padding:14px;text-align:center;font-size:15px;font-weight:700;
-                font-family:inherit;border-radius:6px;background:var(--green-700,#2d6a4f);
-                color:#fff;text-decoration:none;box-sizing:border-box">
+                font-family:inherit;border-radius:6px;background:var(--gold);
+                color:#0b0d0c;text-decoration:none;box-sizing:border-box">
         See plans &amp; pricing →
       </a>
     {% endif %}

@@ -424,7 +424,7 @@ def view_report(round_id):
         score_vs_par=score_vs_par, score_vs_par_label=_score_label(score_vs_par),
         holes_data=holes_data, split=split, holes_played=holes_played,
         cats=cats, cat_by={c['cat']: c for c in cats},
-        sg_total=sg_total, sg_pace18=normalize_to_18(sg_total, holes_played) if holes_played != 18 else None,
+        sg_total=sg_total, sg_pace18=normalize_to_18(sg_total, holes_played) if 9 <= holes_played < 18 else None,
         shots_measured=shots_measured,
         waterfall=waterfall, leaks=leaks, strengths=strengths,
         bd=breakdown, insights=insights,

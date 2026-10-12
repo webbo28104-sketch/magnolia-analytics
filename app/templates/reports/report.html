@@ -170,7 +170,7 @@ a { color: var(--text); text-decoration: none; }
 <body>
 
 {#- ── Formatting macros ── #}
-{% macro f(v, d=2) -%}{% if v is none %}—{% elif v > 0 %}+{{ '%.*f' | format(d, v) }}{% elif v < 0 %}−{{ '%.*f' | format(d, -v) }}{% else %}{{ '%.*f' | format(d, 0) }}{% endif %}{%- endmacro %}
+{% macro f(v, d=2) -%}{% if v is none %}—{% else %}{% set rv = v | round(d) %}{% if rv > 0 %}+{{ '%.*f' | format(d, rv) }}{% elif rv < 0 %}−{{ '%.*f' | format(d, -rv) }}{% else %}{{ '%.*f' | format(d, 0) }}{% endif %}{% endif %}{%- endmacro %}
 {% macro c(v) -%}{% if v is none %}{% elif v >= 0 %}pos{% else %}neg{% endif %}{%- endmacro %}
 {% macro clamp(v, s) -%}{{ [[v / s, -1.0] | max, 1.0] | min }}{%- endmacro %}
 {% macro bar(v, s) -%}

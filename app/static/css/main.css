@@ -1,32 +1,40 @@
 /* ============================================================
    Magnolia Analytics — Main Stylesheet
-   Brand: Dark green (#1B4332) + Gold (#C9A84C)
-   Fonts: Inter (all UI) · DM Mono (data labels)
+   Theme: near-black, hairline rules, gold accent (#C9A84C)
+   Fonts: Geist (UI) · Geist Mono (figures and labels)
    ============================================================ */
 
 :root {
-  --green-900: #0d2218;
-  --green-800: #1B4332;
-  --green-700: #2d6a4f;
-  --green-100: #e8f5ee;
+  /* Dark, data-first theme. Legacy token names are kept so existing
+     templates pick up the new palette; their meaning is noted. */
+  --bg:         #0b0d0c;   /* page background */
+  --ink:        #ecefed;   /* primary text on any surface */
+  --panel:      #111413;   /* raised surfaces */
+  --gain:       #5ee0a0;
+  --loss:       #ff6a3d;
+
+  --green-900:  #0b0d0c;   /* nav / footer / dark sections */
+  --green-800:  #ecefed;   /* strong text; filled buttons use it with dark text */
+  --green-700:  #5ee0a0;   /* positive / success accents */
+  --green-100:  rgba(94,224,160,.12);
   --gold:       #C9A84C;
-  --gold-light: #e8c97a;
-  --cream:      #f8f5ef;
-  --white:      #ffffff;
-  --text:       #1a1a1a;
-  --text-muted: #6b7280;
-  --border:     #e2ddd5;
-  --error:      #c0392b;
-  --success:    #2d6a4f;
+  --gold-light: #dcbe6c;
+  --cream:      #0b0d0c;   /* page background */
+  --white:      #111413;   /* card surfaces */
+  --text:       #ecefed;
+  --text-muted: #9aa29e;
+  --border:     rgba(255,255,255,.10);
+  --error:      #ff6a3d;
+  --success:    #5ee0a0;
 
-  --radius:     8px;
-  --radius-lg:  16px;
-  --shadow:     0 2px 12px rgba(27, 67, 50, 0.08);
-  --shadow-lg:  0 8px 32px rgba(27, 67, 50, 0.14);
+  --radius:     2px;
+  --radius-lg:  4px;
+  --shadow:     none;
+  --shadow-lg:  none;
 
-  --font-serif: 'Inter', system-ui, sans-serif;
-  --font-mono:  'DM Mono', 'Courier New', monospace;
-  --font-sans:  'Inter', system-ui, sans-serif;
+  --font-serif: 'Geist', system-ui, sans-serif;
+  --font-mono:  'Geist Mono', ui-monospace, 'Courier New', monospace;
+  --font-sans:  'Geist', system-ui, sans-serif;
 }
 
 /* ---- Reset & Base ---- */
@@ -112,7 +120,7 @@ h1, h2, h3, h4 {
   text-decoration: none;
   transition: color 0.2s;
 }
-.nav-link:hover { color: var(--white); text-decoration: none; }
+.nav-link:hover { color: var(--ink); text-decoration: none; }
 
 .nav-link--cta {
   background: var(--gold);
@@ -234,14 +242,14 @@ h1, h2, h3, h4 {
   color: var(--green-800);
   border-color: var(--green-800);
 }
-.btn--outline:hover { background: var(--green-800); color: var(--white); text-decoration: none; }
+.btn--outline:hover { background: var(--green-800); color: var(--bg); text-decoration: none; }
 
 .btn--full { width: 100%; }
 
 /* ---- Hero ---- */
 .hero {
   background: var(--green-800);
-  color: var(--white);
+  color: var(--bg);
   padding: 100px 24px 80px;
   text-align: center;
 }
@@ -264,7 +272,7 @@ h1, h2, h3, h4 {
   font-family: var(--font-serif);
   font-size: clamp(2.4rem, 5vw, 3.6rem);
   font-weight: 700;
-  color: var(--white);
+  color: var(--ink);
   margin-bottom: 20px;
   line-height: 1.15;
 }
@@ -350,14 +358,14 @@ h1, h2, h3, h4 {
 /* ---- Hero outline button (light variant for dark bg) ---- */
 .btn--outline-light {
   background: transparent;
-  color: var(--white);
+  color: var(--ink);
   border: 2px solid rgba(255,255,255,0.35);
 }
 .btn--outline-light:hover {
   background: rgba(255,255,255,0.1);
   border-color: rgba(255,255,255,0.6);
   text-decoration: none;
-  color: var(--white);
+  color: var(--ink);
 }
 
 /* ---- Atomic Habits Loop ---- */
@@ -373,7 +381,7 @@ h1, h2, h3, h4 {
   margin: 0 auto;
 }
 
-.loop-section .section-title { color: var(--white); }
+.loop-section .section-title { color: var(--ink); }
 .loop-section .section-subtitle { color: #a8c5b5; }
 
 .loop-steps {
@@ -406,7 +414,7 @@ h1, h2, h3, h4 {
 .loop-step-label {
   font-family: var(--font-serif);
   font-size: 1.2rem;
-  color: var(--white);
+  color: var(--ink);
   margin-bottom: 8px;
   font-weight: 600;
 }
@@ -515,7 +523,7 @@ h1, h2, h3, h4 {
   font-family: var(--font-mono);
   font-size: 1.3rem;
   font-weight: 500;
-  color: var(--white);
+  color: var(--ink);
   margin-bottom: 4px;
 }
 
@@ -648,7 +656,7 @@ h1, h2, h3, h4 {
   font-family: var(--font-mono);
   font-size: 2.2rem;
   font-weight: 500;
-  color: var(--white);
+  color: var(--ink);
   line-height: 1;
 }
 
@@ -710,7 +718,7 @@ h1, h2, h3, h4 {
 .mock-stat-value {
   font-family: var(--font-mono);
   font-size: 1.15rem;
-  color: var(--white);
+  color: var(--ink);
   margin-bottom: 4px;
 }
 
@@ -999,7 +1007,7 @@ h1, h2, h3, h4 {
   min-width: 21px;
   height: 21px;
   background: var(--green-800);
-  color: var(--white);
+  color: var(--bg);
   border-radius: 50%;
   font-size: 0.7rem;
   font-weight: 700;
@@ -1384,7 +1392,7 @@ h1, h2, h3, h4 {
 .tap-btn--active {
   background: var(--green-800);
   border-color: var(--green-800);
-  color: var(--white);
+  color: var(--bg);
 }
 
 .tap-group--two .tap-btn { min-width: 120px; }
@@ -1414,7 +1422,7 @@ h1, h2, h3, h4 {
   transition: background 0.15s;
 }
 .stepper-btn:hover { background: var(--green-100); }
-.stepper-btn:active { background: var(--green-800); color: var(--white); }
+.stepper-btn:active { background: var(--green-800); color: var(--bg); }
 
 .stepper-value {
   flex: 1;
@@ -1454,7 +1462,7 @@ h1, h2, h3, h4 {
 
 .scorecard-table th {
   background: var(--green-800);
-  color: var(--gold);
+  color: var(--bg);
   padding: 10px 14px;
   text-align: center;
   font-family: var(--font-mono);
@@ -1501,7 +1509,7 @@ h1, h2, h3, h4 {
   font-size: 0.85rem;
   padding: 6px 14px;
   background: var(--green-800);
-  color: var(--gold);
+  color: var(--bg);
   border-radius: 20px;
 }
 
@@ -1673,7 +1681,7 @@ h1, h2, h3, h4 {
 .glossary-title {
   font-family: var(--font-serif);
   font-size: clamp(2rem, 4vw, 3rem);
-  color: var(--white);
+  color: var(--ink);
   margin-bottom: 16px;
 }
 .glossary-subtitle {
@@ -1731,7 +1739,7 @@ h1, h2, h3, h4 {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   background: var(--green-800);
-  color: var(--gold);
+  color: var(--bg);
   padding: 2px 8px;
   border-radius: 4px;
   letter-spacing: 0.5px;
@@ -1796,3 +1804,44 @@ input[type="submit"], input[type="button"], input[type="reset"] {
 .btn {
   min-height: 44px;
 }
+
+
+/* ============================================================
+   Dark theme refinements (2026 redesign)
+   ============================================================ */
+body { font-feature-settings: 'tnum'; }
+h1, h2, h3, h4 { color: var(--ink); letter-spacing: -.03em; }
+.nav { background: var(--bg); border-bottom: 1px solid var(--border); }
+.nav-logo { color: var(--ink); font-size: 1rem; letter-spacing: -.01em; font-weight: 600; }
+.nav-logo::after { content: '.'; color: var(--gold); }
+.nav-link { color: var(--text-muted); font-size: .875rem; }
+.nav-link:hover { color: var(--ink); }
+.nav-link--cta { background: var(--gold); color: var(--bg); border-radius: 0; }
+.nav-link--cta:hover { background: var(--gold-light); color: var(--bg); }
+.nav-link--muted { color: #6d7571; }
+.nav-hamburger-bar { background: var(--ink); }
+.nav-link.is-current { color: var(--ink); box-shadow: inset 0 -2px 0 var(--gold); }
+.flash { border-radius: 0; background: var(--panel); color: var(--ink); border: 1px solid var(--border); }
+.flash--success { border-color: rgba(94,224,160,.4); }
+.flash--error   { border-color: rgba(255,106,61,.5); }
+.flash--info    { border-color: rgba(201,168,76,.4); }
+.btn { border-radius: 0; }
+.btn--gold { color: var(--bg); }
+.btn--outline { color: var(--ink); border-color: rgba(255,255,255,.25); }
+.btn--outline:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.form-label { color: var(--text-muted); font-family: var(--font-mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 400; }
+.form-input { background: transparent; color: var(--ink); border-color: rgba(255,255,255,.2); border-radius: 0; }
+.form-input:focus { border-color: var(--gold); box-shadow: none; }
+select.form-input option { background: var(--panel); color: var(--ink); }
+.auth-card { border-radius: 0; }
+.footer { background: var(--bg); border-top: 1px solid var(--border); }
+.footer-logo { color: var(--ink); }
+.footer-tagline { color: #6d7571; }
+::selection { background: rgba(201,168,76,.35); }
+/* Large sections that used the old dark-green fill stay dark in the new theme */
+.hero, .glossary-hero { background: var(--bg); border-bottom: 1px solid var(--border); }
+.hero *, .glossary-hero * { color: var(--ink); }
+.scorecard-table th, .stat-pill { background: var(--panel); color: var(--text-muted); }
+.glossary-term-abbr { background: transparent; color: var(--gold); border: 1px solid rgba(201,168,76,.4); }
+.install-step::before { background: var(--gold); color: var(--bg); }
+textarea, input[type="text"], input[type="email"], input[type="password"], input[type="date"], input[type="number"], select { color-scheme: dark; }

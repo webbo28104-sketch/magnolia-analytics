@@ -55,13 +55,14 @@ def _dims():
                      [b[2] for b in OTT_LENGTHS]),
         'atg_dist': ('atg', lambda s: _band(s['dist'], ATG_BANDS), [b[2] for b in ATG_BANDS]),
         'atg_lie':  ('atg', lambda s: s['lie'], [k for k, _ in ATG_LIE_LABELS]),
+        'atg_club': ('atg', lambda s: s['club'], None),
         'putt_dist': ('putt', lambda s: _band(s['ft'], PUTT_BANDS), [b[2] for b in PUTT_BANDS]),
         'club_all': (None, lambda s: s['club'], None),
     }
 
 
 def _label(dim, key):
-    if dim in ('app_club', 'ott_club', 'club_all'):
+    if dim in ('app_club', 'ott_club', 'atg_club', 'club_all'):
         return club_label(key)
     if dim == 'ott_result':
         return dict(OTT_RESULTS).get(key, key)
@@ -98,7 +99,7 @@ def rows(shots, dim, history_shots=None) -> list:
     keys = list(agg.keys())
     if order:
         keys = [k for k in order if k in agg] + [k for k in keys if k not in order]
-    elif dim in ('app_club', 'ott_club', 'club_all'):
+    elif dim in ('app_club', 'ott_club', 'atg_club', 'club_all'):
         keys = sort_clubs(keys)
     out = []
     for k in keys:

@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% block title %}{{ cfg.title }} — Magnolia Analytics{% endblock %}
+
+{% block head %}
+<style>
+  .an { max-width: 1120px; margin: 0 auto; padding: 24px clamp(16px, 4vw, 40px) 72px; display: flex; flex-direction: column; gap: 32px; }
+  .an a { color: var(--ink); text-decoration: none; }
+  .an .lbl { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+  .an .faint { color: #7a827e; }
+  .an .pos { color: var(--gain); } .an .neg { color: var(--loss); }
+  .an .mono { font-family: var(--font-mono); }
+  .an-tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .an-tabs a { flex: none; min-height: 44px; display: flex; align-items: center; font-size: 14px; color: var(--text-muted) !important; }
+  .an-tabs a.on { color: var(--ink) !important; font-weight: 500; box-shadow: inset 0 -2px 0 var(--gold); }
+  .an-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; }
+  .an-head h1 { margin: 0; font-size: 36px; font-weight: 600; letter-spacing: -.04em; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+  .filters label { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border: 1px solid rgba(255,255,255,.14); font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: .06em; }
+  .filters select { background: transparent; color: var(--ink); border: 0; font-family: var(--font-mono); font-size: 12px; }
+  .filters select option { background: var(--panel); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .kpi { padding: 18px 18px 18px 0; display: flex; flex-direction: column; gap: 6px; }
+  .kpi .v { font-family: var(--font-mono); font-size: 30px; font-weight: 500; letter-spacing: -.04em; }
+  .kpi .s { font-size: 12px; color: var(--text-muted); }
+  .sec-h { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 10px; padding-bottom: 10px; }
+  .scale { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 10px; color: #7a827e; }
+  .scale i { width: 120px; height: 8px; background: linear-gradient(90deg, #ff6a3d, #1a1e1c 50%, #5ee0a0); }
+  .heat-wrap { overflow-x: auto; }
+  .heat { min-width: 640px; display: flex; flex-direction: column; gap: 3px; }
+  .hrow { display: grid; gap: 3px; align-items: center; }
+  .hrow .k { font-family: var(--font-mono); font-size: 12px; }
+  .hrow .c { height: 32px; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 10px; color: rgba(11,13,12,.85); }
+  .hrow .c.empty { border: 1px solid rgba(255,255,255,.06); }
+  .hrow .r { font-family: var(--font-mono); font-size: 12px; text-align: right; }
+  .note { margin: 0; font-size: 13px; line-height: 1.55; color: var(--text-muted); max-width: 760px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 44px; }
+  .row { display: grid; gap: 12px; align-items: center; min-height: 46px; border-top: 1px solid rgba(255,255,255,.06); font-family: var(--font-mono); font-size: 13px; }
+  .row .t { font-family: var(--font-sans); font-size: 14px; }
+  .row .r { text-align: right; }
+  .track { position: relative; height: 22px; display: block; }
+  .track .z { position: absolute; left: 50%; top: 2px; bottom: 2px; width: 1px; background: rgba(255,255,255,.16); }
+  .track .b { position: absolute; top: 6px; height: 10px; }
+  .track .a { position: absolute; top: 3px; height: 16px; width: 2px; margin-left: -1px; background: #7a827e; }
+  .chart { position: relative; padding-left: 44px; }
+  .chart svg { width: 100%; height: 200px; display: block; }
+  .chart .yt { position: absolute; left: 0; font-family: var(--font-mono); font-size: 10px; color: #7a827e; transform: translateY(-50%); }
+  .empty { border-top: 1px solid var(--border); padding: 32px 0; color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% macro f(v, d=2) -%}{% if v is none %}—{% else %}{% set rv = v | round(d) %}{% if rv > 0 %}+{{ '%.*f' | format(d, rv) }}{% elif rv < 0 %}−{{ '%.*f' | format(d, -rv) }}{% else %}{{ '%.*f' | format(d, 0) }}{% endif %}{% endif %}{%- endmacro %}
+{% macro c(v) -%}{% if v is none %}{% elif v >= 0 %}pos{% else %}neg{% endif %}{%- endmacro %}
+{% macro bar(v, avg=none, s=0.5) -%}
+  {%- set w = ([(v | abs) / s, 1.0] | min) * 50 -%}
+  <span class="track"><span class="z"></span><span class="b" style="{{ 'left' if v >= 0 else 'right' }}: 50%; width: {{ '%.2f' | format(w) }}%; background: {{ 'var(--gain)' if v >= 0 else 'var(--loss)' }};"></span>{% if avg is not none %}<span class="a" style="left: {{ '%.2f' | format(50 + ([[avg / s, -1.0] | max, 1.0] | min) * 50) }}%;" title="Previous 10 rounds {{ f(avg) }}"></span>{% endif %}</span>
+{%- endmacro %}
+
+{% block content %}
+<div class="an">
+  <nav class="an-tabs" aria-label="Analytics">
+    {% for k in ['ott', 'app', 'atg', 'putt'] %}
+    <a href="{{ url_for(pages[k].endpoint) }}" class="{{ 'on' if k == cat }}">{{ pages[k].title }}</a>
+    {% endfor %}
+    <a href="{{ url_for('bag.index') }}">Clubs</a>
+  </nav>
+
+  <div class="an-head">
+    <div style="display:flex;align-items:baseline;gap:18px;flex-wrap:wrap">
+      <h1>{{ cfg.title }}</h1>
+      <span class="mono {{ c(per) }}" style="font-size:22px">{{ f(per, 3) }} / {{ cfg.unit }}</span>
+      {% if delta is not none %}<span class="mono {{ c(delta) }}" style="font-size:12px">{{ f(delta, 3) }} vs previous 10</span>{% endif %}
+    </div>
+    <form class="filters" method="GET">
+      {% if cat in ('app', 'atg') %}
+      <label>LIE
+        <select name="lie" onchange="this.form.submit()">
+          <option value="">All</option>
+          {% for k, l in ([('fairway','Fairway'),('rough','Rough'),('bunker','Bunker'),('recovery','Recovery')] if cat == 'app' else [('fringe','Fringe'),('rough','Rough'),('bunker','Bunker')]) %}
+          <option value="{{ k }}" {{ 'selected' if lie == k }}>{{ l }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% endif %}
+      <label>WEATHER
+        <select name="wind" onchange="this.form.submit()">
+          <option value="">Any</option>
+          <option value="calm" {{ 'selected' if wind == 'calm' }}>Calm</option>
+          <option value="windy" {{ 'selected' if wind == 'windy' }}>Windy (&gt;{{ windy_kph }} km/h)</option>
+        </select>
+      </label>
+    </form>
+  </div>
+
+  {% if not n %}
+  <div class="empty">No measured {{ cfg.title | lower }} shots in your last {{ rounds_n }} rounds{% if lie or wind %} with these filters{% endif %}. Log rounds shot by shot, with distances, to fill this page.</div>
+  {% else %}
+
+  <section class="kpis">
+    <div class="kpi"><span class="lbl">SG / {{ cfg.unit }}</span><span class="v {{ c(per) }}">{{ f(per, 3) }}</span><span class="s">{{ n }} {{ cfg.unit }}s · last {{ rounds_n }} rounds</span></div>
+    <div class="kpi"><span class="lbl">SG / round</span><span class="v {{ c(per_round) }}">{{ f(per_round) }}</span><span class="s">holes actually played</span></div>
+    {% for l, v, s in extra %}<div class="kpi"><span class="lbl">{{ l }}</span><span class="v">{{ v }}</span><span class="s">{{ s }}</span></div>{% endfor %}
+  </section>
+
+  {% if heat %}
+  <section>
+    <div class="sec-h">
+      <span class="lbl">SG / {{ cfg.unit }} · {{ cfg.heat_label | lower }} × round</span>
+      <span class="scale">−0.5 <i></i> +0.5 · BLANK = NONE PLAYED</span>
+    </div>
+    <div class="heat-wrap"><div class="heat">
+      <div class="hrow" style="grid-template-columns: 80px repeat({{ cols | length }}, minmax(0,1fr)) 64px 40px;">
+        <span class="lbl" style="font-size:10px">{{ cfg.heat_label }}</span>
+        {% for d in cols %}<span class="mono faint" style="font-size:10px;text-align:center">{{ d }}</span>{% endfor %}
+        <span class="lbl" style="font-size:10px;text-align:right">/{{ cfg.unit }}</span><span class="lbl" style="font-size:10px;text-align:right">N</span>
+      </div>
+      {% for h in heat %}
+      <div class="hrow" style="grid-template-columns: 80px repeat({{ cols | length }}, minmax(0,1fr)) 64px 40px;">
+        <span class="k">{{ h.label }}</span>
+        {% for cell in h.cells %}
+          {% if cell %}<span class="c" title="{{ f(cell.v) }} over {{ cell.n }}" style="background: rgba({{ '94,224,160' if cell.pos else '255,106,61' }},{{ cell.a }});">{{ f(cell.v, 1) if cell.a > 0.5 else '' }}</span>
+          {% else %}<span class="c empty"></span>{% endif %}
+        {% endfor %}
+        <span class="r {{ c(h.per) }}">{{ f(h.per) }}</span>
+        <span class="r faint">{{ h.n }}</span>
+      </div>
+      {% endfor %}
+    </div></div>
+    {% if insight %}<p class="note" style="margin-top:12px">{{ insight }}</p>{% endif %}
+  </section>
+  {% endif %}
+
+  {% if trend %}
+  <section>
+    <div class="sec-h"><span class="lbl">SG / {{ cfg.unit }} per round</span><span class="lbl faint">{{ trend.first }} → {{ trend.last }}</span></div>
+    <div class="chart">
+      <span class="yt" style="top:10px">{{ f(trend.hi) }}</span>
+      <span class="yt" style="top:{{ trend.zero }}px">0</span>
+      <span class="yt" style="top:190px">{{ f(trend.lo) }}</span>
+      <svg viewBox="0 0 1000 200" preserveAspectRatio="none" role="img" aria-label="SG per shot by round">
+        <line x1="0" y1="{{ trend.zero }}" x2="1000" y2="{{ trend.zero }}" stroke="rgba(255,255,255,.18)" vector-effect="non-scaling-stroke"></line>
+        <polyline points="{{ trend.line }}" fill="none" stroke="#c9a84c" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>
+      </svg>
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="two">
+    {% set detail_title = 'By ' ~ cfg.heat_label | lower %}
+    {% for title, rows, dim in [(detail_title, heat_rows, cfg.heat)] + tables %}
+    {% if rows %}
+    <section>
+      <div class="sec-h"><span class="lbl">{{ title }}</span><span class="lbl faint">N · /{{ cfg.unit }} · total</span></div>
+      {% for r in rows %}
+      <div class="row" style="grid-template-columns: 76px minmax(0,1fr) 36px 60px 56px;">
+        <span class="t {{ 'mono' if dim.endswith('club') or dim.endswith('dist') or dim.endswith('len') }}" style="{{ 'font-family:var(--font-mono);font-size:12px' if dim.endswith('dist') or dim.endswith('len') or dim.endswith('club') }}">{{ r.label }}</span>
+        {{ bar(r.per, r.avg) }}
+        <span class="r faint">{{ r.n }}</span>
+        <span class="r {{ c(r.per) }}">{{ f(r.per) }}</span>
+        <span class="r {{ c(r.sg) }}">{{ f(r.sg, 1) }}</span>
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+    {% endfor %}
+
+    {% if wind_rows %}
+    <section>
+      <div class="sec-h"><span class="lbl">Calm vs windy · SG / {{ cfg.unit }}</span><span class="lbl faint">Wind &gt; {{ windy_kph }} km/h</span></div>
+      {% for w in wind_rows %}
+      <div class="row" style="grid-template-columns: 52px minmax(0,1fr) 64px 64px;">
+        <span style="font-weight:500">{{ w.club }}</span>
+        <span class="faint" style="font-family:var(--font-sans);font-size:12px">{{ w.calm[1] }} calm · {{ w.windy[1] }} windy</span>
+        <span class="r {{ c(w.calm[0]) }}">{{ f(w.calm[0]) }}</span>
+        <span class="r {{ c(w.windy[0]) }}">{{ f(w.windy[0]) }}</span>
+      </div>
+      {% endfor %}
+      <p class="note" style="font-size:11px;margin-top:10px">Columns: calm · windy. The caddy weights these when it picks a club on a windy day.</p>
+    </section>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -4,12 +4,12 @@
 {% block head %}
 <style>
   :root {
-    --he-green:   #1a2e1a;
+    --he-green:   #ecefed;
     --he-gold:    #c9a84c;
-    --he-cream:   #f5f0e8;
-    --he-surface: #ffffff;
-    --he-border:  #d8d0c0;
-    --he-muted:   #7a7060;
+    --he-cream:   #0b0d0c;
+    --he-surface: #111413;
+    --he-border:  rgba(255,255,255,.14);
+    --he-muted:   #9aa29e;
     --he-nav:     60px;
   }
 
@@ -19,12 +19,13 @@
     max-width: 480px;
     margin: 0 auto;
     padding: 0 1rem 5rem;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Geist', system-ui, sans-serif;
   }
 
   .em-header {
-    background: var(--he-green);
-    color: #fff;
+    background: #0b0d0c;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    color: #ecefed;
     text-align: center;
     padding: 1.1rem 1rem;
     margin: 0 -1rem 1.75rem;
@@ -61,7 +62,7 @@
     border-radius: 8px;
     font-size: 1rem;
     font-family: inherit;
-    background: #fff;
+    background: var(--he-surface);
     color: #1a1a1a;
     transition: border-color .15s;
   }
@@ -73,7 +74,7 @@
     border: 2px solid var(--he-border); border-radius: 8px;
     padding: .85rem 1rem; cursor: pointer; position: relative;
     transition: border-color .15s, background .15s;
-    background: #fff;
+    background: var(--he-surface);
   }
   .tee-card:hover  { border-color: var(--he-gold); background: var(--he-cream); }
   .tee-card.selected { border-color: var(--he-gold); background: rgba(201,168,76,.08); }

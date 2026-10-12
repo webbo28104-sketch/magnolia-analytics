@@ -12,7 +12,7 @@
 
   <!-- PWA -->
   <link rel="manifest" href="{{ url_for('main.manifest') }}">
-  <meta name="theme-color" content="#1B4332">
+  <meta name="theme-color" content="#0b0d0c">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Magnolia">
@@ -20,7 +20,7 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <!-- Styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
@@ -32,7 +32,7 @@
   <!-- Navigation -->
   <nav class="nav">
     <div class="nav-inner">
-      <a href="{{ url_for('main.index') }}" class="nav-logo">Magnolia Analytics</a>
+      <a href="{{ url_for('main.index') }}" class="nav-logo">Magnolia</a>
 
       <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
         <span class="nav-hamburger-bar"></span>
@@ -43,6 +43,7 @@
       <div class="nav-links" id="navLinks">
         {% if current_user.is_authenticated %}
           <a href="{{ url_for('dashboard.index') }}" class="nav-link">Dashboard</a>
+          <a href="{{ url_for('analytics.approach') }}" class="nav-link">Analytics</a>
           <a href="{{ url_for('coach.index') }}" class="nav-link">Coach</a>
           <a href="{{ url_for('bag.index') }}" class="nav-link">My Bag</a>
           <a href="{{ url_for('profile.index') }}" class="nav-link">Profile</a>

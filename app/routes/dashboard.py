@@ -1,380 +1,168 @@
 from flask import Blueprint, render_template, url_for, request, flash
 from flask_login import login_required, current_user
-import math
 import logging
 
-logger = logging.getLogger(__name__)
-from datetime import date, timedelta
 from app.models.round import Round
-from app.models.hole import Hole
-from app.utils.personal_bests import check_recent_personal_best
-from app.utils.access import is_pro, subscription_required
+from app.utils.access import is_pro
+from app.utils.strokes_gained import normalize_to_18
+from app.utils.shot_sg import CATEGORIES, CATEGORY_LABELS
+from app.utils.round_history import shots_for_round
+from app.utils import sg_breakdown as bd
+
+logger = logging.getLogger(__name__)
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
-@dashboard_bp.route('/')
-@login_required
-def index():
-    # One-time welcome flash after Stripe checkout redirect
-    if request.args.get('subscribed') == 'true':
-        if current_user.is_founding_member:
-            flash('Welcome, Founding Member — your rate is locked for life.', 'success')
-        else:
-            flash("Welcome to Magnolia — you're all set.", 'success')
+WINDOW = 10        # rounds in the "current" window
+TREND_ROUNDS = 20  # rounds plotted on the SG trend
 
-    # Single query for all complete rounds — used for stats, glance, and recent list
-    all_complete = (
-        Round.query
-        .filter_by(user_id=current_user.id, status='complete')
-        .order_by(Round.date_played.desc())
-        .all()
-    )
+ANALYTICS_LINKS = {
+    'ott': 'analytics.off_the_tee', 'app': 'analytics.approach',
+    'atg': 'analytics.around_green', 'putt': 'analytics.putting',
+}
 
-    total_complete = len(all_complete)
-    user_is_pro = is_pro(current_user)
 
-    # Free users get their full round history.
-    # Performance trends (stats) and SG averages are Pro-only — not computed
-    # for free users so no paid data reaches the browser.
-    recent_rounds = all_complete
-    stats   = _compute_stats(all_complete[:20]) if (all_complete and user_is_pro) else None
-    glance  = _compute_glance(all_complete) if all_complete else None
-    sg_avgs = _compute_sg_avgs(all_complete[:20]) if user_is_pro else None
-
-    # SG improvement category in the glance section exposes paid SG data to
-    # free users — clear it so no SG category names or deltas reach the browser.
-    if glance and not user_is_pro:
-        glance['sg_improved_cat'] = None
-
-    # In-progress rounds â find the next unplayed hole for each
-    in_progress = (
-        Round.query
-        .filter_by(user_id=current_user.id, status='in_progress')
-        .order_by(Round.created_at.desc())
-        .all()
-    )
-    in_progress_rounds = []
-    for r in in_progress:
-        saved_holes = {h.hole_number for h in r.holes}
+def _in_progress():
+    rounds = (Round.query.filter_by(user_id=current_user.id, status='in_progress')
+              .order_by(Round.created_at.desc()).all())
+    out = []
+    for r in rounds:
+        saved = {h.hole_number for h in r.holes}
         if r.holes_played == 9 and r.nine_hole_selection == 'back':
             hole_range = range(10, 19)
         elif r.holes_played == 9:
             hole_range = range(1, 10)
         else:
             hole_range = range(1, 19)
-        next_seq = None
-        for i, actual in enumerate(hole_range, start=1):
-            if actual not in saved_holes:
-                next_seq = i
-                break
-        if next_seq is None:
-            next_seq = r.holes_played
-        in_progress_rounds.append({
-            'round': r,
-            'next_hole_url': url_for('rounds.enter_hole', round_id=r.id, hole_number=next_seq),
-            'holes_done': len(saved_holes),
+        next_seq = next((i for i, actual in enumerate(hole_range, start=1) if actual not in saved), r.holes_played)
+        out.append({'round': r, 'holes_done': len(saved),
+                    'next_hole_url': url_for('rounds.enter_hole', round_id=r.id, hole_number=next_seq)})
+    return out
+
+
+def _per_shot(shots, cat):
+    vals = [s['sg'] for s in shots if s['cat'] == cat and s['sg'] is not None]
+    return (sum(vals) / len(vals), len(vals)) if vals else (None, 0)
+
+
+def _spark(values, w=90, h=24):
+    vals = [v for v in values if v is not None]
+    if len(vals) < 2:
+        return ''
+    lo, hi = min(vals), max(vals)
+    span = (hi - lo) or 1
+    pts = []
+    for i, v in enumerate(vals):
+        pts.append(f'{i / (len(vals) - 1) * w:.1f},{h - 2 - (v - lo) / span * (h - 4):.1f}')
+    return ' '.join(pts)
+
+
+def _trend(rounds):
+    """SG per round on an 18-hole basis, oldest → newest, with a 5-round average."""
+    pts = [(r, normalize_to_18(r.sg_total, r.holes_played)) for r in reversed(rounds)
+           if r.sg_total is not None and (r.holes_played or 0) >= 9]
+    if len(pts) < 2:
+        return None
+    vals = [v for _, v in pts]
+    lo, hi = min(vals), max(vals)
+    pad = max((hi - lo) * 0.15, 0.5)
+    lo, hi = lo - pad, hi + pad
+    y = lambda v: 20 + (hi - v) / (hi - lo) * 200
+    x = lambda i: i / (len(pts) - 1) * 1000
+    line = ' '.join(f'{x(i):.1f},{y(v):.1f}' for i, v in enumerate(vals))
+    avg = []
+    for i in range(len(vals)):
+        win = vals[max(0, i - 4):i + 1]
+        avg.append(f'{x(i):.1f},{y(sum(win) / len(win)):.1f}')
+    dots = [{'x': round(x(i), 1), 'y': round(y(v), 1), 'v': round(v, 1),
+             'date': r.date_played.strftime('%d %b'), 'id': r.id} for i, (r, v) in enumerate(pts)]
+    ticks = [round(hi - (hi - lo) * k / 2, 1) for k in range(3)]
+    return {'line': line, 'avg': ' '.join(avg), 'dots': dots, 'ticks': ticks, 'n': len(pts)}
+
+
+@dashboard_bp.route('/')
+@login_required
+def index():
+    if request.args.get('subscribed') == 'true':
+        if current_user.is_founding_member:
+            flash('Welcome, Founding Member — your rate is locked for life.', 'success')
+        else:
+            flash("Welcome to Magnolia — you're all set.", 'success')
+
+    all_complete = (Round.query.filter_by(user_id=current_user.id, status='complete')
+                    .order_by(Round.date_played.desc(), Round.id.desc()).all())
+    user_is_pro = is_pro(current_user)
+
+    # Per-shot data for the last 20 rounds (current window + comparison window)
+    datas = {}
+    for r in all_complete[:WINDOW * 2]:
+        try:
+            datas[r.id] = shots_for_round(r)
+        except Exception as e:
+            logger.warning('[dashboard] shot data failed for round %s: %s', r.id, e)
+    cur = [r for r in all_complete[:WINDOW] if r.id in datas]
+    prev = [r for r in all_complete[WINDOW:WINDOW * 2] if r.id in datas]
+    cur_shots = [s for r in cur for s in datas[r.id]['shots']]
+    prev_shots = [s for r in prev for s in datas[r.id]['shots']]
+
+    # ── KPIs ─────────────────────────────────────────────────────────────
+    full = [r for r in cur if r.holes_played == 18 and r.total_score]
+    # Rounds under 9 holes are too short to project to 18 holes meaningfully
+    sg18 = [normalize_to_18(r.sg_total, r.holes_played) for r in cur
+            if r.sg_total is not None and (r.holes_played or 0) >= 9]
+    sg18_prev = [normalize_to_18(r.sg_total, r.holes_played) for r in prev
+                 if r.sg_total is not None and (r.holes_played or 0) >= 9]
+    measured = [s for s in cur_shots if s['sg'] is not None]
+    kpi = {
+        'scoring_avg': round(sum(r.total_score for r in full) / len(full), 1) if full else None,
+        'scoring_n': len(full),
+        'sg_round': round(sum(sg18) / len(sg18), 2) if sg18 else None,
+        'sg_round_delta': (round(sum(sg18) / len(sg18) - sum(sg18_prev) / len(sg18_prev), 2)
+                           if sg18 and len(sg18_prev) >= 3 else None),
+        'sg_shot': round(sum(s['sg'] for s in measured) / len(measured), 3) if measured else None,
+        'shots': len(measured),
+    }
+
+    # ── Categories, leaks, trend (Pro) ───────────────────────────────────
+    cats, leaks, trend = [], [], None
+    if user_is_pro and cur:
+        for c in CATEGORIES:
+            per, n = _per_shot(cur_shots, c)
+            pper, pn = _per_shot(prev_shots, c)
+            per_round = [normalize_to_18(datas[r.id]['totals'][c], r.holes_played) for r in cur
+                         if (r.holes_played or 0) >= 9]
+            spark_vals = []
+            for r in reversed(cur):
+                v, k = _per_shot(datas[r.id]['shots'], c)
+                spark_vals.append(v)
+            cats.append({
+                'cat': c, 'label': CATEGORY_LABELS[c], 'per': per, 'n': n,
+                'per_round': round(sum(per_round) / len(per_round), 1) if per_round else None,
+                'delta': (per - pper) if (per is not None and pper is not None and pn >= 15) else None,
+                'spark': _spark(spark_vals), 'href': url_for(ANALYTICS_LINKS[c]),
+            })
+        leaks, _ = bd.leaks_and_strengths(cur_shots, prev_shots, n_leaks=4, n_strengths=0)
+        trend = _trend(all_complete[:TREND_ROUNDS])
+
+    # ── Recent rounds table ──────────────────────────────────────────────
+    recent = []
+    for r in all_complete[:25]:
+        d = datas.get(r.id)
+        recent.append({
+            'round': r, 'vs_par': r.score_vs_par(),
+            'sg': r.sg_total if user_is_pro else None,
+            'cats': ({c: (d['totals'][c] if d else getattr(r, {'ott': 'sg_off_tee', 'app': 'sg_approach',
+                                                               'atg': 'sg_atg', 'putt': 'sg_putting'}[c]))
+                      for c in CATEGORIES} if user_is_pro else None),
+            'ott': r.sg_off_tee,
         })
 
-    return render_template('dashboard/index.html',
-        recent_rounds=recent_rounds,
-        total_complete=total_complete,
+    return render_template(
+        'dashboard/index.html',
         user_is_pro=user_is_pro,
-        stats=stats,
-        glance=glance,
-        in_progress_rounds=in_progress_rounds,
-        sg_avgs=sg_avgs)
-
-
-def _compute_stats(rounds):
-    if not rounds:
-        return None
-
-    # Per-hole average score â normalises across 9 and 18-hole rounds
-    scored = [r for r in rounds if r.total_score and r.holes_played]
-    avg_score_per_hole = (
-        round(sum(r.total_score / r.holes_played for r in scored) / len(scored), 2)
-        if scored else None
+        total_complete=len(all_complete),
+        window=len(cur),
+        kpi=kpi, cats=cats, leaks=leaks, trend=trend,
+        recent=recent, more_rounds=max(len(all_complete) - 25, 0),
+        in_progress_rounds=_in_progress(),
     )
-
-    # Aggregate all holes for per-hole metrics
-    all_holes = [h for r in rounds for h in r.holes.all()]
-
-    # GIR %
-    gir_pct = (
-        round(sum(1 for h in all_holes if h.gir) / len(all_holes) * 100, 1)
-        if all_holes else None
-    )
-
-    # FIR % â only counted on par 4s and par 5s
-    fir_holes = [h for h in all_holes if h.par in (4, 5) and h.tee_shot is not None]
-    fir_pct = (
-        round(sum(1 for h in fir_holes if h.tee_shot == 'fairway') / len(fir_holes) * 100, 1)
-        if fir_holes else None
-    )
-
-    # Scramble %
-    missed_gir = [h for h in all_holes if not h.gir]
-    scramble_pct = (
-        round(sum(1 for h in missed_gir if h.score is not None and h.par is not None and h.score <= h.par) / len(missed_gir) * 100, 1)
-        if missed_gir else None
-    )
-
-    # Putts per hole
-    putts_data = [h.putts for h in all_holes if h.putts is not None]
-    putts_per_hole = (
-        round(sum(putts_data) / len(putts_data), 2)
-        if putts_data else None
-    )
-
-    # Average score by par type
-    def avg_by_par(par_num):
-        hs = [h for h in all_holes if h.par == par_num and h.score is not None]
-        return round(sum(h.score for h in hs) / len(hs), 2) if hs else None
-
-    return {
-        'rounds_played': len(rounds),
-        'avg_score_per_hole': avg_score_per_hole,
-        'avg_par3': avg_by_par(3),
-        'avg_par4': avg_by_par(4),
-        'avg_par5': avg_by_par(5),
-        'gir_pct': gir_pct,
-        'fir_pct': fir_pct,
-        'scramble_pct': scramble_pct,
-        'putts_per_hole': putts_per_hole,
-    }
-
-
-def _compute_glance(all_rounds):
-    """Compute 'Your Game at a Glance' engagement metrics from all complete rounds."""
-    if not all_rounds:
-        return None
-
-    today = date.today()
-    glance = {}
-
-    # 1. Streak — consecutive weeks (ISO) going back from most recent round's week
-    weeks_with_rounds = set()
-    for r in all_rounds:
-        iso = r.date_played.isocalendar()
-        weeks_with_rounds.add((iso[0], iso[1]))
-
-    streak = 0
-    check = all_rounds[0].date_played          # start from most recent round
-    while True:
-        iso = check.isocalendar()
-        if (iso[0], iso[1]) in weeks_with_rounds:
-            streak += 1
-            check -= timedelta(weeks=1)
-        else:
-            break
-    glance['streak'] = streak                  # always >= 1
-
-    # Avg score vs par across all rounds within the streak window
-    streak_weeks = set()
-    temp_check = all_rounds[0].date_played
-    for _ in range(streak):
-        iso = temp_check.isocalendar()
-        streak_weeks.add((iso[0], iso[1]))
-        temp_check -= timedelta(weeks=1)
-    streak_rounds = [r for r in all_rounds
-                     if (r.date_played.isocalendar()[0], r.date_played.isocalendar()[1]) in streak_weeks]
-    # Normalise per hole then scale to 18-hole equivalent so 9-hole and
-    # 18-hole rounds contribute fairly (e.g. +4 over 9 holes == +8 over 18).
-    per_hole_rates = []
-    for r in streak_rounds:
-        if not r.holes_played:
-            continue
-        svp = r.score_vs_par()
-        if svp is not None:
-            per_hole_rates.append(svp / r.holes_played * 18)
-    glance['streak_avg_vs_par'] = round(sum(per_hole_rates) / len(per_hole_rates), 1) if per_hole_rates else None
-
-    # 2. Rounds this month vs last month
-    glance['this_month'] = sum(
-        1 for r in all_rounds
-        if r.date_played.year == today.year and r.date_played.month == today.month
-    )
-    last_month_year = today.year if today.month > 1 else today.year - 1
-    last_month_num  = today.month - 1 if today.month > 1 else 12
-    glance['prev_month'] = sum(
-        1 for r in all_rounds
-        if r.date_played.year == last_month_year and r.date_played.month == last_month_num
-    )
-
-    # 3. Most improved SG category over last 5 rounds
-    sg_cats = {
-        'Putting':          'sg_putting',
-        'Off the Tee':      'sg_off_tee',
-        'Approach':         'sg_approach',
-        'Around the Green': 'sg_atg',
-    }
-    last5_sg = [r for r in all_rounds[:5] if any(getattr(r, a) is not None for a in sg_cats.values())]
-
-    if len(last5_sg) >= 2:
-        n     = len(last5_sg)
-        split = max(1, n // 2)
-        recent_sg = last5_sg[:split]
-        older_sg  = last5_sg[split:]
-
-        deltas = {}
-        for cat_name, attr in sg_cats.items():
-            recent_vals = [getattr(r, attr) for r in recent_sg if getattr(r, attr) is not None]
-            older_vals  = [getattr(r, attr) for r in older_sg  if getattr(r, attr) is not None]
-            if recent_vals and older_vals:
-                deltas[cat_name] = round(
-                    sum(recent_vals) / len(recent_vals) - sum(older_vals) / len(older_vals), 2
-                )
-
-        if deltas:
-            best_cat   = max(deltas, key=deltas.get)
-            best_delta = deltas[best_cat]
-            glance['sg_improved_cat']   = best_cat
-            glance['sg_improved_delta'] = best_delta
-            glance['sg_improved_label'] = 'Most Improved' if best_delta > 0 else 'Holding Steady'
-            glance['sg_rounds_count']   = len(last5_sg)
-        else:
-            glance['sg_improved_cat'] = None
-    else:
-        glance['sg_improved_cat'] = None
-
-    # 4. Personal best — scan the last 5 rounds, each vs same-format previous rounds.
-    # Checking 5 rounds catches cases where the most recent round isn't the relevant
-    # format (e.g. the last 9-hole PB was 3 rounds ago after two 18-hole rounds).
-    recent_pb = None
-    for i, r in enumerate(all_rounds[:5]):
-        prev = all_rounds[i + 1:]
-        pb = check_recent_personal_best(r, prev)
-        if pb:
-            recent_pb = pb
-            break
-    glance['recent_pb'] = recent_pb
-
-    return glance
-
-
-def _compute_sg_avgs(rounds):
-    """
-    Rolling 10-round SG averages per category, normalised to 18-hole equivalent.
-
-    Main bar = average of the last 10 rounds that have non-null SG for that
-    category, each normalised as (raw_sg / holes_played) * 18.
-
-    Delta = how the most recent round shifted the rolling average:
-        after  = avg of all N rounds (what the bar shows)
-        before = avg of rounds 2..N (the rolling avg before the latest round)
-        delta  = after − before
-    Shown only when N >= 2. A positive delta means the last round pulled
-    the average up; negative means it dragged it down.
-
-    Returns None if no category has at least 1 round with reliable SG data.
-    """
-    SG_ATTRS = [
-        ('Off the Tee',      'sg_off_tee'),
-        ('Approach',         'sg_approach'),
-        ('Around the Green', 'sg_atg'),
-        ('Putting',          'sg_putting'),
-    ]
-
-    def norm(r, attr):
-        return getattr(r, attr) / r.holes_played * 18
-
-    categories = []
-    max_count  = 0
-
-    for name, attr in SG_ATTRS:
-        # Rounds with reliable, computed SG for this specific category.
-        # algo_version guards against old rounds whose SG fields stored 0.0
-        # rather than NULL before the calculation was implemented.
-        cat_rounds = [
-            r for r in rounds
-            if getattr(r, attr) is not None
-            and r.holes_played
-            and r.algo_version is not None
-        ][:10]   # cap at last 10
-
-        if not cat_rounds:
-            continue
-
-        max_count = max(max_count, len(cat_rounds))
-
-        # Normalised values, index 0 = most recent round
-        vals = [norm(r, attr) for r in cat_rounds]
-
-        avg = sum(vals) / len(vals)   # the number shown on the bar
-
-        # Delta: avg(all N) minus avg(rounds 2..N)
-        delta = None
-        if len(vals) >= 2:
-            before = sum(vals[1:]) / len(vals[1:])
-            delta  = round(avg - before, 2)
-
-        # HCP equivalent: avg is already 18-hole normalised
-        if avg > 0:
-            hcp_equiv = 'Tour'
-        else:
-            hcp_raw = round((avg + 1) * -4 + 4)
-            hcp_equiv = f'+{abs(hcp_raw)}' if hcp_raw < 0 else str(hcp_raw)
-
-        categories.append({
-            'name':      name,
-            'avg':       round(avg, 2),
-            'delta':     delta,
-            'count':     len(cat_rounds),
-            'hcp_equiv': hcp_equiv,
-        })
-
-    if not categories:
-        return None
-
-    # Overall HCP equivalent: total SG = strokes vs scratch, so hcp ≈ -total_sg
-    overall_sg  = sum(c['avg'] for c in categories)
-    hcp_raw     = round(-overall_sg, 1)
-    if hcp_raw < 0:
-        overall_hcp_equiv = f'+{abs(hcp_raw):.1f}'
-    elif hcp_raw == 0.0:
-        overall_hcp_equiv = 'Scratch'
-    else:
-        overall_hcp_equiv = f'{hcp_raw:.1f}'
-
-    # Delta vs previous rolling window (positive = regression, negative = improvement)
-    sg_delta = sum(c['delta'] for c in categories if c.get('delta') is not None)
-    # Only show delta when at least one category had enough rounds to compute one
-    has_delta = any(c.get('delta') is not None for c in categories)
-    overall_hcp_delta = round(-sg_delta * 4, 1) if has_delta else None
-
-    # Relative colour ranking: best (highest avg) → green, worst → red, middle → gold
-    ranked = sorted(categories, key=lambda c: c['avg'])
-    for i, cat in enumerate(ranked):
-        if i == len(ranked) - 1:
-            cat['color'] = 'best'
-        elif i == 0:
-            cat['color'] = 'worst'
-        else:
-            cat['color'] = 'mid'
-
-    # Dynamic scale — zero anchored at zero_pct from the left edge.
-    # Negative bars extend left; positive bars extend right.
-    avgs        = [c['avg'] for c in categories]
-    min_val     = min(avgs)
-    max_val     = max(avgs)
-    floor_min   = math.floor(min_val)        # always ≤ min_val; guarantees gap at left edge
-    right_range = max(max_val, 0.0) + 0.5   # at least 0.5 SG of space right of zero
-    total_range = abs(floor_min) + right_range
-    zero_pct    = round(abs(floor_min) / total_range * 100, 1)
-
-    for cat in categories:
-        v = cat['avg']
-        if v < 0:
-            cat['width_pct'] = round(abs(v) / total_range * 100, 2)
-            cat['positive']  = False
-        else:
-            cat['width_pct'] = round(v / total_range * 100, 2)
-            cat['positive']  = True
-
-    return {
-        'categories':        categories,
-        'rounds_count':      max_count,
-        'zero_pct':          zero_pct,
-        'overall_hcp_equiv': overall_hcp_equiv,
-        'overall_hcp_delta': overall_hcp_delta,
-    }

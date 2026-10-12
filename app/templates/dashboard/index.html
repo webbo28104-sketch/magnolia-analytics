@@ -3,939 +3,259 @@
 
 {% block head %}
 <style>
-/* ── My Coach promo card ───────────────────────────────────────────── */
-.coach-promo-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: linear-gradient(135deg, var(--green-800, #1B4332), var(--green-700, #2d6a4f));
-  border-radius: var(--radius-lg, 16px);
-  padding: 18px 22px;
-  margin: 18px 0;
-  text-decoration: none;
-  box-shadow: var(--shadow, 0 2px 12px rgba(27, 67, 50, 0.08));
-  transition: transform .15s, box-shadow .15s;
-}
-.coach-promo-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg, 0 8px 32px rgba(27, 67, 50, 0.14)); }
-.coach-promo-icon {
-  font-size: 26px;
-  width: 46px; height: 46px;
-  flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.1);
-  border-radius: 50%;
-}
-.coach-promo-body { flex: 1; min-width: 0; }
-.coach-promo-title { color: var(--gold-light, #e8c97a); font-weight: 700; font-size: 15px; margin-bottom: 3px; }
-.coach-promo-sub { color: rgba(255,255,255,0.72); font-size: 12.5px; line-height: 1.5; }
-.coach-promo-arrow { color: rgba(255,255,255,0.5); font-size: 20px; flex-shrink: 0; }
-@media (max-width: 640px) {
-  .coach-promo-sub { display: none; }
-}
+  .db { max-width: 1120px; margin: 0 auto; padding: 32px clamp(16px, 4vw, 40px) 72px; display: flex; flex-direction: column; gap: 36px; }
+  .db .mono { font-family: var(--font-mono); }
+  .db .lbl { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+  .db .faint { color: #7a827e; }
+  .db .pos { color: var(--gain); } .db .neg { color: var(--loss); }
+  .db a { color: var(--ink); text-decoration: none; }
+  .db-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 20px; }
+  .db-head h1 { margin: 6px 0 0; font-size: clamp(28px, 4vw, 36px); font-weight: 600; letter-spacing: -.04em; }
+  .db-hcp { display: flex; gap: 28px; margin-top: 14px; }
+  .db-hcp .v { font-family: var(--font-mono); font-size: 22px; font-weight: 500; letter-spacing: -.03em; }
+  .db-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .db-cta { min-height: 46px; padding: 0 22px; display: inline-flex; align-items: center; background: var(--gold); color: var(--bg) !important; font-weight: 600; font-size: 14px; }
+  .db-cta:hover { background: var(--gold-light); }
+  .db-sub { font-size: 12px; color: var(--text-muted) !important; }
+  .db-sub:hover { color: var(--ink) !important; }
 
-/* ── Round delete button & inline confirm ─────────────────────────── */
-.round-delete-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #c0b8a8;
-  padding: 4px 5px;
-  border-radius: 4px;
-  line-height: 0;
-  flex-shrink: 0;
-  transition: color .15s;
-  vertical-align: middle;
-}
-.round-delete-btn:hover { color: #e03131; }
+  .db-prog { border: 1px solid rgba(201,168,76,.45); padding: 14px 16px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+  .db-prog + .db-prog { margin-top: -26px; }
+  .db-prog .t { font-size: 14px; font-weight: 500; }
+  .db-prog .m { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
 
-.round-delete-confirm {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: .75rem;
-  background: var(--surface, #fff);
-  border: 1.5px solid #e03131;
-  border-radius: 6px;
-  padding: 4px 10px;
-  white-space: nowrap;
-  color: var(--text, #111);
-  font-weight: 500;
-  vertical-align: middle;
-}
-.round-delete-confirm-yes {
-  background: #e03131;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 3px 10px;
-  font-size: .72rem;
-  font-weight: 600;
-  cursor: pointer;
-  line-height: 1.5;
-}
-.round-delete-confirm-yes:hover { background: #c92a2a; }
-.round-delete-confirm-no {
-  background: none;
-  border: 1px solid var(--border, #ddd);
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: .72rem;
-  cursor: pointer;
-  color: var(--text-muted, #666);
-  line-height: 1.5;
-}
-.round-delete-confirm-no:hover { color: var(--text, #111); }
-    .round-edit-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: #c0b8a8;
-      padding: 4px 5px;
-      border-radius: 4px;
-      line-height: 0;
-      flex-shrink: 0;
-      transition: color .15s;
-      vertical-align: middle;
-    }
-    .round-edit-btn:hover { color: #c9a84c; }
-  .stats-note { font-size: 0.78rem; color: var(--color-text-muted, #888); margin: 0.15rem 0 0.6rem; }
-.stats-grid--wide { grid-template-columns: repeat(4, 1fr); }
-@media (max-width: 480px) { .stats-grid--wide { grid-template-columns: repeat(2, 1fr); } }
-.stat-card .stat-value { font-family: 'Inter', system-ui, sans-serif !important; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .kpi { padding: 20px 20px 20px 0; display: flex; flex-direction: column; gap: 6px; }
+  .kpi .v { font-family: var(--font-mono); font-size: 32px; font-weight: 500; letter-spacing: -.04em; line-height: 1.05; }
+  .kpi .s { font-size: 12px; color: var(--text-muted); }
 
-/* ── Official HCP toggle chip ─────────────────────────────────────── */
-.hcp-toggle-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 9px 3px 7px;
-  border-radius: 999px;
-  border: 1.5px solid #d8d0c0;
-  background: #f8f5ef;
-  cursor: pointer;
-  font-size: .7rem;
-  font-weight: 600;
-  color: #9a9080;
-  white-space: nowrap;
-  transition: border-color .15s, background .15s, color .15s;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-.hcp-toggle-chip input { display: none; }
-.hcp-toggle-chip .hcp-toggle-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: #d0c8b8;
-  flex-shrink: 0;
-  transition: background .15s;
-}
-.hcp-toggle-chip.is-counting {
-  border-color: #2d6a4f;
-  background: rgba(45,106,79,.07);
-  color: #1b4332;
-}
-.hcp-toggle-chip.is-counting .hcp-toggle-dot { background: #2d6a4f; }
+  .sec-h { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 10px; padding-bottom: 10px; }
+  .legend { display: flex; gap: 16px; font-family: var(--font-mono); font-size: 10px; color: #7a827e; align-items: center; }
+  .legend i { display: inline-block; margin-right: 6px; vertical-align: middle; }
+  .chart { position: relative; padding-left: 40px; }
+  .chart svg { width: 100%; height: 240px; display: block; overflow: visible; }
+  .chart .yt { position: absolute; left: 0; font-family: var(--font-mono); font-size: 10px; color: #7a827e; transform: translateY(-50%); }
+  .chart-x { display: flex; justify-content: space-between; padding-left: 40px; font-family: var(--font-mono); font-size: 10px; color: #7a827e; margin-top: 6px; }
 
-/* Dual handicap display in header */
-.hcp-duo {
-  display: flex;
-  gap: 16px;
-  align-items: baseline;
-  flex-wrap: wrap;
-  margin-top: 2px;
-}
-.hcp-duo-item { display: flex; flex-direction: column; gap: 1px; }
-.hcp-duo-val { font-weight: 700; font-size: .93rem; color: var(--text, #111); }
-.hcp-duo-lbl { font-size: .67rem; color: var(--text-muted, #888); letter-spacing: .02em; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 44px; }
+  .row { display: grid; gap: 12px; align-items: center; min-height: 56px; border-top: 1px solid rgba(255,255,255,.06); }
+  .row .t { font-size: 14px; font-weight: 500; letter-spacing: -.01em; }
+  .row .m { font-size: 11px; color: var(--text-muted); }
+  .row .num { font-family: var(--font-mono); font-size: 13px; text-align: right; }
+  .row .n { font-family: var(--font-mono); font-size: 12px; text-align: right; color: #7a827e; }
+  a.row:hover .t { color: var(--gold); }
 
-/* ── Your Game at a Glance ───────────────────────────────────────── */
-.glance-strip {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  margin-top: 16px;
-  border-top: 2px solid rgba(201,168,76,0.3);
-  border-bottom: 1px solid var(--border, #e5e0d8);
-}
-.glance-stat {
-  padding: 20px 20px 18px;
-  border-right: 1px solid var(--border, #e5e0d8);
-}
-.glance-stat:last-child { border-right: none; }
-.glance-stat--pb { background: rgba(201,168,76,0.04); }
-.glance-stat-sym {
-  display: block;
-  font-size: 0.6rem;
-  font-weight: 600;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  color: var(--color-gold, #c9a84c);
-  margin-bottom: 9px;
-  line-height: 1;
-}
-.glance-stat-value {
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--color-gold, #c9a84c);
-  letter-spacing: -0.02em;
-  line-height: 1.25;
-  margin-bottom: 5px;
-}
-.glance-stat-label {
-  font-size: 0.73rem;
-  color: var(--text-muted, #888);
-  line-height: 1.4;
-}
-@media (max-width: 600px) {
-  .glance-strip { grid-template-columns: 1fr 1fr; }
-  .glance-stat { border-bottom: 1px solid var(--border, #e5e0d8); }
-  .glance-stat:nth-child(even) { border-right: none; }
-  .glance-stat:nth-last-child(1), .glance-stat:nth-last-child(2) { border-bottom: none; }
-}
-
-/* ── SG delta chip ───────────────────────────────────────────── */
-.sg-delta {
-  font-size: .7rem;
-  font-weight: 600;
-  font-family: var(--font-sans, 'Inter', sans-serif);
-  padding: 1px 5px;
-  border-radius: 4px;
-  flex-shrink: 0;
-  line-height: 1.5;
-}
-.sg-delta--up   { color: #2d6a4f; background: rgba(45,106,79,.09); }
-.sg-delta--down { color: #c0635a; background: rgba(192,99,90,.09); }
-.sg-delta--flat { color: var(--text-muted, #888); background: var(--cream-mid, #ede9e1); }
-
-/* ── Game analysis tiles ────────────────────────────────────── */
-.game-tiles {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-top: 14px;
-}
-@media (max-width: 700px) { .game-tiles { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 420px) { .game-tiles { grid-template-columns: 1fr 1fr; } }
-
-.game-tile {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 18px 16px 14px;
-  background: #fff;
-  border: 1px solid var(--border, #e2ddd5);
-  border-top: 3px solid var(--color-gold, #c9a84c);
-  border-radius: 10px;
-  text-decoration: none;
-  color: var(--text, #111);
-  transition: box-shadow .2s ease, transform .15s ease, border-top-color .15s;
-  cursor: pointer;
-}
-.game-tile:hover {
-  box-shadow: 0 6px 24px rgba(0,0,0,0.09);
-  transform: translateY(-2px);
-  border-top-color: #1B4332;
-}
-.game-tile-icon {
-  width: 36px; height: 36px;
-  background: rgba(27,67,50,0.07);
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  margin-bottom: 12px;
-  flex-shrink: 0;
-}
-.game-tile-icon svg { color: #1B4332; }
-.game-tile-name {
-  font-size: .82rem;
-  font-weight: 700;
-  color: var(--text, #111);
-  margin-bottom: 10px;
-  letter-spacing: -.01em;
-  line-height: 1.2;
-}
-.game-tile-stats { display: flex; flex-direction: column; gap: 5px; flex: 1; }
-.game-tile-stat {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 6px;
-}
-.game-tile-stat-label { font-size: .67rem; color: var(--text-muted, #888); font-weight: 500; }
-.game-tile-stat-value {
-  font-size: .82rem;
-  font-weight: 700;
-  font-family: 'DM Mono', monospace;
-  color: var(--text, #111);
-  white-space: nowrap;
-}
-.game-tile-stat-value.positive { color: #2d6a4f; }
-.game-tile-stat-value.negative { color: #c0635a; }
-.game-tile-cta {
-  margin-top: 12px;
-  font-size: .7rem;
-  font-weight: 600;
-  color: var(--color-gold, #c9a84c);
-  letter-spacing: .03em;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-.game-tile:hover .game-tile-cta { color: #1B4332; }
-
-/* ── SG locked row ─────────────────────────────────────────── */
-.sg-row--locked .sg-lbl { color: var(--border, #e2ddd5); }
-.sg-row--locked .sg-val { color: var(--border, #e2ddd5); }
-.sg-row--locked .sg-track { opacity: 0.3; }
-.sg-row--locked .sg-bar { background: var(--border, #e2ddd5) !important; }
-.sg-upgrade-prompt {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-  padding: 10px 14px;
-  background: rgba(201,168,76,0.06);
-  border: 1px solid rgba(201,168,76,0.2);
-  border-radius: 8px;
-  font-size: 12px;
-  color: var(--text-muted, #888);
-}
-.sg-upgrade-prompt a {
-  color: var(--color-gold, #c9a84c);
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-/* ── Strokes Gained chart ────────────────────────────────────── */
-.sg-chart {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-  margin-top: 10px;
-}
-.sg-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.sg-lbl {
-  width: 128px;
-  font-size: .78rem;
-  color: var(--text-muted, #888);
-  flex-shrink: 0;
-  text-align: right;
-  line-height: 1.3;
-}
-.sg-track {
-  flex: 1;
-  position: relative;
-  height: 7px;
-  background: var(--cream-mid, #ede9e1);
-  border-radius: 999px;
-  overflow: visible;
-}
-.sg-zero {
-  position: absolute;
-  left: 50%;
-  top: -3px;
-  bottom: -3px;
-  width: 1.5px;
-  background: var(--border, #e2ddd5);
-  transform: translateX(-50%);
-  border-radius: 1px;
-}
-.sg-bar {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  border-radius: 999px;
-  min-width: 2px;
-  transition: width .3s ease;
-}
-/* Bars anchor at zero via inline left/right style; colour = relative rank */
-.sg-bar--best  { background: #2d6a4f; }
-.sg-bar--mid   { background: #c9a84c; }
-.sg-bar--worst { background: #c0635a; }
-.sg-val {
-  width: 42px;
-  font-size: .78rem;
-  font-weight: 600;
-  font-family: 'DM Mono', monospace;
-  flex-shrink: 0;
-}
-.sg-val--best  { color: #2d6a4f; }
-.sg-val--mid   { color: #c9a84c; }
-.sg-val--worst { color: #c0635a; }
-.sg-hcp-equiv {
-  font-size: .68rem;
-  color: var(--text-muted, #888);
-  white-space: nowrap;
-  min-width: 52px;
-  font-family: var(--font-sans, 'Inter', sans-serif);
-}
-@media (max-width: 480px) {
-  .sg-lbl { width: 90px; font-size: .72rem; }
-  .sg-val { width: 36px; font-size: .72rem; }
-  .sg-hcp-equiv { display: none; }
-}
+  .tbl-wrap { overflow-x: auto; }
+  .tbl { min-width: 780px; }
+  .tr { display: grid; grid-template-columns: 84px minmax(160px, 1fr) 46px 64px 64px 56px 56px 56px 56px 150px; gap: 10px; align-items: center; min-height: 52px; border-top: 1px solid rgba(255,255,255,.06); font-family: var(--font-mono); font-size: 13px; }
+  .tr.free { grid-template-columns: 84px minmax(160px, 1fr) 46px 64px 64px 56px 150px; }
+  .tr.hd { min-height: 0; border-top: 0; padding-bottom: 8px; font-size: 10px; letter-spacing: .06em; color: #7a827e; text-transform: uppercase; }
+  .tr .r { text-align: right; }
+  .tr .course { font-family: var(--font-sans); font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tr .course a:hover { color: var(--gold); }
+  .acts { display: flex; justify-content: flex-end; align-items: center; gap: 6px; font-family: var(--font-sans); }
+  .icon-btn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: none; border: 1px solid transparent; color: var(--text-muted); cursor: pointer; padding: 0; }
+  .icon-btn:hover { color: var(--ink); border-color: rgba(255,255,255,.14); }
+  .chip { height: 26px; padding: 0 8px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; background: none; border: 1px solid rgba(255,255,255,.16); color: #7a827e; cursor: pointer; }
+  .chip.is-counting { color: var(--gold); border-color: rgba(201,168,76,.5); }
+  .del-confirm { display: none; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+  .del-yes { background: var(--loss); color: var(--bg); border: 0; height: 28px; padding: 0 10px; font-weight: 600; cursor: pointer; }
+  .del-no { background: none; color: var(--text-muted); border: 1px solid rgba(255,255,255,.16); height: 28px; padding: 0 10px; cursor: pointer; }
+  .upsell { border: 1px solid rgba(201,168,76,.4); padding: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; font-size: 14px; color: var(--text-muted); }
+  .empty { border-top: 1px solid var(--border); padding: 40px 0; display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
 </style>
 {% endblock %}
 
+{% macro f(v, d=2) -%}{% if v is none %}—{% else %}{% set rv = v | round(d) %}{% if rv > 0 %}+{{ '%.*f' | format(d, rv) }}{% elif rv < 0 %}−{{ '%.*f' | format(d, -rv) }}{% else %}{{ '%.*f' | format(d, 0) }}{% endif %}{% endif %}{%- endmacro %}
+{% macro c(v) -%}{% if v is none %}{% elif v >= 0 %}pos{% else %}neg{% endif %}{%- endmacro %}
+
 {% block content %}
-<section class="dashboard">
+<div class="db">
 
-  <!-- Header -->
-  <div class="dashboard-header">
+  <div class="db-head">
     <div>
-      <h1 class="dashboard-title">Good to have you back, {{ current_user.first_name }}.</h1>
-      {% if current_user.home_course %}
-      <p class="dashboard-subtitle" style="margin-bottom:6px">{{ current_user.home_course }}</p>
-      {% endif %}
-      <div class="hcp-duo">
-        <div class="hcp-duo-item">
-          <span class="hcp-duo-val" id="official-hcp">
-            {%- if current_user.official_handicap_index is not none -%}
-              {{ '%.1f'|format(current_user.official_handicap_index) }}
-            {%- else -%}—{%- endif -%}
-          </span>
-          <span class="hcp-duo-lbl">Official HCP</span>
-        </div>
-        <div class="hcp-duo-item">
-          <span class="hcp-duo-val" id="all-hcp">
-            {%- if current_user.handicap_index -%}
-              {{ '%.1f'|format(current_user.handicap_index) }}
-            {%- else -%}—{%- endif -%}
-          </span>
-          <span class="hcp-duo-lbl">All Rounds</span>
-        </div>
+      <span class="lbl">{{ total_complete }} round{{ 's' if total_complete != 1 }} logged{% if current_user.home_course %} · {{ current_user.home_course }}{% endif %}</span>
+      <h1>Welcome back, {{ current_user.first_name }}</h1>
+      <div class="db-hcp">
+        <div><div class="v" id="official-hcp">{{ '%.1f' | format(current_user.official_handicap_index) if current_user.official_handicap_index is not none else '—' }}</div><span class="lbl">Official index</span></div>
+        <div><div class="v" id="all-hcp">{{ '%.1f' | format(current_user.handicap_index) if current_user.handicap_index else '—' }}</div><span class="lbl">All rounds</span></div>
       </div>
     </div>
-    <div style="text-align:right">
-      <a href="{{ url_for('rounds.new_round') }}" class="btn btn--gold">+ Log Round</a>
-      {% if current_user.is_staff %}
-      <div style="margin-top:6px">
-        <a href="{{ url_for('admin.index') }}" style="font-size:11px;color:var(--text-muted);text-decoration:none;letter-spacing:0.02em;font-weight:500;opacity:0.7;">Admin Panel</a>
-      </div>
-      {% endif %}
+    <div class="db-actions">
+      <a href="{{ url_for('rounds.new_round') }}" class="db-cta">Log a round</a>
+      <a href="{{ url_for('coach.index') }}" class="db-sub">Ask your coach →</a>
+      {% if current_user.is_staff %}<a href="{{ url_for('admin.index') }}" class="db-sub">Admin panel</a>{% endif %}
     </div>
   </div>
 
-  <!-- My Coach promo -->
-  <a href="{{ url_for('coach.index') }}" class="coach-promo-card">
-    <div class="coach-promo-icon">⛳</div>
-    <div class="coach-promo-body">
-      <div class="coach-promo-title">Ask Your Coach</div>
-      <div class="coach-promo-sub">Talk through your game, your trends, or last week's round — saved so you can pick the conversation back up any time.</div>
+  {% for item in in_progress_rounds %}
+  <div class="db-prog">
+    <div>
+      <div class="t">Round in progress · {{ item.round.course.name if item.round.course else 'Unknown course' }}</div>
+      <div class="m">{{ item.round.date_played.strftime('%d %b') | upper }} · {{ item.holes_done }}/{{ item.round.holes_played }} HOLES SAVED</div>
     </div>
-    <div class="coach-promo-arrow">→</div>
-  </a>
-
-  <!-- Continue Round banner (Task 11) -->
-  {% if in_progress_rounds %}
-  <div class="in-progress-section">
-    {% for item in in_progress_rounds %}
-    <div class="in-progress-card">
-      <div class="in-progress-info">
-        <div class="in-progress-title">Round in progress</div>
-        <div class="in-progress-meta">
-          {{ item.round.course.name if item.round.course else 'Unknown Course' }}
-          &nbsp;·&nbsp;
-          {{ item.round.date_played.strftime('%d %b') }}
-          &nbsp;·&nbsp;
-          {{ item.holes_done }}/{{ item.round.holes_played }} holes saved
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <a href="{{ item.next_hole_url }}" class="btn btn--gold btn--sm">Continue →</a>
-        <button type="button" class="round-delete-btn"
-                id="delbtn-{{ item.round.id }}"
-                onclick="showDelConfirm('delbtn-{{ item.round.id }}','delconfirm-{{ item.round.id }}')"
-                title="Delete this round">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-            <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-          </svg>
-        </button>
-        <span class="round-delete-confirm" id="delconfirm-{{ item.round.id }}" style="display:none">
-          Delete this round?
-          <form method="POST" action="{{ url_for('rounds.delete_round', round_id=item.round.id) }}" style="display:contents">
-            <button type="submit" class="round-delete-confirm-yes">Delete</button>
-          </form>
-          <button type="button" class="round-delete-confirm-no"
-                  onclick="hideDelConfirm('delbtn-{{ item.round.id }}','delconfirm-{{ item.round.id }}')">Cancel</button>
-        </span>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  <!-- Your Game at a Glance -->
-  {% if glance %}
-  <div class="section">
-    <h2 class="section-title">Your Game at a Glance</h2>
-    <div class="glance-strip">
-
-      {% if glance.streak %}
-      <div class="glance-stat">
-        <span class="glance-stat-sym">✦ &nbsp;Streak</span>
-        <div class="glance-stat-value">{{ glance.streak }} week{{ 's' if glance.streak != 1 }}</div>
-        <div class="glance-stat-label">Consecutive weeks with a round logged{% if glance.streak_avg_vs_par is not none %} · Avg {% if glance.streak_avg_vs_par > 0 %}+{% endif %}{{ glance.streak_avg_vs_par }} vs par{% endif %}</div>
-      </div>
-      {% endif %}
-
-      {% if glance.this_month > 0 or glance.prev_month > 0 %}
-      <div class="glance-stat">
-        <span class="glance-stat-sym">✦ &nbsp;This Month</span>
-        <div class="glance-stat-value">{{ glance.this_month }} round{{ 's' if glance.this_month != 1 }}</div>
-        <div class="glance-stat-label">
-          {% if glance.prev_month > 0 %}
-            {% if glance.this_month > glance.prev_month %}Up from {{ glance.prev_month }} last month
-            {% elif glance.this_month < glance.prev_month %}Down from {{ glance.prev_month }} last month
-            {% else %}Same as last month ({{ glance.prev_month }}){% endif %}
-          {% else %}No rounds last month{% endif %}
-        </div>
-      </div>
-      {% endif %}
-
-      {% if glance.sg_improved_cat %}
-      <div class="glance-stat">
-        <span class="glance-stat-sym">✦ &nbsp;{{ glance.sg_improved_label }}</span>
-        <div class="glance-stat-value">{{ glance.sg_improved_cat }}</div>
-        <div class="glance-stat-label">
-          {% if glance.sg_improved_delta > 0 %}+{{ glance.sg_improved_delta }} SG improvement over your last {{ glance.sg_rounds_count }} rounds{% else %}Most consistent category over your last {{ glance.sg_rounds_count }} rounds{% endif %}
-        </div>
-      </div>
-      {% endif %}
-
-      {% if glance.recent_pb %}
-      <div class="glance-stat glance-stat--pb">
-        <span class="glance-stat-sym">✦ &nbsp;Personal Best</span>
-        <div class="glance-stat-value">New record</div>
-        <div class="glance-stat-label">{{ glance.recent_pb.label }}</div>
-      </div>
-      {% endif %}
-
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Performance stats — paid tier only -->
-  {% if stats and user_is_pro %}
-  <div class="section">
-    <h2 class="section-title">Performance</h2>
-    <p class="stats-note">Last 20 rounds &middot; {{ stats.rounds_played }} round{{ 's' if stats.rounds_played != 1 }} logged</p>
-  <div class="stats-grid stats-grid--wide">
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.avg_score_per_hole or '—' }}</div>
-      <div class="stat-label">Avg Score / Hole</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.avg_par3 or '—' }}</div>
-      <div class="stat-label">Par 3 Avg</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.avg_par4 or '—' }}</div>
-      <div class="stat-label">Par 4 Avg</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.avg_par5 or '—' }}</div>
-      <div class="stat-label">Par 5 Avg</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.fir_pct ~ '%' if stats.fir_pct is not none else '—' }}</div>
-      <div class="stat-label">FIR%</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.gir_pct ~ '%' if stats.gir_pct is not none else '—' }}</div>
-      <div class="stat-label">GIR%</div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.scramble_pct ~ '%' if stats.scramble_pct is not none else '—' }}</div>
-      <div class="stat-label">Scramble%</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.putts_per_hole or '—' }}</div>
-      <div class="stat-label">Putts / Hole</div>
-    </div>
-  </div>
-  </div>
-  {% endif %}
-
-  <!-- Performance upgrade prompt for free users -->
-  {% if not user_is_pro and total_complete %}
-  <div class="section">
-    <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:8px;font-size:13px;color:var(--text-muted)">
-      <span style="font-size:16px">📊</span>
-      <span>
-        <strong style="color:var(--text)">Performance trends &amp; Strokes Gained averages</strong> are available with Magnolia Pro.
-        <a href="{{ url_for('main.upgrade') }}" style="color:var(--color-gold,#c9a84c);font-weight:600;text-decoration:none;margin-left:4px">Upgrade →</a>
+    <div class="acts">
+      <a href="{{ item.next_hole_url }}" class="db-cta" style="min-height:38px;padding:0 16px">Continue</a>
+      <button type="button" class="icon-btn" id="delbtn-p{{ item.round.id }}" onclick="showDel('p{{ item.round.id }}')" aria-label="Delete this round" title="Delete this round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </button>
+      <span class="del-confirm" id="delconfirm-p{{ item.round.id }}">Delete?
+        <form method="POST" action="{{ url_for('rounds.delete_round', round_id=item.round.id) }}" style="display:contents"><button type="submit" class="del-yes">Delete</button></form>
+        <button type="button" class="del-no" onclick="hideDel('p{{ item.round.id }}')">Cancel</button>
       </span>
     </div>
   </div>
+  {% endfor %}
+
+  {% if total_complete %}
+  <section class="kpis">
+    <div class="kpi"><span class="lbl">Scoring average</span><span class="v">{{ kpi.scoring_avg if kpi.scoring_avg is not none else '—' }}</span><span class="s">{{ kpi.scoring_n }} eighteen-hole round{{ 's' if kpi.scoring_n != 1 }} in last {{ window }}</span></div>
+    {% if user_is_pro %}
+    <div class="kpi"><span class="lbl">SG vs Tour / round</span><span class="v {{ c(kpi.sg_round) }}">{{ f(kpi.sg_round) }}</span>
+      <span class="s">18-hole basis · last {{ window }}{% if kpi.sg_round_delta is not none %} · <span class="{{ c(kpi.sg_round_delta) }}">{{ f(kpi.sg_round_delta, 1) }} on previous {{ window }}</span>{% endif %}</span></div>
+    <div class="kpi"><span class="lbl">SG / shot</span><span class="v">{{ f(kpi.sg_shot, 3) }}</span><span class="s">{{ kpi.shots }} shots measured</span></div>
+    {% endif %}
+    <div class="kpi"><span class="lbl">Rounds logged</span><span class="v">{{ total_complete }}</span><span class="s"><a href="{{ url_for('bag.index') }}" style="color:var(--text-muted)">My bag →</a></span></div>
+  </section>
   {% endif %}
 
-  <!-- Strokes Gained averages — paid tier only -->
-  {% if sg_avgs and user_is_pro %}
-  <div class="section">
-    <h2 class="section-title">Strokes Gained</h2>
-    <p class="stats-note">Average per round (18-hole equivalent) across {{ sg_avgs.rounds_count }} round{{ 's' if sg_avgs.rounds_count != 1 }} &middot; vs tour baseline</p>
-    <div class="sg-chart">
-      {% for cat in sg_avgs.categories %}
-      {% if user_is_pro or cat.name == 'Off the Tee' %}
-      <div class="sg-row">
-        <div class="sg-lbl" style="display:flex;align-items:center;justify-content:flex-end;gap:5px;">
-          {{ cat.name }}
-          {% if cat.delta is not none %}
-            {% if cat.delta > 0.04 %}
-            <span class="sg-delta sg-delta--up">+{{ '%.2f'|format(cat.delta) }}</span>
-            {% elif cat.delta < -0.04 %}
-            <span class="sg-delta sg-delta--down">{{ '%.2f'|format(cat.delta) }}</span>
-            {% else %}
-            <span class="sg-delta sg-delta--flat">—</span>
-            {% endif %}
-          {% endif %}
-        </div>
-        <div class="sg-track">
-          <div class="sg-zero" style="left:{{ sg_avgs.zero_pct }}%"></div>
-          {% if cat.positive %}
-          <div class="sg-bar sg-bar--{{ cat.color }}"
-               style="left:{{ sg_avgs.zero_pct }}%;width:{{ cat.width_pct }}%"></div>
-          {% else %}
-          <div class="sg-bar sg-bar--{{ cat.color }}"
-               style="right:{{ 100 - sg_avgs.zero_pct }}%;width:{{ cat.width_pct }}%"></div>
-          {% endif %}
-        </div>
-        <div class="sg-val sg-val--{{ cat.color }}">
-          {{ '+' if cat.avg > 0 else '' }}{{ '%.2f'|format(cat.avg) }}
-        </div>
-        <div class="sg-hcp-equiv">
-          {%- if cat.hcp_equiv == 'Tour' -%}Tour
-          {%- else -%}≈ {{ cat.hcp_equiv }} hcp{%- endif -%}
-        </div>
+  {% if trend %}
+  <section>
+    <div class="sec-h">
+      <span class="lbl">SG vs Tour per round · 18-hole basis · last {{ trend.n }}</span>
+      <span class="legend"><span><i style="width:6px;height:6px;border-radius:50%;background:#9aa29e"></i>Round</span><span><i style="width:14px;height:2px;background:var(--gold)"></i>5-round average</span></span>
+    </div>
+    <div class="chart">
+      {% for t in trend.ticks %}<span class="yt" style="top: {{ 20 + loop.index0 * 100 }}px">{{ f(t, 1) }}</span>{% endfor %}
+      <svg viewBox="0 0 1000 240" preserveAspectRatio="none" role="img" aria-label="Strokes gained per round, last {{ trend.n }} rounds">
+        <line x1="0" y1="20" x2="1000" y2="20" stroke="rgba(255,255,255,.06)" vector-effect="non-scaling-stroke"></line>
+        <line x1="0" y1="120" x2="1000" y2="120" stroke="rgba(255,255,255,.06)" vector-effect="non-scaling-stroke"></line>
+        <line x1="0" y1="220" x2="1000" y2="220" stroke="rgba(255,255,255,.06)" vector-effect="non-scaling-stroke"></line>
+        <polyline points="{{ trend.line }}" fill="none" stroke="rgba(154,162,158,.55)" stroke-width="1" vector-effect="non-scaling-stroke"></polyline>
+        <polyline points="{{ trend.avg }}" fill="none" stroke="#c9a84c" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>
+      </svg>
+    </div>
+    <div class="chart-x"><span>{{ trend.dots[0].date }}</span><span>{{ trend.dots[-1].date }}</span></div>
+  </section>
+  {% endif %}
+
+  {% if cats or leaks %}
+  <div class="two">
+    <section>
+      <div class="sec-h"><span class="lbl">SG / shot by category</span><span class="lbl faint">Last {{ window }} · vs previous</span></div>
+      {% for cat in cats %}
+      <a class="row" href="{{ cat.href }}" style="grid-template-columns: minmax(0,1fr) 90px 64px 54px;">
+        <span style="display:flex;flex-direction:column;gap:2px"><span class="t">{{ cat.label }}</span><span class="m">{{ f(cat.per_round, 1) }} per round · {{ cat.n }} shots</span></span>
+        {% if cat.spark %}<svg viewBox="0 0 90 24" style="width:90px;height:24px" role="img" aria-label="{{ cat.label }} trend"><polyline points="{{ cat.spark }}" fill="none" stroke="#9aa29e" stroke-width="1.5"></polyline></svg>{% else %}<span></span>{% endif %}
+        <span class="num">{{ f(cat.per, 3) }}</span>
+        <span class="num {{ c(cat.delta) }}" style="font-size:12px">{{ f(cat.delta, 3) if cat.delta is not none else '' }}</span>
+      </a>
+      {% endfor %}
+    </section>
+    <section>
+      <div class="sec-h"><span class="lbl">Biggest leaks · last {{ window }}</span><span class="lbl faint">N · /shot · total</span></div>
+      {% for l in leaks %}
+      <div class="row" style="grid-template-columns: minmax(0,1fr) 36px 56px 60px;">
+        <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="t">{{ l.title }}</span><span class="m">{% if l.avg is not none %}previous {{ window }}: {{ f(l.avg, 2) }}/shot{% else %}{{ l.meta }}{% endif %}</span></span>
+        <span class="n">{{ l.n }}</span>
+        <span class="num">{{ f(l.per) }}</span>
+        <span class="num neg" style="font-size:14px">{{ f(l.sg, 1) }}</span>
       </div>
       {% else %}
-      <div class="sg-row sg-row--locked">
-        <div class="sg-lbl" style="text-align:right;">{{ cat.name }}</div>
-        <div class="sg-track">
-          <div class="sg-zero" style="left:{{ sg_avgs.zero_pct }}%"></div>
-          <div class="sg-bar" style="left:{{ sg_avgs.zero_pct }}%;width:12%"></div>
-        </div>
-        <div class="sg-val">—</div>
-      </div>
-      {% endif %}
+      <p class="m" style="font-size:13px;color:var(--text-muted)">No consistent leaks yet. Log a few more rounds.</p>
       {% endfor %}
-      {% if not user_is_pro %}
-      <div class="sg-upgrade-prompt">
-        <span>🔒</span>
-        <span>Approach, Around the Green and Putting trends —
-          <a href="{{ url_for('main.pricing') }}">upgrade to unlock</a>
+    </section>
+  </div>
+  {% elif total_complete and not user_is_pro %}
+  <div class="upsell">
+    <span>Strokes gained per shot for every part of your game, your biggest leaks across rounds and the caddy are part of Magnolia Pro.</span>
+    <a href="{{ url_for('main.upgrade') }}" class="db-cta">See Pro</a>
+  </div>
+  {% endif %}
+
+  <section>
+    <div class="sec-h"><span class="lbl">Recent rounds</span>{% if more_rounds %}<span class="lbl faint">Showing 25 of {{ total_complete }}</span>{% endif %}</div>
+    {% if recent %}
+    <div class="tbl-wrap"><div class="tbl">
+      <div class="tr hd {{ '' if user_is_pro else 'free' }}">
+        <span>Date</span><span>Course</span><span class="r">Holes</span><span class="r">Score</span><span class="r">{{ 'SG' if user_is_pro else 'Putts' }}</span>
+        {% if user_is_pro %}<span class="r">Tee</span><span class="r">App</span><span class="r">Short</span><span class="r">Putt</span>{% else %}<span class="r">SG tee</span>{% endif %}
+        <span></span>
+      </div>
+      {% for item in recent %}{% set r = item.round %}
+      <div class="tr {{ '' if user_is_pro else 'free' }}">
+        <span class="faint">{{ r.date_played.strftime('%d %b %y') | upper }}</span>
+        <span class="course"><a href="{{ url_for('reports.view_report', round_id=r.id) }}">{{ r.course.name if r.course else 'Unknown course' }}</a>{% if r.is_partial %} <span class="faint" style="font-size:11px">· partial</span>{% endif %}</span>
+        <span class="r faint">{{ r.holes_played }}</span>
+        <span class="r">{{ r.total_score or '—' }}{% if item.vs_par is not none %} <span class="faint" style="font-size:11px">{{ 'E' if item.vs_par == 0 else ('+' ~ item.vs_par if item.vs_par > 0 else item.vs_par) }}</span>{% endif %}</span>
+        {% if user_is_pro %}
+        <span class="r {{ c(item.sg) }}" style="font-weight:500">{{ f(item.sg, 1) }}</span>
+        {% for k in ['ott', 'app', 'atg', 'putt'] %}<span class="r {{ c(item.cats[k]) }}">{{ f(item.cats[k], 1) }}</span>{% endfor %}
+        {% else %}
+        <span class="r faint">{{ r.total_putts or '—' }}</span>
+        <span class="r {{ c(item.ott) }}">{{ f(item.ott, 1) }}</span>
+        {% endif %}
+        <span class="acts">
+          <button type="button" class="chip {{ 'is-counting' if r.counts_for_official_hc != False }}" data-round-id="{{ r.id }}" title="Counts towards your official handicap?">{{ 'Official' if r.counts_for_official_hc != False else 'Casual' }}</button>
+          <a class="icon-btn" href="{{ url_for('reports.view_report', round_id=r.id) }}#share" aria-label="Share report" title="Share report">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </a>
+          <form method="POST" action="{{ url_for('rounds.reopen_round', round_id=r.id) }}" style="display:contents">
+            <button type="submit" class="icon-btn" aria-label="Edit this round" title="Edit this round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+          </form>
+          <button type="button" class="icon-btn" id="delbtn-{{ r.id }}" onclick="showDel('{{ r.id }}')" aria-label="Delete this round" title="Delete this round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+          <span class="del-confirm" id="delconfirm-{{ r.id }}">
+            <form method="POST" action="{{ url_for('rounds.delete_round', round_id=r.id) }}" style="display:contents"><button type="submit" class="del-yes">Delete</button></form>
+            <button type="button" class="del-no" onclick="hideDel('{{ r.id }}')">Cancel</button>
+          </span>
         </span>
       </div>
-      {% endif %}
-    </div>
-
-    {% if sg_avgs.overall_hcp_equiv and user_is_pro %}
-    {% set _delta = sg_avgs.overall_hcp_delta %}
-    <div style="margin-top:16px;padding:14px 18px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.22);border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
-      <div>
-        <div style="font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted,#888);margin-bottom:3px;">Playing Equivalent</div>
-        <div style="font-size:.8rem;color:var(--text-muted,#888);line-height:1.4;">Your SG total vs. PGA Tour baseline</div>
-      </div>
-      <div style="text-align:right;flex-shrink:0;">
-        <div style="font-size:1.5rem;font-weight:800;font-family:'DM Mono',monospace;color:var(--text,#111);line-height:1.1;">
-          {%- if sg_avgs.overall_hcp_equiv == 'Scratch' -%}Scratch
-          {%- else -%}{{ sg_avgs.overall_hcp_equiv }} hcp{%- endif -%}
-        </div>
-        {% if _delta is not none and _delta != 0.0 %}
-        <div style="font-size:.72rem;font-weight:600;margin-top:3px;
-          color:{{ '#2d8a4e' if _delta < 0 else '#c0392b' }};">
-          {% if _delta < 0 %}↓ {{ '%.1f'|format(_delta|abs) }} improved
-          {% else %}↑ {{ '%.1f'|format(_delta) }} vs last round{% endif %}
-        </div>
-        {% endif %}
-      </div>
-    </div>
-    {% endif %}
-
-  </div>
-  {% endif %}
-
-  <!-- Game analysis tiles — Pro only -->
-  {% if user_is_pro and sg_avgs %}
-  <div class="section">
-    <h2 class="section-title">Analyse Your Game</h2>
-    <p class="stats-note">Deep dive into each area — every stat, every trend, nothing left out</p>
-    <div class="game-tiles">
-
-      <!-- Off the Tee -->
-      {% set ott_list = sg_avgs.categories | selectattr('name', 'equalto', 'Off the Tee') | list %}
-      <a href="{{ url_for('analytics.off_the_tee') }}" class="game-tile">
-        <div class="game-tile-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="20" x2="12" y2="4"/><polyline points="8 8 12 4 16 8"/>
-            <line x1="6" y1="20" x2="18" y2="20"/>
-          </svg>
-        </div>
-        <div class="game-tile-name">Off the Tee</div>
-        <div class="game-tile-stats">
-          {% if stats and stats.fir_pct is not none %}
-          <div class="game-tile-stat">
-            <span class="game-tile-stat-label">FIR%</span>
-            <span class="game-tile-stat-value">{{ stats.fir_pct }}%</span>
-          </div>
-          {% endif %}
-          {% if ott_list %}{% set ott = ott_list[0] %}
-          <div class="game-tile-stat">
-            <span class="game-tile-stat-label">SG: OTT</span>
-            <span class="game-tile-stat-value {% if ott.avg > 0 %}positive{% elif ott.avg < -0.05 %}negative{% endif %}">
-              {{ '+' if ott.avg > 0 else '' }}{{ '%.2f'|format(ott.avg) }}
-            </span>
-          </div>
-          {% endif %}
-        </div>
-        <div class="game-tile-cta">Analyse →</div>
-      </a>
-
-      <!-- Approach -->
-      {% set app_list = sg_avgs.categories | selectattr('name', 'equalto', 'Approach') | list %}
-      <a href="{{ url_for('analytics.approach') }}" class="game-tile">
-        <div class="game-tile-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor"/>
-          </svg>
-        </div>
-        <div class="game-tile-name">Approach</div>
-        <div class="game-tile-stats">
-          {% if stats and stats.gir_pct is not none %}
-          <div class="game-tile-stat">
-            <span class="game-tile-stat-label">GIR%</span>
-            <span class="game-tile-stat-value">{{ stats.gir_pct }}%</span>
-          </div>
-          {% endif %}
-          {% if app_list %}{% set appc = app_list[0] %}
-          <div class="game-tile-stat">
-            <span class="game-tile-stat-label">SG: App</span>
-            <span class="game-tile-stat-value {% if appc.avg > 0 %}positive{% elif appc.avg < -0.05 %}negative{% endif %}">
-              {{ '+' if appc.avg > 0 else '' }}{{ '%.2f'|format(appc.avg) }}
-            </span>
-          </div>
-          {% endif %}
-        </div>
-        <div class="game-tile-cta">Analyse →</div>
-      </a>
-
-      <!-- Around the Green -->
-      {% set atg_list = sg_avgs.categories | selectattr('name', 'equalto', 'Around the Green') | list %}
-      <a href="{{ url_for('analytics.around_green') }}" class="game-tile">
-        <div class="game-tile-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 17l3-8 3 5 3-3 3 6"/>
-            <circle cx="19" cy="17" r="2"/>
-          </svg>
-        </div>
-        <div class="game-tile-name">Around the Green</div>
-        <div class="game-tile-stats">
-          {% if stats and stats.scramble_pct is not none %}
-          <div class="game-tile-stat">
-            <span class="game-tile-stat-label">Scramble%</span>
-            <span class="game-tile-stat-value">{{ stats.scramble_pct }}%</span>
-          </div>
-          {% endif %}
-          {% if atg_list %}{% set atg = atg_list[0] %}
-          <div class="game-tile-stat">
-            <span class="game-tile-stat-label">SG: ATG</span>
-            <span class="game-tile-stat-value {% if atg.avg > 0 %}positive{% elif atg.avg < -0.05 %}negative{% endif %}">
-              {{ '+' if atg.avg > 0 else '' }}{{ '%.2f'|format(atg.avg) }}
-            </span>
-          </div>
-          {% endif %}
-        </div>
-        <div class="game-tile-cta">Analyse →</div>
-      </a>
-
-      <!-- Putting -->
-      {% set putt_list = sg_avgs.categories | selectattr('name', 'equalto', 'Putting') | list %}
-      <a href="{{ url_for('analytics.putting') }}" class="game-tile">
-        <div class="game-tile-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/>
-            <line x1="12" y1="17.5" x2="12" y2="5"/>
-            <line x1="12" y1="5" x2="18" y2="9"/>
-          </svg>
-        </div>
-        <div class="game-tile-name">Putting</div>
-        <div class="game-tile-stats">
-          {% if stats and stats.putts_per_hole is not none %}
-          <div class="game-tile-stat">
-            <span class="game-tile-stat-label">Putts/hole</span>
-            <span class="game-tile-stat-value">{{ stats.putts_per_hole }}</span>
-          </div>
-          {% endif %}
-          {% if putt_list %}{% set putt = putt_list[0] %}
-          <div class="game-tile-stat">
-            <span class="game-tile-stat-label">SG: Putt</span>
-            <span class="game-tile-stat-value {% if putt.avg > 0 %}positive{% elif putt.avg < -0.05 %}negative{% endif %}">
-              {{ '+' if putt.avg > 0 else '' }}{{ '%.2f'|format(putt.avg) }}
-            </span>
-          </div>
-          {% endif %}
-        </div>
-        <div class="game-tile-cta">Analyse →</div>
-      </a>
-
-    </div>
-  </div>
-  {% elif not user_is_pro and total_complete %}
-  <div class="section">
-    <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:8px;font-size:13px;color:var(--text-muted)">
-      <span style="font-size:16px">📊</span>
-      <span>
-        <strong style="color:var(--text)">Deep-dive game analysis</strong> (Off the Tee, Approach, Short Game &amp; Putting) is available with Magnolia Pro.
-        <a href="{{ url_for('main.upgrade') }}" style="color:var(--color-gold,#c9a84c);font-weight:600;text-decoration:none;margin-left:4px">Upgrade →</a>
-      </span>
-    </div>
-  </div>
-  {% endif %}
-
-    <!-- Recent rounds -->
-  <div class="section">
-    <h2 class="section-title">Recent rounds</h2>
-
-    {% if recent_rounds %}
-    <div class="rounds-list">
-      {% for round in recent_rounds %}
-      <div class="round-row">
-        <div class="round-date">
-          {{ round.date_played.strftime('%d %b %Y') }}
-          {% if round.is_partial %}<span class="badge badge--partial">Partial</span>{% endif %}
-        </div>
-        <div class="round-course">{{ round.course.name if round.course else 'Unknown Course' }}</div>
-        <div class="round-score">
-          {% if round.total_score %}
-            <span class="score-number">{{ round.total_score }}</span>
-            {% set _svp = round.score_vs_par() %}
-            {% if _svp is not none %}
-              <span class="score-diff {% if _svp < 0 %}score-diff--under{% elif _svp == 0 %}score-diff--even{% else %}score-diff--over{% endif %}">
-                {% if _svp == 0 %}E{% elif _svp > 0 %}+{{ _svp }}{% else %}{{ _svp }}{% endif %}
-              </span>
-            {% endif %}
-          {% else %}
-            <span class="score-dash">—</span>
-          {% endif %}
-        </div>
-        <div class="round-putts">{{ round.total_putts or '—' }} putts</div>
-        <div class="round-gir">{{ round.gir_count or '—' }}/{{ round.holes_played }} GIR</div>
-        <div class="round-actions" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          {# Official HCP toggle chip #}
-          <button type="button"
-                  class="hcp-toggle-chip {% if round.counts_for_official_hc != False %}is-counting{% endif %}"
-                  data-round-id="{{ round.id }}"
-                  title="Toggle whether this round counts towards your Official Handicap">
-            <span class="hcp-toggle-dot"></span>
-            <span class="hcp-toggle-text">{% if round.counts_for_official_hc != False %}Official{% else %}Casual{% endif %}</span>
-          </button>
-          {% if round.status == 'complete' %}
-            <a href="{{ url_for('reports.view_report', round_id=round.id) }}" class="link-gold">View Report →</a>
-            <a href="{{ url_for('reports.view_report', round_id=round.id) }}#share" class="round-edit-btn" title="Share report" style="display:inline-flex;align-items:center;text-decoration:none;color:inherit;vertical-align:middle">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-              </svg>
-            </a>
-          {% else %}
-            <span class="badge badge--pending">Report pending</span>
-          {% endif %}
-          <form method="POST" action="{{ url_for('rounds.reopen_round', round_id=round.id) }}" style="display:contents">
-                <button type="submit" class="round-edit-btn" title="Edit this round">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                  </svg>
-                </button>
-              </form>
-              <button type="button" class="round-delete-btn"
-                  id="delbtn-{{ round.id }}"
-                  onclick="showDelConfirm('delbtn-{{ round.id }}','delconfirm-{{ round.id }}')"
-                  title="Delete this round">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-              <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-            </svg>
-          </button>
-          <span class="round-delete-confirm" id="delconfirm-{{ round.id }}" style="display:none">
-            Delete this round?
-            <form method="POST" action="{{ url_for('rounds.delete_round', round_id=round.id) }}" style="display:contents">
-              <button type="submit" class="round-delete-confirm-yes">Delete</button>
-            </form>
-            <button type="button" class="round-delete-confirm-no"
-                    onclick="hideDelConfirm('delbtn-{{ round.id }}','delconfirm-{{ round.id }}')">Cancel</button>
-          </span>
-        </div>
-      </div>
       {% endfor %}
-    </div>
+    </div></div>
+    <p class="m" style="font-size:11px;color:#7a827e;margin-top:10px">SG columns are for the holes actually played, so a 9-hole round shows its 9-hole total.</p>
     {% else %}
-    <div class="empty-state">
-      <p>No rounds logged yet.</p>
-      <a href="{{ url_for('rounds.new_round') }}" class="btn btn--gold">Log your first round</a>
+    <div class="empty">
+      <p style="margin:0;color:var(--text-muted)">No rounds logged yet.</p>
+      <a href="{{ url_for('rounds.new_round') }}" class="db-cta">Log your first round</a>
     </div>
     {% endif %}
-  </div>
+  </section>
 
-</section>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function showDelConfirm(btnId, confirmId) {
-  document.querySelectorAll('.round-delete-confirm').forEach(el => el.style.display = 'none');
-  document.querySelectorAll('.round-delete-btn').forEach(el => el.style.display = '');
-  var confirmEl = document.getElementById(confirmId);
-  var btnEl     = document.getElementById(btnId);
-  if (confirmEl) confirmEl.style.display = 'inline-flex';
-  if (btnEl)     btnEl.style.display     = 'none';
+function showDel(id) {
+  document.querySelectorAll('.del-confirm').forEach(function (el) { el.style.display = 'none'; });
+  document.querySelectorAll('[id^="delbtn-"]').forEach(function (el) { el.style.display = ''; });
+  var c = document.getElementById('delconfirm-' + id), b = document.getElementById('delbtn-' + id);
+  if (c) c.style.display = 'inline-flex';
+  if (b) b.style.display = 'none';
 }
-function hideDelConfirm(btnId, confirmId) {
-  var confirmEl = document.getElementById(confirmId);
-  var btnEl     = document.getElementById(btnId);
-  if (confirmEl) confirmEl.style.display = 'none';
-  if (btnEl)     btnEl.style.display     = '';
+function hideDel(id) {
+  var c = document.getElementById('delconfirm-' + id), b = document.getElementById('delbtn-' + id);
+  if (c) c.style.display = 'none';
+  if (b) b.style.display = '';
 }
-
-// Official HCP toggle chips
-document.querySelectorAll('.hcp-toggle-chip').forEach(function (chip) {
+document.querySelectorAll('.chip[data-round-id]').forEach(function (chip) {
   chip.addEventListener('click', function () {
-    var roundId = chip.getAttribute('data-round-id');
-    chip.style.opacity = '0.5';
-    chip.style.pointerEvents = 'none';
-    fetch('/rounds/' + roundId + '/toggle-official-hc', {
-      method: 'POST',
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      // Update chip appearance
-      var text = chip.querySelector('.hcp-toggle-text');
-      if (data.counts) {
-        chip.classList.add('is-counting');
-        if (text) text.textContent = 'Official';
-      } else {
-        chip.classList.remove('is-counting');
-        if (text) text.textContent = 'Casual';
-      }
-      // Update header handicap display
-      var officialEl = document.getElementById('official-hcp');
-      var allEl      = document.getElementById('all-hcp');
-      if (officialEl) officialEl.textContent = data.official_hcp !== null ? parseFloat(data.official_hcp).toFixed(1) : '—';
-      if (allEl)      allEl.textContent      = data.all_hcp !== null      ? parseFloat(data.all_hcp).toFixed(1)      : '—';
-    })
-    .catch(function () { /* silently ignore — page still functions */ })
-    .finally(function () {
-      chip.style.opacity = '';
-      chip.style.pointerEvents = '';
-    });
+    chip.style.opacity = '.5'; chip.style.pointerEvents = 'none';
+    fetch('/rounds/' + chip.dataset.roundId + '/toggle-official-hc', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        chip.classList.toggle('is-counting', !!data.counts);
+        chip.textContent = data.counts ? 'Official' : 'Casual';
+        var o = document.getElementById('official-hcp'), a = document.getElementById('all-hcp');
+        if (o) o.textContent = data.official_hcp !== null ? parseFloat(data.official_hcp).toFixed(1) : '—';
+        if (a) a.textContent = data.all_hcp !== null ? parseFloat(data.all_hcp).toFixed(1) : '—';
+      })
+      .catch(function () {})
+      .finally(function () { chip.style.opacity = ''; chip.style.pointerEvents = ''; });
   });
 });
 </script>
