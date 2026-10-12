@@ -1,0 +1,17 @@
+name: Deploy to Vercel
+
+# Production runs on Vercel (free Hobby) with a Neon Postgres database.
+# Every push to master triggers a production deploy through a Vercel deploy hook.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel production deploy
+        run: curl -fsS -X POST "$HOOK"
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
