@@ -50,7 +50,8 @@
           <a href="{{ url_for('rounds.new_round') }}" class="nav-link nav-link--cta">Log Round</a>
           <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link--muted">Sign Out</a>
         {% else %}
-          <a href="{{ url_for('auth.register') }}" class="nav-link nav-link--cta">Get Early Access</a>
+          <a href="{{ url_for('auth.login') }}" class="nav-link">Sign in</a>
+          <a href="{{ url_for('auth.register') }}" class="nav-link nav-link--cta">Create account</a>
         {% endif %}
       </div>
     </div>
