@@ -1,7 +1,8 @@
 {
   "services": {
     "web": {
-      "root": "."
+      "root": ".",
+      "entrypoint": "wsgi.py"
     }
   },
   "rewrites": [
@@ -12,5 +13,8 @@
         "service": "web"
       }
     }
+  ],
+  "regions": [
+    "lhr1"
   ]
 }

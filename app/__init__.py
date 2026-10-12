@@ -149,12 +149,24 @@ def _run_column_migrations():
         ('users',     'bag_json',                   'TEXT'),
         ('users',     'track_clubs',                'BOOLEAN DEFAULT FALSE'),
     ]
+    # Look up existing columns once, then only ALTER what's missing — keeps
+    # serverless cold starts fast (one round trip per table, not per column).
+    inspector = db.inspect(db.engine)
+    existing = {}
     for table, column, col_type in migrations:
+        if table not in existing:
+            try:
+                existing[table] = {c['name'] for c in inspector.get_columns(table)}
+            except Exception:
+                existing[table] = set()
+        if column in existing[table]:
+            continue
         try:
             db.session.execute(
                 db.text(f'ALTER TABLE {table} ADD COLUMN {column} {col_type}')
             )
             db.session.commit()
+            existing[table].add(column)
         except Exception:
             db.session.rollback()   # column already exists — fine
 
