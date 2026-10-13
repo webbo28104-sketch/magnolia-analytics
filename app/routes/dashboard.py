@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 dashboard_bp = Blueprint('dashboard', __name__)
 
 WINDOW = 10        # rounds in the "current" window
+ROUNDS_PER_PAGE = 25
 TREND_ROUNDS = 20  # rounds plotted on the SG trend
 
 ANALYTICS_LINKS = {
@@ -182,8 +183,11 @@ def index():
     # ── Recent rounds table ──────────────────────────────────────────────
     # Score-only rounds come from England Golf and have no shot data
     score_only = (Round.query.filter_by(user_id=current_user.id, status='score_only')
-                  .order_by(Round.date_played.desc()).limit(25).all())
-    listed = sorted(all_complete[:25] + score_only, key=lambda r: (r.date_played, r.id), reverse=True)[:25]
+                  .order_by(Round.date_played.desc()).all())
+    every = sorted(all_complete + score_only, key=lambda r: (r.date_played, r.id), reverse=True)
+    pages = max((len(every) + ROUNDS_PER_PAGE - 1) // ROUNDS_PER_PAGE, 1)
+    page = min(max(request.args.get('page', 1, type=int), 1), pages)
+    listed = every[(page - 1) * ROUNDS_PER_PAGE:page * ROUNDS_PER_PAGE]
     recent = []
     for r in listed:
         hp = r.holes_played or 18
@@ -210,6 +214,6 @@ def index():
         total_complete=len(all_complete),
         window=len(cur),
         kpi=kpi, cats=cats, leaks=leaks, trend=trend,
-        recent=recent, more_rounds=max(len(all_complete) - 25, 0), glance=glance, glance_n=len(eligible) if eligible else 0, bench=bench,
+        recent=recent, page=page, pages=pages, rounds_total=len(every), glance=glance, glance_n=len(eligible) if eligible else 0, bench=bench,
         in_progress_rounds=_in_progress(),
     )

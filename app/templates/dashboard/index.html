@@ -56,6 +56,11 @@
   .acts { display: flex; justify-content: flex-end; align-items: center; gap: 6px; font-family: var(--font-sans); }
   .icon-btn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: none; border: 1px solid transparent; color: var(--text-muted); cursor: pointer; padding: 0; }
   .icon-btn:hover { color: var(--ink); border-color: rgba(255,255,255,.14); }
+  .pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; font-family: var(--font-mono); font-size: 12px; }
+  .pager a { color: var(--ink); text-decoration: none; min-height: 40px; display: inline-flex; align-items: center; padding: 0 10px; border: 1px solid var(--border); }
+  .pager .pages { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+  .pager .pages b, .pager .pages a { min-width: 34px; justify-content: center; display: inline-flex; align-items: center; min-height: 34px; }
+  .pager .pages b { color: var(--gold); }
   .chip { height: 26px; padding: 0 8px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; background: none; border: 1px solid rgba(255,255,255,.16); color: #7a827e; cursor: pointer; }
   .chip.is-counting { color: var(--gold); border-color: rgba(201,168,76,.5); }
   .del-confirm { display: none; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
@@ -215,7 +220,7 @@
   {% endif %}
 
   <section>
-    <div class="sec-h"><span class="lbl">Recent rounds</span>{% if more_rounds %}<span class="lbl faint">Showing 25 of {{ total_complete }}</span>{% endif %}</div>
+    <div class="sec-h" id="rounds"><span class="lbl">{{ 'Recent rounds' if page == 1 else 'Rounds' }}</span>{% if pages > 1 %}<span class="lbl faint">Page {{ page }} of {{ pages }} · {{ rounds_total }} rounds</span>{% endif %}</div>
     {% if recent %}
     <div class="tbl-wrap"><div class="tbl">
       <div class="tr hd {{ '' if user_is_pro else 'free' }}">
@@ -259,7 +264,13 @@
       </div>
       {% endfor %}
     </div></div>
-    <p class="m" style="font-size:11px;color:#7a827e;margin-top:10px">SG = total strokes gained vs a scratch golfer for the holes actually played (a 9-hole round shows its 9-hole total). Tee, App (approach), Short (around the green) and Putt split that total by category. Official/Casual sets whether the round counts towards your official handicap.</p>
+    {% if pages > 1 %}
+    <nav class="pager" aria-label="Rounds pages">
+      {% if page > 1 %}<a href="{{ url_for('dashboard.index', page=page - 1) }}#rounds">← Newer</a>{% else %}<span></span>{% endif %}
+      <span class="pages">{% for p in range(1, pages + 1) %}{% if p == page %}<b>{{ p }}</b>{% else %}<a href="{{ url_for('dashboard.index', page=p) }}#rounds">{{ p }}</a>{% endif %}{% endfor %}</span>
+      {% if page < pages %}<a href="{{ url_for('dashboard.index', page=page + 1) }}#rounds">Older →</a>{% else %}<span></span>{% endif %}
+    </nav>
+    {% endif %}
     {% else %}
     <div class="empty">
       <p style="margin:0;color:var(--text-muted)">No rounds logged yet.</p>
