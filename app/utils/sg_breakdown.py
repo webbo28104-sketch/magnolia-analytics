@@ -196,16 +196,22 @@ def _meta(row):
     return ' · '.join(parts)
 
 
-def leaks_and_strengths(shots, history_shots=None, n_leaks=4, n_strengths=3):
-    """Rank every breakdown bucket by total SG: biggest losses and clearest gains."""
+def leaks_and_strengths(shots, history_shots=None, n_leaks=4, n_strengths=3, bench_shot=None):
+    """
+    Rank every breakdown bucket by strokes lost or gained against a benchmark:
+    scratch (0) by default, or the golfer's handicap benchmark per shot
+    (bench_shot = {'ott': −0.19, ...}) so 'leaks' are worse than normal for them.
+    """
     candidates = []
     for dim in _LEAK_DIMS:
         for row in rows(shots, dim, history_shots):
             row['title'] = _title(row)
             row['meta'] = _meta(row)
+            b = (bench_shot or {}).get(dim.split('_')[0], 0.0)
+            row['excess'] = round(row['sg'] - b * row['n'], 2)
             candidates.append(row)
-    leaks = sorted([r for r in candidates if r['sg'] < 0], key=lambda r: r['sg'])
-    strengths = sorted([r for r in candidates if r['sg'] > 0], key=lambda r: -r['sg'])
+    leaks = sorted([r for r in candidates if r['excess'] < 0], key=lambda r: r['excess'])
+    strengths = sorted([r for r in candidates if r['excess'] > 0], key=lambda r: -r['excess'])
     return _dedupe(leaks)[:n_leaks], _dedupe(strengths)[:n_strengths]
 
 

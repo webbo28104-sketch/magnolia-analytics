@@ -219,6 +219,7 @@ def _hole_rows(round_data, holes_data):
                 'club': club_label(s['club']) if s['club'] else '',
                 'text': _shot_text(s),
                 'sg': s['sg'],
+                'cat': s.get('cat'),
                 'merged': s['merged'],
                 'n_strokes': s['n_strokes'],
                 'penalty': s['penalty'],
@@ -372,7 +373,13 @@ def view_report(round_id):
             'atg_dist', 'atg_lie', 'putt_dist', 'club_all')
     hist_vals = {dim: ev.per_round_values(hist_datas, dim) for dim in dims}
     breakdown = {dim: ev.annotate(bd.rows(vis_shots, dim, vis_hist), sd_by_cat, hist_vals) for dim in dims}
-    leaks, strengths = bd.leaks_and_strengths(vis_shots, vis_hist)
+    # ── Handicap benchmark: what a golfer of the golfer's index typically records ──
+    from app.utils import benchmark as bm
+    b_index, b_label = bm.index_at(current_user, round_.date_played)
+    bench = bm.make(b_index, b_label, bm.shots_per18(hist_datas + [(round_, round_data)]))
+    bshot = bench['shot'] if bench else {c: 0.0 for c in (*CATEGORIES, 'all')}
+    bhole = bench['hole'] if bench else 0.0
+    leaks, strengths = bd.leaks_and_strengths(vis_shots, vis_hist, bench_shot=bshot if bench else None)
     ev.annotate(leaks, sd_by_cat, hist_vals)
     ev.annotate(strengths, sd_by_cat, hist_vals)
     pattern_rounds = [(round_, round_data)] + hist_datas
@@ -396,7 +403,10 @@ def view_report(round_id):
             for s in hr['shots']:
                 if s['type'] != 'Tee':
                     s['sg'] = None
-    hole_sgs = [h['sg'] for h in hole_rows if h['sg'] is not None]
+    # Hole chart is centred on the handicap benchmark per hole, not on scratch
+    for hr in hole_rows:
+        hr['rel'] = None if hr['sg'] is None else round(hr['sg'] - bhole, 2)
+    hole_sgs = [h['rel'] for h in hole_rows if h['rel'] is not None]
     hole_scale = max([abs(v) for v in hole_sgs] + [1.0])
     # Hole chart geometry: zero line placed in proportion to the biggest gain
     # and biggest loss, so the chart uses its full height and 0 is labelled.
@@ -480,6 +490,7 @@ def view_report(round_id):
         weather=weather, summary_text=summary_text, narrative=narrative,
         pb_banner=pb_banner, sg_data=sg_data,
         glance=glance, shots_per18=shots_per18, dim_cat=ev.DIM_CAT,
+        bench=bench, bshot=bshot, bhole=bhole,
     )
 
 

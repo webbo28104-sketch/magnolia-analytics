@@ -58,14 +58,15 @@ def _spark(values, w=90, h=24):
     return ' '.join(pts)
 
 
-def _trend(rounds):
-    """SG per round on an 18-hole basis, oldest → newest, with a 5-round average."""
+def _trend(rounds, bench_v=None):
+    """SG per round on an 18-hole basis, oldest → newest, with a 5-round average.
+    bench_v: what the golfer's handicap typically records per 18 (drawn as a line)."""
     pts = [(r, normalize_to_18(r.sg_total, r.holes_played)) for r in reversed(rounds)
            if r.sg_total is not None and (r.holes_played or 0) >= 9]
     if len(pts) < 2:
         return None
     vals = [v for _, v in pts]
-    lo, hi = min(vals), max(vals)
+    lo, hi = min(vals + ([bench_v] if bench_v is not None else [])), max(vals + ([bench_v] if bench_v is not None else []))
     pad = max((hi - lo) * 0.15, 0.5)
     lo, hi = lo - pad, hi + pad
     y = lambda v: 20 + (hi - v) / (hi - lo) * 200
@@ -80,6 +81,7 @@ def _trend(rounds):
     ticks = [round(hi - (hi - lo) * k / 2, 1) for k in range(3)]
     return {'line': line, 'avg': ' '.join(avg), 'dots': dots, 'ticks': ticks, 'n': len(pts),
             'zero': round(y(0), 1) if lo < 0 < hi else None,
+            'bench': round(y(bench_v), 1) if bench_v is not None else None, 'bench_v': bench_v,
             'best': max(vals), 'worst': min(vals), 'latest': vals[-1]}
 
 
@@ -107,6 +109,12 @@ def index():
     prev = [r for r in all_complete[WINDOW:WINDOW * 2] if r.id in datas]
     cur_shots = [s for r in cur for s in datas[r.id]['shots']]
     prev_shots = [s for r in prev for s in datas[r.id]['shots']]
+
+    # ── Handicap benchmark: colour against what's normal for this golfer, not scratch ──
+    from datetime import date as _date
+    from app.utils import benchmark as bm
+    bench = bm.make(*bm.index_at(current_user, _date.today()),
+                    bm.shots_per18([(r, datas[r.id]) for r in cur]))
 
     # ── KPIs ─────────────────────────────────────────────────────────────
     full = [r for r in cur if r.holes_played == 18 and r.total_score]
@@ -144,7 +152,8 @@ def index():
                 'delta': (per - pper) if (per is not None and pper is not None and pn >= 15) else None,
                 'spark': _spark(spark_vals), 'href': url_for(ANALYTICS_LINKS[c]),
             })
-        leaks, _ = bd.leaks_and_strengths(cur_shots, prev_shots, n_leaks=4, n_strengths=0)
+        leaks, _ = bd.leaks_and_strengths(cur_shots, prev_shots, n_leaks=4, n_strengths=0,
+                                          bench_shot=bench['shot'] if bench else None)
         sd = ev.category_sd(cur_shots + prev_shots)
         cur_pairs = [(r, datas[r.id]) for r in cur]
         for l in leaks:
@@ -152,7 +161,7 @@ def index():
             l['pattern'] = ev.pattern(None, ev.per_round_values(cur_pairs, l['dim']).get(l['key'], []))
         for cat in cats:
             cat['rel'] = ev.reliability(cat['per'], cat['n'], sd[cat['cat']])
-        trend = _trend(all_complete[:TREND_ROUNDS])
+        trend = _trend(all_complete[:TREND_ROUNDS], bench['round18'] if bench else None)
 
     # ── Clubhouse glance: handicap equivalents over the last N rounds ──────
     from app.utils import hcp_equiv
@@ -177,8 +186,11 @@ def index():
     listed = sorted(all_complete[:25] + score_only, key=lambda r: (r.date_played, r.id), reverse=True)[:25]
     recent = []
     for r in listed:
+        hp = r.holes_played or 18
+        b_round = (bench['hole'] * hp) if bench else 0.0
+        b_cat = (bench['cat18'] * hp / 18) if bench else 0.0
         if r.status == 'score_only':
-            recent.append({'round': r, 'vs_par': None, 'sg': None, 'ott': None,
+            recent.append({'round': r, 'vs_par': None, 'sg': None, 'ott': None, 'b_round': b_round, 'b_cat': b_cat,
                            'cats': {c: None for c in CATEGORIES} if user_is_pro else None})
             continue
         d = datas.get(r.id)
@@ -189,6 +201,7 @@ def index():
                                                                'atg': 'sg_atg', 'putt': 'sg_putting'}[c]))
                       for c in CATEGORIES} if user_is_pro else None),
             'ott': r.sg_off_tee,
+            'b_round': b_round, 'b_cat': b_cat,
         })
 
     return render_template(
@@ -197,6 +210,6 @@ def index():
         total_complete=len(all_complete),
         window=len(cur),
         kpi=kpi, cats=cats, leaks=leaks, trend=trend,
-        recent=recent, more_rounds=max(len(all_complete) - 25, 0), glance=glance, glance_n=len(eligible) if eligible else 0,
+        recent=recent, more_rounds=max(len(all_complete) - 25, 0), glance=glance, glance_n=len(eligible) if eligible else 0, bench=bench,
         in_progress_rounds=_in_progress(),
     )

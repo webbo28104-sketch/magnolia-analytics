@@ -91,6 +91,18 @@ def _category_page(cat):
     hcp_index = (current_user.official_handicap_index if current_user.official_handicap_index is not None
                  else current_user.handicap_index)
 
+    # ── Handicap benchmark: centre charts on what's normal for the golfer, not scratch ──
+    from datetime import date as _date
+    from app.utils import benchmark as bm
+    per18 = bm.shots_per18(cur)
+    bench = bm.make(*bm.index_at(current_user, _date.today()), per18)
+    b_now = bench['shot'][cat] if bench else 0.0
+
+    def b_at(r):
+        """Per-shot benchmark using the golfer's index when round r was played."""
+        bb = bm.make(*bm.index_at(current_user, r.date_played), per18)
+        return bb['shot'][cat] if bb else 0.0
+
     # ── Heatmap: SG per shot by band (rows) × round (columns, oldest → newest) ──
     cols = list(reversed(cur))
     heat_dim = cfg['heat']
@@ -106,10 +118,11 @@ def _category_page(cat):
             b = bd.aggregate(rs, heat_dim).get(key)
             if b:
                 v = b['sg'] / b['n']
+                rel = v - b_at(r)
                 played += 1
-                neg += 1 if v < 0 else 0
-                cells.append({'v': round(v, 2), 'n': b['n'], 'a': round(min(abs(v) / 0.5, 1) * 0.85 + 0.12, 2),
-                              'pos': v >= 0})
+                neg += 1 if rel < 0 else 0
+                cells.append({'v': round(v, 2), 'rel': round(rel, 2), 'n': b['n'],
+                              'a': round(min(abs(rel) / 0.5, 1) * 0.85 + 0.12, 2), 'pos': rel >= 0})
             else:
                 cells.append(None)
         row = overall[key]
@@ -121,10 +134,11 @@ def _category_page(cat):
         worst = max(regular, key=lambda h: (h['neg'] / h['played'], -h['per']))
         best = min(regular, key=lambda h: (h['neg'] / h['played'], -h['per']))
         unit = {'putt': 'ft', 'ott': 'yd holes'}.get(cat, 'yds')
-        insight = (f"{worst['label']} {unit} has lost strokes in {worst['neg']} of the {worst['played']} rounds "
-                   f"you played from there ({worst['per']:+.2f}/{cfg['unit']}).")
+        level = f"a {bench['index_txt']} handicap" if bench else 'scratch'
+        insight = (f"{worst['label']} {unit} was worse than {level} normally manages in {worst['neg']} of the "
+                   f"{worst['played']} rounds you played from there ({worst['per']:+.2f}/{cfg['unit']} vs scratch).")
         if best is not worst and best['neg'] < best['played'] / 2:
-            insight += (f" {best['label']} {unit} was at or above scratch level in "
+            insight += (f" {best['label']} {unit} was at or better than {level} in "
                         f"{best['played'] - best['neg']} of {best['played']} ({best['per']:+.2f}/{cfg['unit']}).")
 
     # ── Per-round trend (SG per shot, oldest → newest) ──
@@ -132,20 +146,21 @@ def _category_page(cat):
     for r, d in cols:
         v, k = _per(_filter(d['shots'], cat, lie, wind))
         if v is not None:
-            trend_vals.append({'date': r.date_played.strftime('%d %b'), 'v': v})
+            trend_vals.append({'date': r.date_played.strftime('%d %b'), 'v': v, 'b': b_at(r)})
     trend = None
     if len(trend_vals) >= 2:
         for t in trend_vals:
             t['label'] = f"{t['v']:+.2f}"
         vs = [t['v'] for t in trend_vals]
-        lo, hi = min(vs + [0]), max(vs + [0])
+        lo, hi = min(vs + [0, b_now]), max(vs + [0, b_now])
         pad = max((hi - lo) * 0.15, 0.05)
         lo, hi = lo - pad, hi + pad
         y = lambda v: 10 + (hi - v) / (hi - lo) * 180
         x = lambda i: i / (len(vs) - 1) * 1000
         trend = {'line': ' '.join(f'{x(i):.1f},{y(v):.1f}' for i, v in enumerate(vs)),
                  'points': [{'x': round(x(i) / 10, 2), 'y': round(y(v), 1), 'date': trend_vals[i]['date'],
-                             'label': trend_vals[i]['label'], 'pos': v >= 0} for i, v in enumerate(vs)],
+                             'label': trend_vals[i]['label'], 'pos': v >= trend_vals[i]['b']} for i, v in enumerate(vs)],
+                 'bench_y': round(y(b_now), 1),
                  'avg_y': round(y(sum(vs) / len(vs)), 1), 'avg': round(sum(vs) / len(vs), 3),
                  'zero': round(y(0), 1), 'hi': round(hi, 2), 'lo': round(lo, 2),
                  'first': trend_vals[0]['date'], 'last': trend_vals[-1]['date']}
@@ -160,7 +175,7 @@ def _category_page(cat):
         for row in rows:
             vals = per_round.get(row['key'], [])
             row['played'] = len(vals)
-            row['lost_in'] = sum(1 for v in vals if v < 0)
+            row['lost_in'] = sum(1 for v in vals if v < b_now)
         return rows
 
     tables = [(title, _rows(dim), dim) for dim, title in cfg['tables']]
@@ -210,7 +225,7 @@ def _category_page(cat):
         wind_rows=wind_rows, extra=extra, lie=lie, wind=wind, windy_kph=WINDY_KPH,
         headline_rel=headline_rel, prev_n=pn, prev_rounds_n=len(prev),
         plays_like=plays_like, plays_verdict=hcp_equiv.verdict(plays_like, hcp_index), hcp_index=hcp_index,
-        shots_per18=shots_per18,
+        shots_per18=shots_per18, bench=bench, b_now=b_now,
     )
 
 

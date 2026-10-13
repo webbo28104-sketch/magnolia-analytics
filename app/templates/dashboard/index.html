@@ -84,6 +84,7 @@
 {% macro f(v, d=2) -%}{% if v is none %}—{% else %}{% set rv = v | round(d) %}{% if rv > 0 %}+{{ '%.*f' | format(d, rv) }}{% elif rv < 0 %}−{{ '%.*f' | format(d, -rv) }}{% else %}{{ '%.*f' | format(d, 0) }}{% endif %}{% endif %}{%- endmacro %}
 {% macro meter(rel) -%}{%- set lv = {'thin': 1, 'early': 2, 'developing': 3, 'solid': 4}[rel.tier] -%}<span class="conf" title="{{ rel.tier_label }}">{% for i in range(4) %}<i class="{{ 'on' if i < lv }}"></i>{% endfor %}</span>{%- endmacro %}
 {% macro c(v) -%}{% if v is none %}{% elif v >= 0 %}pos{% else %}neg{% endif %}{%- endmacro %}
+{% macro cb(v, b) -%}{% if v is none %}{% elif v >= (b or 0) %}pos{% else %}neg{% endif %}{%- endmacro %}
 
 {% block content %}
 <div class="db">
@@ -143,9 +144,9 @@
   <section class="kpis">
     <div class="kpi"><span class="lbl">Scoring average</span><span class="v">{{ kpi.scoring_avg if kpi.scoring_avg is not none else '—' }}</span><span class="s">Average gross score over your {{ kpi.scoring_n }} most recent 18-hole round{{ 's' if kpi.scoring_n != 1 }}</span></div>
     {% if user_is_pro %}
-    <div class="kpi"><span class="lbl">Strokes gained / round</span><span class="v {{ c(kpi.sg_round) }}">{{ f(kpi.sg_round) }}</span>
-      <span class="s">vs a scratch golfer, per 18 holes, last {{ window }} rounds{% if kpi.sg_round_delta is not none %}. <span class="{{ c(kpi.sg_round_delta) }}">{{ f(kpi.sg_round_delta, 1) }}</span> compared with the {{ window }} before{% endif %}</span></div>
-    <div class="kpi"><span class="lbl">Strokes gained / shot</span><span class="v {{ c(kpi.sg_shot) }}">{{ f(kpi.sg_shot, 3) }}</span><span class="s">Average over {{ kpi.shots }} measured shots in the last {{ window }} rounds</span></div>
+    <div class="kpi"><span class="lbl">Strokes gained / round</span><span class="v {{ cb(kpi.sg_round, bench.round18 if bench else 0) }}">{{ f(kpi.sg_round) }}</span>
+      <span class="s">vs a scratch golfer, per 18 holes, last {{ window }} rounds{% if bench %}; a {{ bench.index_txt }} handicap typically records {{ f(bench.round18, 1) }}{% endif %}{% if kpi.sg_round_delta is not none %}. <span class="{{ c(kpi.sg_round_delta) }}">{{ f(kpi.sg_round_delta, 1) }}</span> compared with the {{ window }} before{% endif %}</span></div>
+    <div class="kpi"><span class="lbl">Strokes gained / shot</span><span class="v {{ cb(kpi.sg_shot, bench.shot.all if bench else 0) }}">{{ f(kpi.sg_shot, 3) }}</span><span class="s">Average over {{ kpi.shots }} measured shots in the last {{ window }} rounds</span></div>
     {% endif %}
     <div class="kpi"><span class="lbl">Rounds logged</span><span class="v">{{ total_complete }}</span><span class="s">All time · <a href="{{ url_for('bag.index') }}" style="color:var(--text-muted);text-decoration:underline">my bag</a></span></div>
   </section>
@@ -163,13 +164,14 @@
         <line x1="0" y1="20" x2="1000" y2="20" stroke="rgba(255,255,255,.06)" vector-effect="non-scaling-stroke"></line>
         <line x1="0" y1="120" x2="1000" y2="120" stroke="rgba(255,255,255,.06)" vector-effect="non-scaling-stroke"></line>
         <line x1="0" y1="220" x2="1000" y2="220" stroke="rgba(255,255,255,.06)" vector-effect="non-scaling-stroke"></line>
+        {% if trend.bench is not none %}<line x1="0" y1="{{ trend.bench }}" x2="1000" y2="{{ trend.bench }}" stroke="rgba(201,168,76,.75)" stroke-dasharray="2 5" vector-effect="non-scaling-stroke"></line>{% endif %}
         {% if trend.zero is not none %}<line x1="0" y1="{{ trend.zero }}" x2="1000" y2="{{ trend.zero }}" stroke="rgba(255,255,255,.35)" stroke-dasharray="6 6" vector-effect="non-scaling-stroke"></line>{% endif %}
         <polyline points="{{ trend.line }}" fill="none" stroke="rgba(154,162,158,.55)" stroke-width="1" vector-effect="non-scaling-stroke"></polyline>
         <polyline points="{{ trend.avg }}" fill="none" stroke="#c9a84c" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>
       </svg>
       {% for d in trend.dots %}<a href="{{ url_for('reports.view_report', round_id=d.id) }}" class="dot" style="left: calc(40px + (100% - 40px) * {{ d.x / 1000 }}); top: {{ d.y }}px" title="{{ d.date }}: {{ f(d.v, 1) }}" aria-label="{{ d.date }} round, {{ f(d.v, 1) }} strokes gained"></a>{% endfor %}
     </div>
-    <div class="chart-x"><span>{{ trend.dots[0].date }}</span><span class="faint">Rounds, oldest to newest · strokes gained per 18 holes{% if trend.zero is not none %} · dashed line = scratch level{% endif %}</span><span>{{ trend.dots[-1].date }}</span></div>
+    <div class="chart-x"><span>{{ trend.dots[0].date }}</span><span class="faint">Rounds, oldest to newest · strokes gained per 18 holes{% if trend.zero is not none %} · dashed line = scratch level{% endif %}{% if trend.bench is not none %} · <span style="color:var(--gold)">gold dotted = typical for a {{ bench.index_txt }} ({{ f(trend.bench_v, 1) }})</span>{% endif %}</span><span>{{ trend.dots[-1].date }}</span></div>
   </section>
   {% endif %}
 
@@ -178,14 +180,14 @@
     <section>
       <div class="sec-h" style="flex-direction:column;align-items:flex-start;gap:4px">
         <h2 class="sec-t">By category · last {{ window }} rounds</h2>
-        <p class="sec-d">Average strokes gained per shot in each part of your game. The small line shows how it has moved round by round. Change = compared with the {{ window }} rounds before.</p>
+        <p class="sec-d">Average strokes gained per shot in each part of your game{% if bench %}, coloured against what a {{ bench.index_txt }} handicap normally records (green = better than normal for you){% endif %}. The small line shows how it has moved round by round. Change = compared with the {{ window }} rounds before.</p>
       </div>
       <div class="row hdr" style="grid-template-columns: minmax(0,1fr) 90px 64px 58px;"><span>Category</span><span>Per-round trend</span><span class="r">Per shot</span><span class="r">Change</span></div>
       {% for cat in cats %}
       <a class="row" href="{{ cat.href }}" style="grid-template-columns: minmax(0,1fr) 90px 64px 58px;">
         <span style="display:flex;flex-direction:column;gap:2px"><span class="t">{{ cat.label }}</span><span class="m">{{ f(cat.per_round, 1) }} per round · {{ cat.n }} shots{% if cat.rel %} · {{ meter(cat.rel) }} {{ cat.rel.tier_label }}{% endif %}</span></span>
         {% if cat.spark %}<svg viewBox="0 0 90 24" style="width:90px;height:24px" role="img" aria-label="{{ cat.label }} per-round trend"><polyline points="{{ cat.spark }}" fill="none" stroke="#9aa29e" stroke-width="1.5"></polyline></svg>{% else %}<span class="m">—</span>{% endif %}
-        <span class="num {{ c(cat.per) }}">{{ f(cat.per, 3) }}</span>
+        <span class="num {{ cb(cat.per, bench.shot[cat.cat] if bench else 0) }}" title="{% if bench %}A {{ bench.index_txt }} averages {{ f(bench.shot[cat.cat], 3) }}{% endif %}">{{ f(cat.per, 3) }}</span>
         <span class="num {{ c(cat.delta) }}" style="font-size:12px">{{ f(cat.delta, 3) if cat.delta is not none else '—' }}</span>
       </a>
       {% endfor %}
@@ -193,15 +195,15 @@
     <section>
       <div class="sec-h" style="flex-direction:column;align-items:flex-start;gap:4px">
         <h2 class="sec-t">Biggest leaks · last {{ window }} rounds</h2>
-        <p class="sec-d">The groups of shots that cost you the most strokes in total, and how often they did it.</p>
+        <p class="sec-d">The groups of shots that cost you the most strokes{% if bench %} beyond what a {{ bench.index_txt }} handicap normally loses there{% endif %}, and how often they did it.</p>
       </div>
-      <div class="row hdr" style="grid-template-columns: minmax(0,1fr) 40px 58px 60px;"><span>Shots</span><span class="r">Count</span><span class="r">Per shot</span><span class="r">Total</span></div>
+      <div class="row hdr" style="grid-template-columns: minmax(0,1fr) 40px 58px 60px;"><span>Shots</span><span class="r">Count</span><span class="r">Per shot</span><span class="r">{{ ('vs ' ~ bench.index_txt) if bench else 'Total' }}</span></div>
       {% for l in leaks %}
       <div class="row" style="grid-template-columns: minmax(0,1fr) 40px 58px 60px;">
         <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="t">{{ l.title }}</span><span class="m">{% if l.pattern %}{{ l.pattern.text }}{% endif %}{% if l.rel %} {{ meter(l.rel) }} {{ l.rel.tier_label }}{% endif %}</span></span>
         <span class="n">{{ l.n }}</span>
         <span class="num">{{ f(l.per) }}</span>
-        <span class="num neg" style="font-size:14px">{{ f(l.sg, 1) }}</span>
+        <span class="num neg" style="font-size:14px" title="{{ f(l.sg, 1) }} vs scratch">{{ f(l.excess if bench else l.sg, 1) }}</span>
       </div>
       {% else %}
       <p class="m" style="font-size:13px;color:var(--text-muted)">No consistent leaks yet. Log a few more rounds.</p>
@@ -231,11 +233,11 @@
         <span class="r faint">{{ r.holes_played }}</span>
         <span class="r">{{ r.total_score or '—' }}{% if item.vs_par is not none %} <span class="faint" style="font-size:11px">{{ 'E' if item.vs_par == 0 else ('+' ~ item.vs_par if item.vs_par > 0 else item.vs_par) }}</span>{% endif %}</span>
         {% if user_is_pro %}
-        <span class="r {{ c(item.sg) }}" style="font-weight:500">{{ f(item.sg, 1) }}</span>
-        {% for k in ['ott', 'app', 'atg', 'putt'] %}<span class="r {{ c(item.cats[k]) }}">{{ f(item.cats[k], 1) }}</span>{% endfor %}
+        <span class="r {{ cb(item.sg, item.b_round) }}" style="font-weight:500">{{ f(item.sg, 1) }}</span>
+        {% for k in ['ott', 'app', 'atg', 'putt'] %}<span class="r {{ cb(item.cats[k], item.b_cat) }}">{{ f(item.cats[k], 1) }}</span>{% endfor %}
         {% else %}
         <span class="r faint">{{ r.total_putts or '—' }}</span>
-        <span class="r {{ c(item.ott) }}">{{ f(item.ott, 1) }}</span>
+        <span class="r {{ cb(item.ott, item.b_cat) }}">{{ f(item.ott, 1) }}</span>
         {% endif %}
         <span class="acts">
           <span class="chip {{ 'is-counting' if r.eg_score_uid }}" style="cursor:default;display:inline-flex;align-items:center" title="{% if r.eg_score_uid %}On England Golf{{ ': adjusted gross ' ~ r.eg_adj_gross if r.eg_adj_gross }}{{ ', differential ' ~ r.eg_differential if r.eg_differential is not none }}{{ ' (full round; ' ~ r.holes_played ~ ' holes logged here)' if r.status == 'complete' and r.eg_adj_gross and (r.holes_played or 18) < 18 and r.holes_played > 9 }}. England Golf’s score is used for handicaps.{% elif current_user.eg_member_no %}Not on England Golf: a casual round. Set automatically by the England Golf sync.{% else %}Connect England Golf on your Profile and official rounds are marked automatically.{% endif %}">{{ 'Official' if r.eg_score_uid else 'Casual' }}</span>

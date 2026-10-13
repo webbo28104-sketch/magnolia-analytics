@@ -197,36 +197,41 @@ details.howto li b { color: var(--text); font-weight: 500; }
 {#- ── Formatting macros ── #}
 {% macro f(v, d=2) -%}{% if v is none %}—{% else %}{% set rv = v | round(d) %}{% if rv > 0 %}+{{ '%.*f' | format(d, rv) }}{% elif rv < 0 %}−{{ '%.*f' | format(d, -rv) }}{% else %}{{ '%.*f' | format(d, 0) }}{% endif %}{% endif %}{%- endmacro %}
 {% macro c(v) -%}{% if v is none %}{% elif v >= 0 %}pos{% else %}neg{% endif %}{%- endmacro %}
+{#- Colour against the handicap benchmark b: green = better than normal for your handicap -#}
+{% macro cb(v, b) -%}{% if v is none %}{% elif v >= (b or 0) %}pos{% else %}neg{% endif %}{%- endmacro %}
 {% macro x(v, s) -%}{{ '%.2f' | format(50 + ([[v / s, -1.0] | max, 1.0] | min) * 50) }}{%- endmacro %}
 {% macro meter(rel) -%}
   {%- set lv = {'thin': 1, 'early': 2, 'developing': 3, 'solid': 4}[rel.tier] -%}
   <span class="conf" title="{{ rel.tier_label }}" aria-label="Confidence: {{ rel.tier_label }}">{% for i in range(4) %}<i class="{{ 'on' if i < lv }}"></i>{% endfor %}</span>
 {%- endmacro %}
 {#- One chart row: bar = SG per shot, whisker = 95% range, gold tick = 10-round average -#}
-{% macro bchart(r, s) -%}
-  {%- set w = ([(r.per | abs) / s, 1.0] | min) * 50 -%}
-  <span class="track" role="img" aria-label="{{ r.label }}: {{ f(r.per) }} strokes per shot{% if r.avg is not none %}, your average {{ f(r.avg) }}{% endif %}">
+{% macro bchart(r, s, bm=0) -%}
+  {%- set d = r.per - bm -%}
+  {%- set w = ([(d | abs) / s, 1.0] | min) * 50 -%}
+  <span class="track" role="img" aria-label="{{ r.label }}: {{ f(r.per) }} strokes per shot vs scratch, {{ f(d) }} vs your handicap benchmark{% if r.avg is not none %}, your average {{ f(r.avg) }}{% endif %}">
     <span class="zero"></span>
-    <span class="bar" style="{{ 'left' if r.per >= 0 else 'right' }}: 50%; width: {{ '%.2f' | format(w) }}%; background: {{ 'var(--gain)' if r.per >= 0 else 'var(--loss)' }};"></span>
-    {%- if r.rel and r.rel.ci is not none and r.n > 1 %}{% set a = x(r.rel.lo, s) | float %}{% set b = x(r.rel.hi, s) | float %}<span class="ci" style="left: {{ a }}%; width: {{ '%.2f' | format(b - a) }}%;"></span>{% endif %}
-    {%- if r.avg is not none %}<span class="avg" style="left: {{ x(r.avg, s) }}%;"></span>{% endif %}
+    <span class="bar" style="{{ 'left' if d >= 0 else 'right' }}: 50%; width: {{ '%.2f' | format(w) }}%; background: {{ 'var(--gain)' if d >= 0 else 'var(--loss)' }};"></span>
+    {%- if r.rel and r.rel.ci is not none and r.n > 1 %}{% set a = x(r.rel.lo - bm, s) | float %}{% set b = x(r.rel.hi - bm, s) | float %}<span class="ci" style="left: {{ a }}%; width: {{ '%.2f' | format(b - a) }}%;"></span>{% endif %}
+    {%- if r.avg is not none %}<span class="avg" style="left: {{ x(r.avg - bm, s) }}%;"></span>{% endif %}
   </span>
 {%- endmacro %}
 {% macro brows(rows, s, unit='shot', mono=False) -%}
-  <div class="bhead"><span>{{ caller() if caller is defined else '' }}</span><span class="axis3"><span>−{{ s }}</span><span>0</span><span>+{{ s }}</span></span><span class="r">Per {{ unit }}</span><span class="r">Total</span></div>
+  <div class="bhead"><span>{{ caller() if caller is defined else '' }}</span><span class="axis3"><span>−{{ s }}</span><span title="Centre line: what a {{ bench.index_txt if bench else 'scratch' }} handicap typically gains per {{ unit }} here">{{ (bench.index_txt ~ ' HCP') if bench else '0' }}</span><span>+{{ s }}</span></span><span class="r">Per {{ unit }}</span><span class="r">Total</span></div>
   {% for r in rows %}
   <div class="brow {{ 'thin' if r.rel and r.rel.tier == 'thin' }}">
     <div class="bmain">
       <span class="lbl {{ 'm' if mono }}">{{ r.label }}</span>
-      {{ bchart(r, s) }}
-      <span class="num {{ c(r.per) }}">{{ f(r.per) }}</span>
-      <span class="num {{ c(r.sg) }}">{{ f(r.sg) }}</span>
+      {% set bm = bshot.get((r.dim or '').split('_')[0], bshot['all']) if r.dim is defined else 0 %}
+      {{ bchart(r, s, bm) }}
+      <span class="num {{ cb(r.per, bm) }}">{{ f(r.per) }}</span>
+      <span class="num {{ cb(r.sg, bm * r.n) }}">{{ f(r.sg) }}</span>
     </div>
     <div class="bdetail">
       <span>{{ r.n }} {{ unit }}{{ 's' if r.n != 1 }}{% if r.holed is defined and r.holed is not none %} · {{ r.holed }} holed{% if r.scratch_make %} (scratch holes ~{{ r.scratch_make }}%){% endif %}{% endif %}</span>
       {% if r.rel %}<span>{{ meter(r.rel) }} {{ r.rel.tier_label }}{% if r.rel.ci is not none and r.n > 1 %} · ±{{ '%.2f' | format(r.rel.ci) }}{% endif %}</span>{% endif %}
       {% set pl = shots_plays_like(r.per, shots_per18.get(dim_cat.get(r.dim))) if r.dim is defined else none %}
       {% if pl is not none and r.n >= 3 %}<span title="If every one of these shots in 18 holes were like this">plays like a {{ hcp_fmt(pl) }} from here</span>{% endif %}
+      {% if bench and r.dim is defined %}<span>a {{ bench.index_txt }} averages {{ f(bm) }}/{{ unit }}</span>{% endif %}
       {% if r.avg is not none %}<span>your usual {{ f(r.avg) }}/{{ unit }}</span>{% endif %}
       {% if r.pattern and r.pattern.kind in ('recurring', 'one-off', 'improving') %}<span class="pat {{ r.pattern.kind }}">{{ r.pattern.text }}</span>{% endif %}
     </div>
@@ -270,10 +275,10 @@ details.howto li b { color: var(--text); font-weight: 500; }
       <div class="hero-block r">
         <span class="label">Strokes gained vs scratch</span>
         {% if sg_total is not none %}
-        <span class="big-sg {{ c(sg_total) }}">{{ f(sg_total) }}</span>
+        <span class="big-sg {{ cb(sg_total, bhole * holes_played) }}">{{ f(sg_total) }}</span>
         <span class="sub">over the {{ holes_played }} holes played · {% if shots_measured %}{{ f(sg_total / shots_measured, 3) }} per shot across {{ shots_measured }} measured shots{% endif %}{% if sg_pace18 is not none %}<br>18-hole pace {{ f(sg_pace18, 1) }}{% endif %}</span>
         {% else %}
-        <span class="big-sg {{ c(cat_by.ott.total) }}">{{ f(cat_by.ott.total) }}</span>
+        <span class="big-sg {{ cb(cat_by.ott.total, bshot.ott * (cat_by.ott.n or 0)) }}">{{ f(cat_by.ott.total) }}</span>
         <span class="sub">off the tee only · full strokes gained with Pro</span>
         {% endif %}
       </div>
@@ -303,6 +308,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
         <summary>How to read this report</summary>
         <ul>
           <li><b>Strokes gained (SG)</b> compares every shot with what a scratch (0 handicap) golfer averages from the same distance and lie. <b>0 = scratch.</b> −0.30 means that shot cost you 0.3 strokes more than a scratch golfer; negative numbers are normal for anyone who isn’t scratch.</li>
+          <li><b>Colours and centre lines are judged against your handicap</b>{% if bench %} ({{ bench.index_txt }}, {{ bench.label }}){% endif %}, not scratch. A {{ bench.index_txt if bench else '10' }} handicap loses some strokes to scratch on almost every shot, so green means better than normal for you and orange means worse. The numbers themselves are still strokes gained vs scratch.</li>
           <li><b>Plays like</b> turns that into a handicap: strokes lost to scratch, scaled to 18 holes. Each part of the game counts for a quarter, so −2 off the tee over 9 holes is −4 per 18 and plays like a 16 handicap. On a breakdown row it means “if every shot like this were played this well, you’d play to a …”.</li>
           <li><b>Per shot</b> is the average across the shots in that group; <b>Total</b> is all of them added up. Category totals add up to your round total.</li>
           <li><b>The confidence bars</b> (▮▮▮▮) show how much data is behind a number: 1 bar = fewer than 3 shots, too few to judge; 4 bars = 30+ shots, solid. The <b>± range</b> is where the true average probably sits; if the whole range is below 0, the loss is more than normal shot-to-shot luck.</li>
@@ -361,13 +367,13 @@ details.howto li b { color: var(--text); font-weight: 500; }
             <td>{{ cat.label }}
               {% if cat.allowed and cat.rel %}<small>{{ meter(cat.rel) }} {{ cat.rel.tier_label }}{% if cat.rel.ci is not none and cat.n > 1 %} · ±{{ '%.2f' | format(cat.rel.ci) }}{% endif %}{% if cat.pattern and cat.pattern.kind in ('recurring', 'one-off', 'improving') %}<br>{{ cat.pattern.text }}{% endif %}</small>{% elif not cat.allowed %}<small>Pro</small>{% endif %}</td>
             <td>{{ cat.n if cat.allowed else '—' }}</td>
-            <td class="{{ c(cat.per) }}">{{ f(cat.per) if cat.allowed else '—' }}</td>
-            <td class="{{ c(cat.total) }}">{{ f(cat.total) if cat.allowed else '—' }}</td>
+            <td class="{{ cb(cat.per, bshot[cat.cat]) }}">{{ f(cat.per) if cat.allowed else '—' }}</td>
+            <td class="{{ cb(cat.total, bshot[cat.cat] * (cat.n or 0)) }}">{{ f(cat.total) if cat.allowed else '—' }}</td>
             <td class="faint">{{ f(cat.avg) if cat.allowed and cat.avg is not none else '—' }}</td>
           </tr>
           {% endfor %}
           {% if sg_total is not none %}
-          <tr class="total"><td>All shots</td><td>{{ cat_total_n }}</td><td class="{{ c(sg_total) }}">{{ f(sg_total / cat_total_n if cat_total_n else none) }}</td><td class="{{ c(cat_total_sg) }}">{{ f(cat_total_sg) }}</td><td></td></tr>
+          <tr class="total"><td>All shots</td><td>{{ cat_total_n }}</td><td class="{{ cb(sg_total, bhole * holes_played) }}">{{ f(sg_total / cat_total_n if cat_total_n else none) }}</td><td class="{{ cb(cat_total_sg, bhole * holes_played) }}">{{ f(cat_total_sg) }}</td><td></td></tr>
           {% endif %}
         </tbody>
       </table>
@@ -377,13 +383,13 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% if leaks %}
     <section class="sec">
       <h2 class="sec-title">Where strokes went today</h2>
-      <p class="sec-desc">The groups of shots that cost the most strokes this round, with how much data is behind each and whether it is a pattern or a one-off.</p>
+      <p class="sec-desc">The groups of shots that cost the most strokes{% if bench %} compared with what a {{ bench.index_txt }} handicap normally loses there{% endif %}, with how much data is behind each and whether it is a pattern or a one-off.</p>
       <div>
         {% for l in leaks %}
         <div class="lk">
           <span class="rk">{{ '%02d' | format(loop.index) }}</span>
           <div style="min-width:0"><div class="t">{{ l.title }}</div><div class="faint" style="font-size:11px">{{ l.meta }}</div></div>
-          <div class="nums"><span class="neg">{{ f(l.sg) }}</span><small>{{ f(l.per) }} per {{ 'putt' if l.dim == 'putt_dist' else 'shot' }}</small></div>
+          <div class="nums"><span class="neg">{{ f(l.excess) if bench else f(l.sg) }}</span><small>{% if bench %}vs a {{ bench.index_txt }} · {{ f(l.sg) }} vs scratch{% else %}{{ f(l.per) }} per {{ 'putt' if l.dim == 'putt_dist' else 'shot' }}{% endif %}</small></div>
           <div class="why">{{ meter(l.rel) }} {{ l.rel.tier_label }}{% if l.rel.clear == 'loss' %}, beyond normal variation{% elif l.n > 1 %}, could still be luck{% endif %}.{% if l.pattern %} {{ l.pattern.text }}{% endif %}</div>
         </div>
         {% endfor %}
@@ -415,11 +421,12 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% if strengths %}
     <section class="sec">
       <h2 class="sec-title">What went well today</h2>
+      {% if bench %}<p class="sec-desc">Shots that beat what a {{ bench.index_txt }} handicap normally does from there.</p>{% endif %}
       <div>
         {% for s in strengths %}
         <div class="lk" style="grid-template-columns: minmax(0,1fr) auto;">
           <div style="min-width:0"><div class="t">{{ s.title }}</div><div class="faint" style="font-size:11px">{{ s.meta }}</div></div>
-          <div class="nums"><span class="pos">{{ f(s.sg) }}</span><small>{{ f(s.per) }} per {{ 'putt' if s.dim == 'putt_dist' else 'shot' }}</small></div>
+          <div class="nums"><span class="pos">{{ f(s.excess) if bench else f(s.sg) }}</span><small>{% if bench %}vs a {{ bench.index_txt }} · {{ f(s.sg) }} vs scratch{% else %}{{ f(s.per) }} per {{ 'putt' if s.dim == 'putt_dist' else 'shot' }}{% endif %}</small></div>
           <div class="why" style="grid-column: 1 / 3">{{ meter(s.rel) }} {{ s.rel.tier_label }}.{% if s.pattern %} {{ s.pattern.text }}{% endif %}</div>
         </div>
         {% endfor %}
@@ -433,25 +440,25 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% set in_sg = hole_rows | selectattr('hole_number', 'gt', 9) | map(attribute='sg') | sum %}
     <section class="sec">
       <h2 class="sec-title">Strokes gained on each hole</h2>
-      <p class="sec-desc">Bars above the line gained strokes on a scratch golfer, bars below lost them.{% if split.front and split.back %} Front nine {{ f(out_sg, 1) }}, back nine {{ f(in_sg, 1) }}.{% endif %} Faded bars are holes with a shot missing a distance.</p>
+      <p class="sec-desc">{% if bench %}The centre line is what a {{ bench.index_txt }} handicap averages on a hole ({{ f(bhole) }} vs scratch). Bars above it were better than normal for your handicap, bars below worse.{% else %}Bars above the line gained strokes on a scratch golfer, bars below lost them.{% endif %}{% if split.front and split.back %} Front nine {{ f(out_sg, 1) }}, back nine {{ f(in_sg, 1) }}.{% endif %} Faded bars are holes with a shot missing a distance.</p>
       <div class="hchart-wrap">
         <div class="hy" style="height: {{ hchart.h }}px">
           <span style="top: 0">{{ f(hchart.max_pos, 1) }}</span>
-          <span style="top: {{ hchart.zero }}px">0</span>
+          <span style="top: {{ hchart.zero }}px">{{ (bench.index_txt ~ ' HCP') if bench else '0' }}</span>
           <span style="top: {{ hchart.h }}px">{{ f(-hchart.max_neg, 1) }}</span>
         </div>
         <div class="hchart" style="height: {{ hchart.h }}px; grid-template-columns: repeat({{ n_h }}, minmax(0, 1fr));" role="img" aria-label="Strokes gained per hole">
           <span class="zl" style="top: {{ hchart.zero }}px"></span>
           {% for h in hole_rows %}
-          {% set px = (h.sg | abs) * hchart.scale %}
-          <div class="hcol" title="Hole {{ h.hole_number }}: {{ f(h.sg) }} strokes">
-            <span class="b" style="top: {{ '%.1f' | format(hchart.zero - px if h.sg >= 0 else hchart.zero) }}px; height: {{ '%.1f' | format([px, 1] | max) }}px; background: {{ 'var(--gain)' if h.sg >= 0 else 'var(--loss)' }};{% if not h.complete %} opacity: .45;{% endif %}"></span>
+          {% set px = ((h.rel or 0) | abs) * hchart.scale %}
+          <div class="hcol" title="Hole {{ h.hole_number }}: {{ f(h.sg) }} vs scratch{% if bench %}, {{ f(h.rel) }} vs a {{ bench.index_txt }}{% endif %}">
+            <span class="b" style="top: {{ '%.1f' | format(hchart.zero - px if (h.rel or 0) >= 0 else hchart.zero) }}px; height: {{ '%.1f' | format([px, 1] | max) }}px; background: {{ 'var(--gain)' if (h.rel or 0) >= 0 else 'var(--loss)' }};{% if not h.complete %} opacity: .45;{% endif %}"></span>
           </div>
           {% endfor %}
         </div>
       </div>
       <div class="hx" style="grid-template-columns: repeat({{ n_h }}, minmax(0, 1fr));">{% for h in hole_rows %}<span>{{ h.hole_number }}</span>{% endfor %}</div>
-      {% set ranked = hole_rows | sort(attribute='sg') %}
+      {% set ranked = hole_rows | selectattr('sg', 'ne', none) | sort(attribute='sg') | list %}
       <p class="note">Hardest holes: {% for h in ranked[:3] %}{{ h.hole_number }} ({{ f(h.sg, 1) }}){% if not loop.last %}, {% endif %}{% endfor %}. Best: {{ ranked[-1].hole_number }} ({{ f(ranked[-1].sg, 1) }}).</p>
     </section>
     {% endif %}
@@ -478,7 +485,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
               <td><span class="sp {{ h.score_class }}">{{ h.score }}</span></td>
               <td>{{ h.putts if h.putts is not none else '—' }}</td>
               <td>{{ '●' if h.gir else '·' }}</td>
-              <td class="{{ c(h.sg) }}">{{ f(h.sg) if h.sg is not none else '' }}</td>
+              <td class="{{ cb(h.sg, bhole) }}">{{ f(h.sg) if h.sg is not none else '' }}</td>
             </tr>
             {% if h.hole_number == 9 and split.front and split.back %}
             <tr class="sub"><td colspan="3">Out</td><td>{{ split.front.score }}</td><td>{{ split.front.putts }}</td><td>{{ split.front.gir }}</td><td>{{ split.front.score_label }}</td></tr>
@@ -502,8 +509,8 @@ details.howto li b { color: var(--text); font-weight: 500; }
       <h2 class="sec-title">Off the tee</h2>
       <p class="sec-desc">Tee shots on par 4s and 5s, plus any recovery punch-out after a tee shot into the trees.</p>
       <div class="kpis">
-        <div class="kpi"><span class="label">Total SG</span><span class="v {{ c(ott.total) }}">{{ f(ott.total) }}</span><span class="s">{{ ott.n or 0 }} shots this round</span></div>
-        <div class="kpi"><span class="label">Per shot</span><span class="v {{ c(ott.per) }}">{{ f(ott.per) }}</span><span class="s">your usual {{ f(ott.avg) }}</span></div>
+        <div class="kpi"><span class="label">Total SG</span><span class="v {{ cb(ott.total, bshot.ott * (ott.n or 0)) }}">{{ f(ott.total) }}</span><span class="s">{{ ott.n or 0 }} shots this round</span></div>
+        <div class="kpi"><span class="label">Per shot</span><span class="v {{ cb(ott.per, bshot.ott) }}">{{ f(ott.per) }}</span><span class="s">your usual {{ f(ott.avg) }}</span></div>
         <div class="kpi"><span class="label">Fairways</span><span class="v">{{ round.fairways_hit if round.fairways_hit is not none else '—' }}/{{ round.fairways_available or 0 }}</span><span class="s">{% if avg_tee_travel %}avg tee shot ~{{ avg_tee_travel }} yds{% else %}{{ fw_pct if fw_pct is not none else '—' }}%{% endif %}</span></div>
       </div>
       {% if insights.ott %}<p class="insight">{{ insights.ott }}</p>{% endif %}
@@ -540,8 +547,8 @@ details.howto li b { color: var(--text); font-weight: 500; }
       <h2 class="sec-title">Approach</h2>
       <p class="sec-desc">Full shots into the green (more than 30 yards out, plus par-3 tee shots).</p>
       <div class="kpis">
-        <div class="kpi"><span class="label">Total SG</span><span class="v {{ c(app.total) }}">{{ f(app.total) }}</span><span class="s">{{ app.n }} shots this round</span></div>
-        <div class="kpi"><span class="label">Per shot</span><span class="v {{ c(app.per) }}">{{ f(app.per) }}</span><span class="s">your usual {{ f(app.avg) }}</span></div>
+        <div class="kpi"><span class="label">Total SG</span><span class="v {{ cb(app.total, bshot.app * (app.n or 0)) }}">{{ f(app.total) }}</span><span class="s">{{ app.n }} shots this round</span></div>
+        <div class="kpi"><span class="label">Per shot</span><span class="v {{ cb(app.per, bshot.app) }}">{{ f(app.per) }}</span><span class="s">your usual {{ f(app.avg) }}</span></div>
         <div class="kpi"><span class="label">Greens in reg.</span><span class="v">{{ round.gir_count }}/{{ holes_data | length }}</span><span class="s">{{ gir_pct }}% of holes</span></div>
       </div>
     </section>
@@ -578,8 +585,8 @@ details.howto li b { color: var(--text); font-weight: 500; }
     <section class="sec">
       <h2 class="sec-title">Short game and putting</h2>
       <div class="kpis" style="grid-template-columns: repeat(2, minmax(0,1fr));">
-        <div class="kpi"><span class="label">Around the green</span><span class="v {{ c(atg.total) }}">{{ f(atg.total) }}</span><span class="s">{{ atg.n }} shots · {{ f(atg.per) }} per shot · your usual {{ f(atg.avg) }}</span></div>
-        <div class="kpi"><span class="label">Putting</span><span class="v {{ c(putt.total) }}">{{ f(putt.total) }}</span><span class="s">{{ putt.n }} putts · {{ f(putt.per) }} per putt · your usual {{ f(putt.avg) }}</span></div>
+        <div class="kpi"><span class="label">Around the green</span><span class="v {{ cb(atg.total, bshot.atg * (atg.n or 0)) }}">{{ f(atg.total) }}</span><span class="s">{{ atg.n }} shots · {{ f(atg.per) }} per shot · your usual {{ f(atg.avg) }}</span></div>
+        <div class="kpi"><span class="label">Putting</span><span class="v {{ cb(putt.total, bshot.putt * (putt.n or 0)) }}">{{ f(putt.total) }}</span><span class="s">{{ putt.n }} putts · {{ f(putt.per) }} per putt · your usual {{ f(putt.avg) }}</span></div>
       </div>
     </section>
 
@@ -619,14 +626,14 @@ details.howto li b { color: var(--text); font-weight: 500; }
         <div class="hole">
           <div class="hole-h">
             <span class="t">Hole {{ h.hole_number }}<span>PAR {{ h.par }}{% if h.yardage %} · {{ h.yardage }} YDS{% endif %} · {{ h.score_label | upper }}</span></span>
-            <span class="mono {{ c(h.sg) }}" style="font-size:14px" title="Strokes gained on this hole">{{ f(h.sg) if h.sg is not none else '' }}</span>
+            <span class="mono {{ cb(h.sg, bhole) }}" style="font-size:14px" title="Strokes gained on this hole (a {{ bench.index_txt if bench else 'scratch' }} averages {{ f(bhole) }} a hole)">{{ f(h.sg) if h.sg is not none else '' }}</span>
           </div>
           {% for s in h.shots %}
           <div class="shot">
             <span class="ty">{{ s.type }}</span>
             <span class="cl">{{ s.club }}</span>
             <span class="tx">{{ s.text }}{% if s.penalty %} · +{{ s.penalty }} penalty{% endif %}</span>
-            <span class="sg {{ c(s.sg) }}">{% if s.merged %}<span class="faint" style="font-size:11px">incl. above</span>{% elif s.sg is not none %}{{ f(s.sg) }}{% else %}<span class="faint">—</span>{% endif %}</span>
+            <span class="sg {{ cb(s.sg, bshot.get(s.cat, bshot['all'])) }}">{% if s.merged %}<span class="faint" style="font-size:11px">incl. above</span>{% elif s.sg is not none %}{{ f(s.sg) }}{% else %}<span class="faint">—</span>{% endif %}</span>
           </div>
           {% endfor %}
         </div>
