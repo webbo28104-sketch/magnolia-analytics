@@ -17,6 +17,7 @@ from app.utils.access import is_pro
 from app.utils.round_history import shots_for_round
 from app.utils.shot_sg import CATEGORY_LABELS
 from app.utils import sg_breakdown as bd
+from app.utils import sg_evidence as ev
 
 analytics_bp = Blueprint('analytics', __name__, url_prefix='/analytics')
 
@@ -127,6 +128,8 @@ def _category_page(cat):
             trend_vals.append({'date': r.date_played.strftime('%d %b'), 'v': v})
     trend = None
     if len(trend_vals) >= 2:
+        for t in trend_vals:
+            t['label'] = f"{t['v']:+.2f}"
         vs = [t['v'] for t in trend_vals]
         lo, hi = min(vs + [0]), max(vs + [0])
         pad = max((hi - lo) * 0.15, 0.05)
@@ -134,11 +137,28 @@ def _category_page(cat):
         y = lambda v: 10 + (hi - v) / (hi - lo) * 180
         x = lambda i: i / (len(vs) - 1) * 1000
         trend = {'line': ' '.join(f'{x(i):.1f},{y(v):.1f}' for i, v in enumerate(vs)),
+                 'points': [{'x': round(x(i) / 10, 2), 'y': round(y(v), 1), 'date': trend_vals[i]['date'],
+                             'label': trend_vals[i]['label'], 'pos': v >= 0} for i, v in enumerate(vs)],
+                 'avg_y': round(y(sum(vs) / len(vs)), 1), 'avg': round(sum(vs) / len(vs), 3),
                  'zero': round(y(0), 1), 'hi': round(hi, 2), 'lo': round(lo, 2),
                  'first': trend_vals[0]['date'], 'last': trend_vals[-1]['date']}
 
-    tables = [(title, bd.rows(cur_shots, dim, prev_shots), dim) for dim, title in cfg['tables']]
-    heat_rows_detail = bd.rows(cur_shots, heat_dim, prev_shots)
+    # ── Breakdown tables, each row with confidence and a round-by-round pattern ──
+    sd_by_cat = ev.category_sd(cur_shots + prev_shots)
+    cur_filtered = [(r, {'shots': _filter(d['shots'], cat, lie, wind)}) for r, d in cur]
+
+    def _rows(dim):
+        rows = ev.annotate(bd.rows(cur_shots, dim, prev_shots), sd_by_cat)
+        per_round = ev.per_round_values(cur_filtered, dim)
+        for row in rows:
+            vals = per_round.get(row['key'], [])
+            row['played'] = len(vals)
+            row['lost_in'] = sum(1 for v in vals if v < 0)
+        return rows
+
+    tables = [(title, _rows(dim), dim) for dim, title in cfg['tables']]
+    heat_rows_detail = _rows(heat_dim)
+    headline_rel = ev.reliability(per, n, sd_by_cat.get(cat, 0.5))
 
     # ── Calm vs windy by club (approach & short game) ──
     wind_rows = []
@@ -181,6 +201,7 @@ def _category_page(cat):
         rounds_n=len(cur), heat=heat, cols=[r.date_played.strftime('%d/%m') for r, _ in cols],
         insight=insight, trend=trend, tables=tables, heat_rows=heat_rows_detail,
         wind_rows=wind_rows, extra=extra, lie=lie, wind=wind, windy_kph=WINDY_KPH,
+        headline_rel=headline_rel, prev_n=pn, prev_rounds_n=len(prev),
     )
 
 

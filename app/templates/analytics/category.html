@@ -45,6 +45,34 @@
   .chart svg { width: 100%; height: 200px; display: block; }
   .chart .yt { position: absolute; left: 0; font-family: var(--font-mono); font-size: 10px; color: #7a827e; transform: translateY(-50%); }
   .empty { border-top: 1px solid var(--border); padding: 32px 0; color: var(--text-muted); }
+  .sec-title { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.02em; }
+  .sec-desc { margin: 4px 0 14px; font-size: 13px; line-height: 1.55; color: var(--text-muted); max-width: 760px; }
+  details.howto { border: 1px solid var(--border); padding: 0 14px; }
+  details.howto summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-size: 13px; font-weight: 500; list-style: none; }
+  details.howto summary::after { content: '+'; margin-left: auto; color: var(--text-muted); font-family: var(--font-mono); }
+  details.howto[open] summary::after { content: '−'; }
+  details.howto ul { margin: 0 0 14px; padding-left: 18px; font-size: 13px; line-height: 1.6; color: var(--text-muted); }
+  details.howto li b { color: var(--ink); font-weight: 500; }
+  .conf { display: inline-flex; align-items: center; gap: 3px; vertical-align: middle; }
+  .conf i { display: inline-block; width: 4px; height: 9px; background: rgba(255,255,255,.14); }
+  .conf i.on { background: var(--ink); }
+  .bhead { display: grid; gap: 12px; align-items: end; padding-bottom: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: #7a827e; }
+  .bhead .r { text-align: right; }
+  .axis3 { display: flex; justify-content: space-between; }
+  .rowmeta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 14px; padding-bottom: 8px; margin-top: -6px; font-family: var(--font-sans); font-size: 11px; color: #7a827e; }
+  .rowmeta .rec { color: var(--loss); } .rowmeta .str { color: var(--gain); }
+  .row.thin > span:not(.rowmeta) { opacity: .5; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 11px; color: #7a827e; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { display: inline-block; }
+  .legend .sw-bar { width: 14px; height: 8px; background: var(--gain); }
+  .legend .sw-tick { width: 2px; height: 12px; background: #7a827e; }
+  .legend .sw-line { width: 16px; height: 2px; background: #c9a84c; }
+  .legend .sw-dash { width: 16px; border-top: 1px dashed rgba(255,255,255,.4); }
+  .chart .xt { display: flex; justify-content: space-between; margin-top: 6px; font-family: var(--font-mono); font-size: 10px; color: #7a827e; }
+  .chart .ytitle { position: absolute; left: 0; top: -18px; font-family: var(--font-mono); font-size: 10px; color: #7a827e; letter-spacing: .06em; text-transform: uppercase; }
+  .chart .pt { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; }
+  .chart .plot { position: relative; }
 </style>
 {% endblock %}
 
@@ -53,6 +81,11 @@
 {% macro bar(v, avg=none, s=0.5) -%}
   {%- set w = ([(v | abs) / s, 1.0] | min) * 50 -%}
   <span class="track"><span class="z"></span><span class="b" style="{{ 'left' if v >= 0 else 'right' }}: 50%; width: {{ '%.2f' | format(w) }}%; background: {{ 'var(--gain)' if v >= 0 else 'var(--loss)' }};"></span>{% if avg is not none %}<span class="a" style="left: {{ '%.2f' | format(50 + ([[avg / s, -1.0] | max, 1.0] | min) * 50) }}%;" title="Previous 10 rounds {{ f(avg) }}"></span>{% endif %}</span>
+{%- endmacro %}
+
+{% macro meter(rel) -%}
+  {%- set lv = {'thin': 1, 'early': 2, 'developing': 3, 'solid': 4}[rel.tier] -%}
+  <span class="conf" title="{{ rel.tier_label }}" aria-label="Confidence: {{ rel.tier_label }}">{% for i in range(4) %}<i class="{{ 'on' if i < lv }}"></i>{% endfor %}</span>
 {%- endmacro %}
 
 {% block content %}
@@ -67,8 +100,8 @@
   <div class="an-head">
     <div style="display:flex;align-items:baseline;gap:18px;flex-wrap:wrap">
       <h1>{{ cfg.title }}</h1>
-      <span class="mono {{ c(per) }}" style="font-size:22px">{{ f(per, 3) }} / {{ cfg.unit }}</span>
-      {% if delta is not none %}<span class="mono {{ c(delta) }}" style="font-size:12px">{{ f(delta, 3) }} vs previous 10</span>{% endif %}
+      <span class="mono {{ c(per) }}" style="font-size:22px" title="Average strokes gained per {{ cfg.unit }} vs a Tour player">{{ f(per, 3) }} strokes / {{ cfg.unit }}</span>
+      {% if delta is not none %}<span class="mono {{ c(delta) }}" style="font-size:12px">{{ f(delta, 3) }} vs your previous {{ prev_rounds_n }} rounds</span>{% endif %}
     </div>
     <form class="filters" method="GET">
       {% if cat in ('app', 'atg') %}
@@ -95,29 +128,42 @@
   <div class="empty">No measured {{ cfg.title | lower }} shots in your last {{ rounds_n }} rounds{% if lie or wind %} with these filters{% endif %}. Log rounds shot by shot, with distances, to fill this page.</div>
   {% else %}
 
+  <details class="howto">
+    <summary>How to read this page</summary>
+    <ul>
+      <li><b>Strokes gained (SG)</b> compares each {{ cfg.unit }} with what a Tour player averages from the same spot. <b>+0.10</b> means that {{ cfg.unit }} was a tenth of a stroke better than Tour; <b>−0.30</b> means it cost you about a third of a stroke. 0 = Tour level.</li>
+      <li><b>Per {{ cfg.unit }}</b> is the average, so you can compare groups of different sizes. <b>Total</b> is the sum: how many strokes that group actually cost or gained over the period.</li>
+      <li><b>Confidence bars</b> (▮▮▮▮) show how much data is behind a number: 1 bar = under 3 {{ cfg.unit }}s, too few to judge; 2 = early signal; 3 = developing (10+); 4 = solid (30+). The <b>± range</b> is where your true average probably sits. If the whole range is below 0, the loss is more than normal shot-to-shot luck.</li>
+      <li><b>Lost strokes in X of Y rounds</b> tells you whether something is a pattern (most rounds) or a one-off bad day.</li>
+      <li>Everything here uses your last {{ rounds_n }} complete rounds{% if prev_rounds_n %}, compared with the {{ prev_rounds_n }} before that{% endif %}{% if lie or wind %}, with the filters above applied{% endif %}.</li>
+    </ul>
+  </details>
+
   <section class="kpis">
-    <div class="kpi"><span class="lbl">SG / {{ cfg.unit }}</span><span class="v {{ c(per) }}">{{ f(per, 3) }}</span><span class="s">{{ n }} {{ cfg.unit }}s · last {{ rounds_n }} rounds</span></div>
-    <div class="kpi"><span class="lbl">SG / round</span><span class="v {{ c(per_round) }}">{{ f(per_round) }}</span><span class="s">holes actually played</span></div>
+    <div class="kpi"><span class="lbl">Strokes gained per {{ cfg.unit }}</span><span class="v {{ c(per) }}">{{ f(per, 3) }}</span><span class="s">{{ meter(headline_rel) }} {{ headline_rel.tier_label }}{% if headline_rel.ci is not none and n > 1 %} · likely {{ f(headline_rel.lo) }} to {{ f(headline_rel.hi) }}{% endif %}<br>{{ n }} {{ cfg.unit }}s over {{ rounds_n }} rounds</span></div>
+    <div class="kpi"><span class="lbl">Strokes gained per round</span><span class="v {{ c(per_round) }}">{{ f(per_round) }}</span><span class="s">average {{ cfg.title | lower }} total per round of 9+ holes (holes actually played, not scaled to 18)</span></div>
     {% for l, v, s in extra %}<div class="kpi"><span class="lbl">{{ l }}</span><span class="v">{{ v }}</span><span class="s">{{ s }}</span></div>{% endfor %}
   </section>
 
   {% if heat %}
   <section>
+    <h2 class="sec-title">Round by round, by {{ 'hole length' if cat == 'ott' else ('putt length' if cat == 'putt' else 'distance to the flag') }}</h2>
+    <p class="sec-desc">Each row is a {{ 'hole length' if cat == 'ott' else 'distance' }} range ({{ cfg.heat_label | lower }}); each column is one round, oldest on the left. Colour shows strokes gained per {{ cfg.unit }} in that round: green beat Tour, orange lost to Tour, stronger colour = bigger number. Hover a square for the exact value and how many {{ cfg.unit }}s it covers. A row that is orange across most rounds is a habit, not bad luck.</p>
     <div class="sec-h">
-      <span class="lbl">SG / {{ cfg.unit }} · {{ cfg.heat_label | lower }} × round</span>
-      <span class="scale">−0.5 <i></i> +0.5 · BLANK = NONE PLAYED</span>
+      <span class="lbl">Rounds, oldest → newest</span>
+      <span class="scale">LOST −0.5 <i></i> +0.5 GAINED · BLANK = NONE FROM HERE</span>
     </div>
     <div class="heat-wrap"><div class="heat">
       <div class="hrow" style="grid-template-columns: 80px repeat({{ cols | length }}, minmax(0,1fr)) 64px 40px;">
         <span class="lbl" style="font-size:10px">{{ cfg.heat_label }}</span>
         {% for d in cols %}<span class="mono faint" style="font-size:10px;text-align:center">{{ d }}</span>{% endfor %}
-        <span class="lbl" style="font-size:10px;text-align:right">/{{ cfg.unit }}</span><span class="lbl" style="font-size:10px;text-align:right">N</span>
+        <span class="lbl" style="font-size:10px;text-align:right" title="Average over all rounds">Avg</span><span class="lbl" style="font-size:10px;text-align:right" title="Number of {{ cfg.unit }}s">{{ cfg.unit | capitalize }}s</span>
       </div>
       {% for h in heat %}
       <div class="hrow" style="grid-template-columns: 80px repeat({{ cols | length }}, minmax(0,1fr)) 64px 40px;">
         <span class="k">{{ h.label }}</span>
         {% for cell in h.cells %}
-          {% if cell %}<span class="c" title="{{ f(cell.v) }} over {{ cell.n }}" style="background: rgba({{ '94,224,160' if cell.pos else '255,106,61' }},{{ cell.a }});">{{ f(cell.v, 1) if cell.a > 0.5 else '' }}</span>
+          {% if cell %}<span class="c" title="{{ cols[loop.index0] }}: {{ f(cell.v) }} per {{ cfg.unit }} over {{ cell.n }} {{ cfg.unit }}{{ 's' if cell.n != 1 }}" style="background: rgba({{ '94,224,160' if cell.pos else '255,106,61' }},{{ cell.a }});">{{ f(cell.v, 1) if cell.a > 0.5 else '' }}</span>
           {% else %}<span class="c empty"></span>{% endif %}
         {% endfor %}
         <span class="r {{ c(h.per) }}">{{ f(h.per) }}</span>
@@ -131,41 +177,70 @@
 
   {% if trend %}
   <section>
-    <div class="sec-h"><span class="lbl">SG / {{ cfg.unit }} per round</span><span class="lbl faint">{{ trend.first }} → {{ trend.last }}</span></div>
-    <div class="chart">
+    <h2 class="sec-title">Trend: strokes gained per {{ cfg.unit }}, each round</h2>
+    <p class="sec-desc">One dot per round, {{ trend.first }} to {{ trend.last }}. Above the 0 line = better than Tour that round; below = worse. The dashed line is your average across these rounds ({{ f(trend.avg) }}). A line drifting upward means you are improving.</p>
+    <div class="chart" style="margin-top:22px">
+      <span class="ytitle">SG / {{ cfg.unit }}</span>
       <span class="yt" style="top:10px">{{ f(trend.hi) }}</span>
-      <span class="yt" style="top:{{ trend.zero }}px">0</span>
+      <span class="yt" style="top:{{ trend.zero }}px">0 Tour</span>
       <span class="yt" style="top:190px">{{ f(trend.lo) }}</span>
-      <svg viewBox="0 0 1000 200" preserveAspectRatio="none" role="img" aria-label="SG per shot by round">
-        <line x1="0" y1="{{ trend.zero }}" x2="1000" y2="{{ trend.zero }}" stroke="rgba(255,255,255,.18)" vector-effect="non-scaling-stroke"></line>
-        <polyline points="{{ trend.line }}" fill="none" stroke="#c9a84c" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>
-      </svg>
+      <div class="plot">
+        <svg viewBox="0 0 1000 200" preserveAspectRatio="none" role="img" aria-label="Strokes gained per {{ cfg.unit }} by round">
+          <line x1="0" y1="{{ trend.zero }}" x2="1000" y2="{{ trend.zero }}" stroke="rgba(255,255,255,.3)" vector-effect="non-scaling-stroke"></line>
+          <line x1="0" y1="{{ trend.avg_y }}" x2="1000" y2="{{ trend.avg_y }}" stroke="rgba(255,255,255,.4)" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"></line>
+          <polyline points="{{ trend.line }}" fill="none" stroke="#c9a84c" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>
+        </svg>
+        {% for pt in trend.points %}<span class="pt" style="left:{{ pt.x }}%;top:{{ pt.y }}px;background:{{ 'var(--gain)' if pt.pos else 'var(--loss)' }}" title="{{ pt.date }}: {{ pt.label }} per {{ cfg.unit }}"></span>{% endfor %}
+      </div>
+      <div class="xt">{% for pt in trend.points %}<span>{{ pt.date }}</span>{% endfor %}</div>
     </div>
+    <div class="legend"><span><i class="sw-line"></i>Your SG per {{ cfg.unit }} that round</span><span><i class="sw-dash"></i>Your average</span><span>Solid line = Tour level (0)</span></div>
   </section>
   {% endif %}
 
   <div class="two">
-    {% set detail_title = 'By ' ~ cfg.heat_label | lower %}
+    {% set detail_title = ('By hole length' if cat == 'ott' else ('By putt length' if cat == 'putt' else 'By distance to the flag')) %}
+    {% set descs = {
+      'ott_len': 'Tee shots grouped by the length of the hole (yards).',
+      'ott_club': 'Tee shots grouped by the club you hit.',
+      'ott_result': 'Tee shots grouped by where they finished, so you can see what each miss actually costs.',
+      'app_dist': 'Approach shots grouped by distance to the flag (yards).',
+      'app_lie': 'Approach shots grouped by the lie you played from.',
+      'app_club': 'Approach shots grouped by the club you hit.',
+      'atg_dist': 'Chips, pitches and bunker shots grouped by distance to the flag (yards).',
+      'atg_lie': 'Short-game shots grouped by lie. Rough and bunker shots are judged against Tour from that same lie.',
+      'atg_club': 'Short-game shots grouped by the club you hit.',
+      'putt_dist': 'Putts grouped by length (feet).'} %}
     {% for title, rows, dim in [(detail_title, heat_rows, cfg.heat)] + tables %}
     {% if rows %}
     <section>
-      <div class="sec-h"><span class="lbl">{{ title }}</span><span class="lbl faint">N · /{{ cfg.unit }} · total</span></div>
+      <h2 class="sec-title">{{ title }}</h2>
+      <p class="sec-desc">{{ descs.get(dim, '') }} The bar is strokes gained per {{ cfg.unit }}{% if prev_rounds_n %}; the grey tick is your average over the previous {{ prev_rounds_n }} rounds, so you can see whether you are getting better or worse{% endif %}.</p>
+      <div class="bhead" style="grid-template-columns: 76px minmax(0,1fr) 44px 60px 56px;"><span>Group</span><span class="axis3"><span>−0.5</span><span>0</span><span>+0.5</span></span><span class="r">{{ cfg.unit }}s</span><span class="r">Per {{ cfg.unit }}</span><span class="r">Total</span></div>
       {% for r in rows %}
-      <div class="row" style="grid-template-columns: 76px minmax(0,1fr) 36px 60px 56px;">
+      <div class="row {{ 'thin' if r.rel.tier == 'thin' }}" style="grid-template-columns: 76px minmax(0,1fr) 44px 60px 56px;">
         <span class="t {{ 'mono' if dim.endswith('club') or dim.endswith('dist') or dim.endswith('len') }}" style="{{ 'font-family:var(--font-mono);font-size:12px' if dim.endswith('dist') or dim.endswith('len') or dim.endswith('club') }}">{{ r.label }}</span>
         {{ bar(r.per, r.avg) }}
         <span class="r faint">{{ r.n }}</span>
         <span class="r {{ c(r.per) }}">{{ f(r.per) }}</span>
         <span class="r {{ c(r.sg) }}">{{ f(r.sg, 1) }}</span>
+        <span class="rowmeta">
+          <span>{{ meter(r.rel) }} {{ r.rel.tier_label }}{% if r.rel.ci is not none and r.n > 1 %} · ±{{ '%.2f' | format(r.rel.ci) }}{% if r.rel.clear == 'loss' %} · loss beyond normal variation{% elif r.rel.clear == 'gain' %} · gain beyond normal variation{% endif %}{% endif %}</span>
+          {% if r.played >= 3 %}<span class="{{ 'rec' if r.lost_in / r.played >= 0.6 else ('str' if r.lost_in / r.played <= 0.4 else '') }}">Lost strokes in {{ r.lost_in }} of {{ r.played }} rounds{% if r.lost_in / r.played >= 0.6 %} · pattern{% endif %}</span>{% elif r.played %}<span>Played in {{ r.played }} round{{ 's' if r.played != 1 }}: too few to call a pattern</span>{% endif %}
+          {% if r.avg is not none %}<span>Previous {{ prev_rounds_n }} rounds: {{ f(r.avg) }}</span>{% endif %}
+        </span>
       </div>
       {% endfor %}
+      <div class="legend"><span><i class="sw-bar"></i>SG per {{ cfg.unit }} (green gained, orange lost)</span>{% if prev_rounds_n %}<span><i class="sw-tick"></i>Previous rounds' average</span>{% endif %}</div>
     </section>
     {% endif %}
     {% endfor %}
 
     {% if wind_rows %}
     <section>
-      <div class="sec-h"><span class="lbl">Calm vs windy · SG / {{ cfg.unit }}</span><span class="lbl faint">Wind &gt; {{ windy_kph }} km/h</span></div>
+      <h2 class="sec-title">Calm vs windy, by club</h2>
+      <p class="sec-desc">Strokes gained per {{ cfg.unit }} with each club in calm conditions and in wind over {{ windy_kph }} km/h, across your last {{ rounds_n + prev_rounds_n }} rounds. Small counts are noisy.</p>
+      <div class="bhead" style="grid-template-columns: 52px minmax(0,1fr) 64px 64px;"><span>Club</span><span>Shots (calm · windy)</span><span class="r">Calm</span><span class="r">Windy</span></div>
       {% for w in wind_rows %}
       <div class="row" style="grid-template-columns: 52px minmax(0,1fr) 64px 64px;">
         <span style="font-weight:500">{{ w.club }}</span>
@@ -174,7 +249,7 @@
         <span class="r {{ c(w.windy[0]) }}">{{ f(w.windy[0]) }}</span>
       </div>
       {% endfor %}
-      <p class="note" style="font-size:11px;margin-top:10px">Columns: calm · windy. The caddy weights these when it picks a club on a windy day.</p>
+      <p class="note" style="font-size:11px;margin-top:10px">The caddy uses these when it picks a club on a windy day.</p>
     </section>
     {% endif %}
   </div>
