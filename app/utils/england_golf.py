@@ -200,21 +200,32 @@ def _score_row(item):
         if sc:
             holes.append({'n': n, 'score': sc, 'par': item.get(f'Hole{n}Par'),
                           'yds': item.get(f'Hole{n}Distance')})
+    nine = item.get('IsNineHole')
     row = {
-        'date': _iso_date(_first(item, 'PlayDate', 'DatePlayed', 'CaptureDate', 'Date')),
-        'course': _first(item, 'CourseName', 'Course', 'FacilityName', 'ClubName'),
-        'gross': _first(item, 'GrossScore', 'Gross', 'TotalGross'),
-        'adj_gross': _first(item, 'AdjustedGrossScore', 'AdjGrossScore', 'AdjustedGross'),
-        'differential': _first(item, 'ScoreDifferential', 'Differential', 'SD'),
-        'holes': len(holes) or _first(item, 'NoOfHoles', 'HolesPlayed'),
-        'counted': item.get('CountedInHandicap'),
+        'date': _iso_date(_first(item, 'PlayDate', 'DatePlayed', 'CaptureDate')),
+        'course': _first(item, 'CourseName', 'FacilityName', 'ClubName'),
+        'tees': item.get('Marker'),
+        'adj_gross': _first(item, 'AdjustedGross', 'AdjustedGrossScore'),
+        'stableford': item.get('StablefordPoints'),
+        'differential': _first(item, 'HCDiff', 'ScoreDifferential'),
+        'course_rating': item.get('CourseRating'),
+        'slope': item.get('Slope'),
+        'course_handicap': item.get('CourseHandicap'),
+        'index_at_time': item.get('HandicapIndex'),
+        'holes': 9 if nine else (18 if nine is False else len(holes) or None),
+        'counted': bool(item.get('CountedInHandicap')),
+        'competition': bool(item.get('IsCompetitionScore')),
         'raw': raw,
     }
     if holes:
         row['hole_scores'] = holes
-    row['cells'] = [str(x) for x in (row['course'], row['gross'] and f"Gross {row['gross']}",
-                                       row['adj_gross'] and f"Adj {row['adj_gross']}",
-                                       row['differential'] and f"Diff {row['differential']}") if x]
+    course = ' · '.join(str(x) for x in (row['course'], row['tees'] and f"{row['tees']} tees",
+                                          row['holes'] == 9 and '9 holes') if x)
+    row['cells'] = [x for x in (course,
+                                row['adj_gross'] and f"Adj gross {row['adj_gross']}",
+                                row['stableford'] is not None and f"{row['stableford']} pts",
+                                row['differential'] and f"Differential {row['differential']}",
+                                row['counted'] and 'counts towards index') if x]
     return row
 
 
