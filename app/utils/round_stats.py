@@ -32,7 +32,7 @@ from app.utils.shot_sg import compute_round
 
 # Increment whenever computation logic changes.
 # Rounds with algo_version < CURRENT_ALGO_VERSION (or NULL) are stale.
-CURRENT_ALGO_VERSION = 7   # v7: scratch baseline (Tour + scratch gap); v6: per-shot SG, rough short-game baseline
+CURRENT_ALGO_VERSION = 8   # v8: scratch gap fitted to course ratings (distance-only); v7: SwingU-sized gap
 
 
 def build_course_hole_map(round_):
