@@ -53,4 +53,9 @@ def sync_user(user) -> bool:
     user.eg_scores_json = json.dumps(result['scores'][:200])
     user.eg_pages_text = _pages_text(result['pages'])
     db.session.commit()
+
+    from app.routes.rounds import _recalculate_handicap
+    from app.utils.eg_match import reconcile
+    reconcile(user, result['scores'])
+    _recalculate_handicap(user)
     return True

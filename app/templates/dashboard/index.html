@@ -93,8 +93,9 @@
       <span class="lbl">{{ total_complete }} round{{ 's' if total_complete != 1 }} logged{% if current_user.home_course %} · {{ current_user.home_course }}{% endif %}</span>
       <h1>Welcome back, {{ current_user.first_name }}</h1>
       <div class="db-hcp">
-        <div><div class="v" id="official-hcp">{{ '%.1f' | format(current_user.official_handicap_index) if current_user.official_handicap_index is not none else '—' }}</div><span class="lbl">Official index</span></div>
-        <div><div class="v" id="all-hcp">{{ '%.1f' | format(current_user.handicap_index) if current_user.handicap_index else '—' }}</div><span class="lbl">All rounds</span></div>
+        {% set eg_linked = current_user.eg_member_no and current_user.eg_handicap_index is not none %}
+        <div><div class="v" id="official-hcp">{% if current_user.official_handicap_index is none %}—{% elif current_user.official_handicap_index < 0 %}+{{ '%.1f' | format(-current_user.official_handicap_index) }}{% else %}{{ '%.1f' | format(current_user.official_handicap_index) }}{% endif %}</div><span class="lbl" title="{{ 'Your Handicap Index from England Golf, synced daily' if eg_linked else 'Calculated from rounds marked Official' }}">Official index{{ ' · England Golf' if eg_linked }}</span></div>
+        <div><div class="v" id="all-hcp">{{ '%.1f' | format(current_user.handicap_index) if current_user.handicap_index else '—' }}</div><span class="lbl" title="WHS method over your last 20 Magnolia rounds; England Golf's score is used wherever a round is on England Golf">Magnolia index</span></div>
       </div>
     </div>
     <div class="db-actions">
@@ -220,7 +221,7 @@
       {% for item in recent %}{% set r = item.round %}
       <div class="tr {{ '' if user_is_pro else 'free' }}">
         <span class="faint">{{ r.date_played.strftime('%d %b %y') | upper }}</span>
-        <span class="course"><a href="{{ url_for('reports.view_report', round_id=r.id) }}">{{ r.course.name if r.course else 'Unknown course' }}</a>{% if r.is_partial %} <span class="faint" style="font-size:11px">· partial</span>{% endif %}</span>
+        <span class="course">{% if r.status == 'score_only' %}{{ r.course.name if r.course else 'Unknown course' }} <span class="faint" style="font-size:11px">· from England Golf, score only</span>{% else %}<a href="{{ url_for('reports.view_report', round_id=r.id) }}">{{ r.course.name if r.course else 'Unknown course' }}</a>{% if r.is_partial %} <span class="faint" style="font-size:11px">· partial</span>{% endif %}{% endif %}</span>
         <span class="r faint">{{ r.holes_played }}</span>
         <span class="r">{{ r.total_score or '—' }}{% if item.vs_par is not none %} <span class="faint" style="font-size:11px">{{ 'E' if item.vs_par == 0 else ('+' ~ item.vs_par if item.vs_par > 0 else item.vs_par) }}</span>{% endif %}</span>
         {% if user_is_pro %}
@@ -231,7 +232,12 @@
         <span class="r {{ c(item.ott) }}">{{ f(item.ott, 1) }}</span>
         {% endif %}
         <span class="acts">
+          {% if current_user.eg_member_no %}
+          <span class="chip {{ 'is-counting' if r.eg_score_uid }}" style="cursor:default;display:inline-flex;align-items:center" title="{{ ('On England Golf' ~ (': adjusted gross ' ~ r.eg_adj_gross if r.eg_adj_gross) ~ (', differential ' ~ r.eg_differential if r.eg_differential is not none) ~ '. England Golf’s score is used for handicaps.') if r.eg_score_uid else 'Not on England Golf: a casual round' }}">{{ 'Official' if r.eg_score_uid else 'Casual' }}</span>
+          {% else %}
           <button type="button" class="chip {{ 'is-counting' if r.counts_for_official_hc != False }}" data-round-id="{{ r.id }}" title="Counts towards your official handicap?">{{ 'Official' if r.counts_for_official_hc != False else 'Casual' }}</button>
+          {% endif %}
+          {% if r.status != 'score_only' %}
           <a class="icon-btn" href="{{ url_for('reports.view_report', round_id=r.id) }}#share" aria-label="Share report" title="Share report">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           </a>
@@ -240,6 +246,7 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
           </form>
+          {% endif %}
           <button type="button" class="icon-btn" id="delbtn-{{ r.id }}" onclick="showDel('{{ r.id }}')" aria-label="Delete this round" title="Delete this round">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
           </button>

@@ -155,8 +155,16 @@ def index():
         trend = _trend(all_complete[:TREND_ROUNDS])
 
     # ── Recent rounds table ──────────────────────────────────────────────
+    # Score-only rounds come from England Golf and have no shot data
+    score_only = (Round.query.filter_by(user_id=current_user.id, status='score_only')
+                  .order_by(Round.date_played.desc()).limit(25).all())
+    listed = sorted(all_complete[:25] + score_only, key=lambda r: (r.date_played, r.id), reverse=True)[:25]
     recent = []
-    for r in all_complete[:25]:
+    for r in listed:
+        if r.status == 'score_only':
+            recent.append({'round': r, 'vs_par': None, 'sg': None, 'ott': None,
+                           'cats': {c: None for c in CATEGORIES} if user_is_pro else None})
+            continue
         d = datas.get(r.id)
         recent.append({
             'round': r, 'vs_par': r.score_vs_par(),

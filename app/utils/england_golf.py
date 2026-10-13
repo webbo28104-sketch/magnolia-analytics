@@ -215,6 +215,9 @@ def _score_row(item):
         'holes': 9 if nine else (18 if nine is False else len(holes) or None),
         'counted': bool(item.get('CountedInHandicap')),
         'competition': bool(item.get('IsCompetitionScore')),
+        'uid': item.get('ScoreUID'),
+        'parent_uid': item.get('ParentScoreUID'),
+        'penalty': bool(item.get('IsPenaltyScore')),
         'raw': raw,
     }
     if holes:

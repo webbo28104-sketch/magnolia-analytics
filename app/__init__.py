@@ -156,6 +156,9 @@ def _run_column_migrations():
         ('users',     'eg_handicap_index',          'REAL'),
         ('users',     'eg_scores_json',             'TEXT'),
         ('users',     'eg_pages_text',              'TEXT'),
+        ('rounds',    'eg_score_uid',               'VARCHAR(64)'),
+        ('rounds',    'eg_adj_gross',               'INTEGER'),
+        ('rounds',    'eg_differential',            'REAL'),
     ]
     # Look up existing columns once, then only ALTER what's missing — keeps
     # serverless cold starts fast (one round trip per table, not per column).

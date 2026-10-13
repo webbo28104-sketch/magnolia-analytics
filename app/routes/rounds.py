@@ -34,9 +34,12 @@ def _compute_whs_index(rounds):
     Returns the computed index (float) or None if fewer than 3 qualifying
     differentials are available.
     """
-    # holes_played < 18 covers declared 9-hole rounds AND partial submissions
-    nine_hole_diffs = [r.hc_differential for r in rounds if r.holes_played < 18]
-    eighteen_diffs  = [r.hc_differential for r in rounds if r.holes_played == 18]
+    # holes_played < 18 covers declared 9-hole rounds AND partial submissions.
+    # England Golf differentials are already 18-hole equivalents.
+    def _is_18(r):
+        return r.eg_differential is not None or r.holes_played == 18
+    nine_hole_diffs = [r.hc_differential for r in rounds if not _is_18(r) and r.holes_played < 18]
+    eighteen_diffs  = [r.hc_differential for r in rounds if _is_18(r)]
 
     # Pair 9-hole diffs (most recent first) into 18-hole equivalents; drop odd one out
     paired = [
@@ -67,15 +70,17 @@ def _recalculate_handicap(user):
     """Recalculate both handicap indexes for user and commit.
 
     Computes:
-      - user.handicap_index          — all complete rounds (All Rounds HCP)
-      - user.official_handicap_index — rounds with counts_for_official_hc=True only
+      - user.handicap_index          — Magnolia index: every round, including score-only
+                                       rounds from England Golf (their differential wins)
+      - user.official_handicap_index — England Golf's Handicap Index when connected,
+                                       otherwise rounds with counts_for_official_hc=True
 
     Uses the same WHS differential logic for both. Requires at least 3
     qualifying 18-hole differentials (9-hole pairs count as one 18-hole diff).
     """
     all_rounds = (
         Round.query
-        .filter_by(user_id=user.id, status='complete')
+        .filter(Round.user_id == user.id, Round.status.in_(('complete', 'score_only')))
         .filter(Round.hc_differential.isnot(None))
         .order_by(Round.date_played.desc())
         .limit(20)
@@ -88,8 +93,11 @@ def _recalculate_handicap(user):
         user.handicap_index = new_all
 
     # Official handicap — rounds explicitly marked as counting (None treated as True)
-    official_rounds = [r for r in all_rounds if r.counts_for_official_hc is not False]
-    user.official_handicap_index = _compute_whs_index(official_rounds)
+    if user.eg_member_no and user.eg_handicap_index is not None:
+        user.official_handicap_index = user.eg_handicap_index
+    else:
+        official_rounds = [r for r in all_rounds if r.counts_for_official_hc is not False]
+        user.official_handicap_index = _compute_whs_index(official_rounds)
 
     db.session.commit()
     current_app.logger.info(
@@ -524,6 +532,8 @@ def edit_round_meta(round_id):
 def toggle_official_hc(round_id):
     """Toggle whether a round counts towards the Official Handicap."""
     round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
+    if current_user.eg_member_no:
+        return jsonify({'error': 'Official rounds are set by England Golf.'}), 409
     # Treat None (pre-migration rows) as True before toggling
     current_state = round_.counts_for_official_hc
     if current_state is None:

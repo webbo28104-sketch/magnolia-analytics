@@ -42,6 +42,13 @@ class Round(db.Model):
     hc_differential        = db.Column(db.Float, nullable=True)
     counts_for_official_hc = db.Column(db.Boolean, default=True, nullable=True)
 
+    # England Golf link — set by the sync (app/utils/eg_match.py). When linked, the
+    # England Golf differential is the one used for handicaps. status='score_only'
+    # marks a round created from an England Golf score with no hole data.
+    eg_score_uid    = db.Column(db.String(64), nullable=True, index=True)
+    eg_adj_gross    = db.Column(db.Integer, nullable=True)
+    eg_differential = db.Column(db.Float, nullable=True)
+
     # Status
     status       = db.Column(db.String(20), default='in_progress')
     created_at   = db.Column(db.DateTime, default=datetime.utcnow)
@@ -89,6 +96,9 @@ class Round(db.Model):
         otherwise inferred from the majority of actual hole numbers played.
         Split ratings fall back to half of full-round values when absent.
         """
+        if self.eg_differential is not None:
+            self.hc_differential = self.eg_differential   # England Golf's figure takes precedence
+            return
         if not (self.total_score and self.tee_set_obj):
             return
 
