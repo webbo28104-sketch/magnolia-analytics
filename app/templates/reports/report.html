@@ -73,7 +73,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
 /* Breakdown rows: label | chart | per shot | total, then a detail line */
 .brow { border-top: 1px solid var(--rule-soft); padding: 8px 0 7px; }
 .brow.thin .bmain { opacity: .5; }
-.bmain { display: grid; grid-template-columns: 78px minmax(0, 1fr) 54px 54px; gap: 10px; align-items: center; }
+.bmain { display: grid; grid-template-columns: 78px minmax(0, 1fr) 54px 64px; gap: 10px; align-items: center; }
 .bmain .lbl { font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bmain .lbl.m { font-family: var(--mono); font-size: 12px; }
 .bmain .num { font-family: var(--mono); font-size: 13px; text-align: right; }
@@ -82,7 +82,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
 .bdetail .pat.recurring { color: #ff9a76; }
 .bdetail .pat.one-off { color: #c9ceca; }
 .bdetail .pat.improving { color: #8fe9bd; }
-.bhead { display: grid; grid-template-columns: 78px minmax(0, 1fr) 54px 54px; gap: 10px; padding-bottom: 6px; font-family: var(--mono); font-size: 10px; letter-spacing: .05em; color: var(--faint); text-transform: uppercase; }
+.bhead { display: grid; grid-template-columns: 78px minmax(0, 1fr) 54px 64px; gap: 10px; padding-bottom: 6px; font-family: var(--mono); font-size: 10px; letter-spacing: .05em; color: var(--faint); text-transform: uppercase; }
 .bhead .r { text-align: right; }
 .axis3 { display: flex; justify-content: space-between; }
 .track { position: relative; height: 22px; display: block; }
@@ -92,6 +92,18 @@ details.howto li b { color: var(--text); font-weight: 500; }
 .track .ci::before, .track .ci::after { content: ''; position: absolute; top: -3px; width: 1px; height: 8px; background: rgba(236,239,237,.35); }
 .track .ci::before { left: 0; } .track .ci::after { right: 0; }
 .track .avg { position: absolute; top: 2px; height: 18px; width: 2px; margin-left: -1px; background: var(--gold); }
+.track .bar { opacity: .55; }
+.track .dot { position: absolute; top: 5px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; border: 2px solid var(--text); }
+.track .dot.pos { background: var(--gain); } .track .dot.neg { background: var(--loss); }
+.track .dot.few { background: var(--bg); border-color: var(--dim); }
+details.brow > summary { list-style: none; cursor: pointer; }
+details.brow > summary::-webkit-details-marker { display: none; }
+details.brow .bdetail { padding: 6px 0 4px 88px; }
+details.brow[open] > summary .lbl { color: var(--gold); }
+.bhead .key { display: flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-family: var(--sans); font-size: 11px; }
+.bhead .key i { display: inline-block; }
+.bhead .k-bar { width: 14px; height: 8px; background: var(--gain); opacity: .55; }
+.bhead .k-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text); margin-left: 6px; }
 .conf { display: inline-flex; align-items: center; gap: 4px; }
 .conf i { display: inline-block; width: 4px; height: 9px; background: rgba(255,255,255,.14); }
 .conf i.on { background: var(--text); }
@@ -204,38 +216,35 @@ details.howto li b { color: var(--text); font-weight: 500; }
   {%- set lv = {'thin': 1, 'early': 2, 'developing': 3, 'solid': 4}[rel.tier] -%}
   <span class="conf" title="{{ rel.tier_label }}" aria-label="Confidence: {{ rel.tier_label }}">{% for i in range(4) %}<i class="{{ 'on' if i < lv }}"></i>{% endfor %}</span>
 {%- endmacro %}
-{#- One chart row: bar = SG per shot, whisker = 95% range, gold tick = 10-round average -#}
+{#- One row: bar = your usual (previous rounds) from there, dot = today; both vs your handicap benchmark -#}
 {% macro bchart(r, s, bm=0) -%}
   {%- set d = r.per - bm -%}
-  {%- set w = ([(d | abs) / s, 1.0] | min) * 50 -%}
-  <span class="track" role="img" aria-label="{{ r.label }}: {{ f(r.per) }} strokes per shot vs scratch, {{ f(d) }} vs your handicap benchmark{% if r.avg is not none %}, your average {{ f(r.avg) }}{% endif %}">
+  <span class="track" role="img" aria-label="{{ r.label }}: today {{ f(r.per) }} per shot{% if r.avg is not none %}, usually {{ f(r.avg) }}{% endif %}">
     <span class="zero"></span>
-    <span class="bar" style="{{ 'left' if d >= 0 else 'right' }}: 50%; width: {{ '%.2f' | format(w) }}%; background: {{ 'var(--gain)' if d >= 0 else 'var(--loss)' }};"></span>
-    {%- if r.rel and r.rel.ci is not none and r.n > 1 %}{% set a = x(r.rel.lo - bm, s) | float %}{% set b = x(r.rel.hi - bm, s) | float %}<span class="ci" style="left: {{ a }}%; width: {{ '%.2f' | format(b - a) }}%;"></span>{% endif %}
-    {%- if r.avg is not none %}<span class="avg" style="left: {{ x(r.avg - bm, s) }}%;"></span>{% endif %}
+    {%- if r.avg is not none %}{% set u = r.avg - bm %}{% set w = ([(u | abs) / s, 1.0] | min) * 50 %}<span class="bar" style="{{ 'left' if u >= 0 else 'right' }}: 50%; width: {{ '%.2f' | format(w) }}%; background: {{ 'var(--gain)' if u >= 0 else 'var(--loss)' }};"></span>{% endif %}
+    <span class="dot {{ 'pos' if d >= 0 else 'neg' }} {{ 'few' if r.n < 3 }}" style="left: {{ x(d, s) }}%;"></span>
   </span>
 {%- endmacro %}
 {% macro brows(rows, s, unit='shot', mono=False) -%}
-  <div class="bhead"><span>{{ caller() if caller is defined else '' }}</span><span class="axis3"><span>−{{ s }}</span><span title="Centre line: what a {{ bench.index_txt if bench else 'scratch' }} handicap typically gains per {{ unit }} here">{{ (bench.index_txt ~ ' HCP') if bench else '0' }}</span><span>+{{ s }}</span></span><span class="r">Per {{ unit }}</span><span class="r">Total</span></div>
+  <div class="bhead"><span>{{ caller() if caller is defined else '' }}</span><span class="key"><i class="k-bar"></i>usual <i class="k-dot"></i>today <span class="faint">· centre = {{ (bench.index_txt ~ ' hcp') if bench else 'scratch' }}</span></span><span class="r">Today</span><span class="r">Plays like</span></div>
   {% for r in rows %}
-  <div class="brow {{ 'thin' if r.rel and r.rel.tier == 'thin' }}">
-    <div class="bmain">
+  {% set bm = bshot.get((r.dim or '').split('_')[0], bshot['all']) if r.dim is defined else 0 %}
+  {% set pl = shots_plays_like(r.per, shots_per18.get(dim_cat.get(r.dim))) if r.dim is defined else none %}
+  <details class="brow">
+    <summary class="bmain">
       <span class="lbl {{ 'm' if mono }}">{{ r.label }}</span>
-      {% set bm = bshot.get((r.dim or '').split('_')[0], bshot['all']) if r.dim is defined else 0 %}
       {{ bchart(r, s, bm) }}
       <span class="num {{ cb(r.per, bm) }}">{{ f(r.per) }}</span>
-      <span class="num {{ cb(r.sg, bm * r.n) }}">{{ f(r.sg) }}</span>
-    </div>
+      <span class="num">{% if r.n < 3 %}<span class="faint">{{ r.n }} {{ unit }}{{ 's' if r.n != 1 }}</span>{% elif pl is not none %}{{ hcp_fmt(pl) }}{% else %}—{% endif %}</span>
+    </summary>
     <div class="bdetail">
-      <span>{{ r.n }} {{ unit }}{{ 's' if r.n != 1 }}{% if r.holed is defined and r.holed is not none %} · {{ r.holed }} holed{% if r.scratch_make %} (scratch holes ~{{ r.scratch_make }}%){% endif %}{% endif %}</span>
+      <span>Today: {{ r.n }} {{ unit }}{{ 's' if r.n != 1 }}, {{ f(r.sg) }} in total{% if r.holed is defined and r.holed is not none %}, {{ r.holed }} holed{% if r.scratch_make %} (scratch holes ~{{ r.scratch_make }}%){% endif %}{% endif %}</span>
+      {% if r.avg is not none %}<span>Usually {{ f(r.avg) }}/{{ unit }} (previous rounds)</span>{% else %}<span>No earlier shots from here yet</span>{% endif %}
+      {% if bench %}<span>A {{ bench.index_txt }} averages {{ f(bm) }}/{{ unit }}</span>{% endif %}
       {% if r.rel %}<span>{{ meter(r.rel) }} {{ r.rel.tier_label }}{% if r.rel.ci is not none and r.n > 1 %} · ±{{ '%.2f' | format(r.rel.ci) }}{% endif %}</span>{% endif %}
-      {% set pl = shots_plays_like(r.per, shots_per18.get(dim_cat.get(r.dim))) if r.dim is defined else none %}
-      {% if pl is not none and r.n >= 3 %}<span title="If every one of these shots in 18 holes were like this">plays like a {{ hcp_fmt(pl) }} from here</span>{% endif %}
-      {% if bench and r.dim is defined %}<span>a {{ bench.index_txt }} averages {{ f(bm) }}/{{ unit }}</span>{% endif %}
-      {% if r.avg is not none %}<span>your usual {{ f(r.avg) }}/{{ unit }}</span>{% endif %}
       {% if r.pattern and r.pattern.kind in ('recurring', 'one-off', 'improving') %}<span class="pat {{ r.pattern.kind }}">{{ r.pattern.text }}</span>{% endif %}
     </div>
-  </div>
+  </details>
   {% endfor %}
 {%- endmacro %}
 {% macro locked(title) -%}
@@ -308,6 +317,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
         <summary>How to read this report</summary>
         <ul>
           <li><b>Strokes gained (SG)</b> compares every shot with what a scratch (0 handicap) golfer averages from the same distance and lie. <b>0 = scratch.</b> −0.30 means that shot cost you 0.3 strokes more than a scratch golfer; negative numbers are normal for anyone who isn’t scratch.</li>
+          <li><b>Breakdown rows:</b> the faint bar is how you usually do from there (your previous rounds); the dot is today. Dots right of the centre line beat what your handicap normally does; a hollow dot means only 1–2 shots today, so don't read much into it. Tap a row for the detail.</li>
           <li><b>Colours and centre lines are judged against your handicap</b>{% if bench %} ({{ bench.index_txt }}, {{ bench.label }}){% endif %}, not scratch. A {{ bench.index_txt if bench else '10' }} handicap loses some strokes to scratch on almost every shot, so green means better than normal for you and orange means worse. The numbers themselves are still strokes gained vs scratch.</li>
           <li><b>Plays like</b> turns that into a handicap: strokes lost to scratch, scaled to 18 holes. Each part of the game counts for a quarter, so −2 off the tee over 9 holes is −4 per 18 and plays like a 16 handicap. On a breakdown row it means “if every shot like this were played this well, you’d play to a …”.</li>
           <li><b>Per shot</b> is the average across the shots in that group; <b>Total</b> is all of them added up. Category totals add up to your round total.</li>
@@ -322,7 +332,6 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% set lost = waterfall.score - waterfall.expected %}
     <section class="sec">
       <h2 class="sec-title">Your score vs a scratch golfer</h2>
-      <p class="sec-desc">A scratch golfer would average {{ '%.1f' | format(waterfall.expected) }} strokes on {% if waterfall.complete %}these {{ waterfall.holes }} holes{% else %}the {{ waterfall.holes }} of {{ waterfall.holes_total }} holes where every shot was measured{% endif %}. Each bar shows how many strokes you lost (red) or gained (green) against that in one part of the game, ending at your score.</p>
       <div>
         <div class="wf-row">
           <span class="lbl dim">Scratch golfer</span>
@@ -352,13 +361,11 @@ details.howto li b { color: var(--text); font-weight: 500; }
           <span></span>
         </div>
       </div>
-      <p class="note">Strokes gained is measured against a scratch golfer, not par. Right column: strokes lost (+) or gained (−) per category.</p>
     </section>
     {% endif %}
 
     <section class="sec">
       <h2 class="sec-title">Round totals by category</h2>
-      <p class="sec-desc">Strokes gained added up for each part of the game, the average per shot, and how that compares with your own previous 10 rounds.</p>
       <table class="ctab">
         <thead><tr><th>Category</th><th>Shots</th><th>Per shot</th><th>Total</th><th>Your usual</th></tr></thead>
         <tbody>
@@ -377,13 +384,11 @@ details.howto li b { color: var(--text); font-weight: 500; }
           {% endif %}
         </tbody>
       </table>
-      <p class="note">"Your usual" is your average strokes gained per shot in that category across your previous 10 rounds.</p>
     </section>
 
     {% if leaks %}
     <section class="sec">
       <h2 class="sec-title">Where strokes went today</h2>
-      <p class="sec-desc">The groups of shots that cost the most strokes{% if bench %} compared with what a {{ bench.index_txt }} handicap normally loses there{% endif %}, with how much data is behind each and whether it is a pattern or a one-off.</p>
       <div>
         {% for l in leaks %}
         <div class="lk">
@@ -400,7 +405,6 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% if recur_weak or recur_strong %}
     <section class="sec">
       <h2 class="sec-title">Patterns across your last {{ pattern_rounds_n }} rounds</h2>
-      <p class="sec-desc">Things that keep happening: each needs at least 3 rounds of data and the same result in most of them. This is what's worth practising (or trusting).</p>
       {% for group, items, cls in [('Keeps costing you', recur_weak, 'neg'), ('Reliably good', recur_strong, 'pos')] %}
       {% if items %}
       <span class="label" style="margin-top:4px">{{ group }}</span>
@@ -421,7 +425,6 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% if strengths %}
     <section class="sec">
       <h2 class="sec-title">What went well today</h2>
-      {% if bench %}<p class="sec-desc">Shots that beat what a {{ bench.index_txt }} handicap normally does from there.</p>{% endif %}
       <div>
         {% for s in strengths %}
         <div class="lk" style="grid-template-columns: minmax(0,1fr) auto;">
@@ -440,7 +443,6 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% set in_sg = hole_rows | selectattr('hole_number', 'gt', 9) | map(attribute='sg') | sum %}
     <section class="sec">
       <h2 class="sec-title">Strokes gained on each hole</h2>
-      <p class="sec-desc">{% if bench %}The centre line is what a {{ bench.index_txt }} handicap averages on a hole ({{ f(bhole) }} vs scratch). Bars above it were better than normal for your handicap, bars below worse.{% else %}Bars above the line gained strokes on a scratch golfer, bars below lost them.{% endif %}{% if split.front and split.back %} Front nine {{ f(out_sg, 1) }}, back nine {{ f(in_sg, 1) }}.{% endif %} Faded bars are holes with a shot missing a distance.</p>
       <div class="hchart-wrap">
         <div class="hy" style="height: {{ hchart.h }}px">
           <span style="top: 0">{{ f(hchart.max_pos, 1) }}</span>
@@ -459,7 +461,6 @@ details.howto li b { color: var(--text); font-weight: 500; }
       </div>
       <div class="hx" style="grid-template-columns: repeat({{ n_h }}, minmax(0, 1fr));">{% for h in hole_rows %}<span>{{ h.hole_number }}</span>{% endfor %}</div>
       {% set ranked = hole_rows | selectattr('sg', 'ne', none) | sort(attribute='sg') | list %}
-      <p class="note">Hardest holes: {% for h in ranked[:3] %}{{ h.hole_number }} ({{ f(h.sg, 1) }}){% if not loop.last %}, {% endif %}{% endfor %}. Best: {{ ranked[-1].hole_number }} ({{ f(ranked[-1].sg, 1) }}).</p>
     </section>
     {% endif %}
 
@@ -498,7 +499,6 @@ details.howto li b { color: var(--text); font-weight: 500; }
           </tbody>
         </table>
       </div>
-      <p class="note">GIR ● = green in regulation. SG = strokes gained on the hole vs a scratch golfer.</p>
     </section>
   </div>
 
@@ -507,22 +507,17 @@ details.howto li b { color: var(--text); font-weight: 500; }
   <div class="panel" id="tab-tee" role="tabpanel">
     <section class="sec">
       <h2 class="sec-title">Off the tee</h2>
-      <p class="sec-desc">Tee shots on par 4s and 5s, plus any recovery punch-out after a tee shot into the trees.</p>
       <div class="kpis">
         <div class="kpi"><span class="label">Total SG</span><span class="v {{ cb(ott.total, bshot.ott * (ott.n or 0)) }}">{{ f(ott.total) }}</span><span class="s">{{ ott.n or 0 }} shots this round</span></div>
         <div class="kpi"><span class="label">Per shot</span><span class="v {{ cb(ott.per, bshot.ott) }}">{{ f(ott.per) }}</span><span class="s">your usual {{ f(ott.avg) }}</span></div>
         <div class="kpi"><span class="label">Fairways</span><span class="v">{{ round.fairways_hit if round.fairways_hit is not none else '—' }}/{{ round.fairways_available or 0 }}</span><span class="s">{% if avg_tee_travel %}avg tee shot ~{{ avg_tee_travel }} yds{% else %}{{ fw_pct if fw_pct is not none else '—' }}%{% endif %}</span></div>
       </div>
-      {% if insights.ott %}<p class="insight">{{ insights.ott }}</p>{% endif %}
     </section>
 
     {% if bd.ott_club %}
     <section class="sec">
       <h2 class="sec-title">By club</h2>
-      <p class="sec-desc">Strokes gained per tee shot with each club, and roughly how far it went (hole length minus the distance left).</p>
       {% call brows(bd.ott_club, 0.8, 'shot', True) %}Club{% endcall %}
-      <p class="note">{% for r in bd.ott_club %}{{ r.label }}: {{ r.fairways }}/{{ r.n }} fairways{% if r.avg_travel %}, ~{{ r.avg_travel }} yds{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</p>
-      {{ chartkey() }}
     </section>
     {% else %}
     <section class="sec"><p class="note">Turn on club logging in <a href="{{ url_for('bag.index') }}" style="text-decoration:underline">My Bag</a> to see SG and distance for each club off the tee.</p></section>
@@ -532,7 +527,6 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% if bd[dim] %}
     <section class="sec">
       <h2 class="sec-title">{{ title }}</h2>
-      <p class="sec-desc">{{ desc }}</p>
       {% call brows(bd[dim], 0.8, 'shot', dim == 'ott_len') %}{{ 'Result' if dim == 'ott_result' else 'Yds' }}{% endcall %}
     </section>
     {% endif %}
@@ -545,7 +539,6 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% set app = cat_by.app %}
     <section class="sec">
       <h2 class="sec-title">Approach</h2>
-      <p class="sec-desc">Full shots into the green (more than 30 yards out, plus par-3 tee shots).</p>
       <div class="kpis">
         <div class="kpi"><span class="label">Total SG</span><span class="v {{ cb(app.total, bshot.app * (app.n or 0)) }}">{{ f(app.total) }}</span><span class="s">{{ app.n }} shots this round</span></div>
         <div class="kpi"><span class="label">Per shot</span><span class="v {{ cb(app.per, bshot.app) }}">{{ f(app.per) }}</span><span class="s">your usual {{ f(app.avg) }}</span></div>
@@ -556,10 +549,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% if bd.app_dist %}
     <section class="sec">
       <h2 class="sec-title">By distance to the flag</h2>
-      <p class="sec-desc">Average strokes gained per approach shot from each distance band. Faded rows have fewer than 3 shots behind them.</p>
       {% call brows(bd.app_dist, 0.5, 'shot', True) %}Yards{% endcall %}
-      {{ chartkey() }}
-      {% if insights.app %}<p class="insight">{{ insights.app }}</p>{% endif %}
     </section>
     {% endif %}
 
@@ -567,9 +557,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% if bd[dim] %}
     <section class="sec">
       <h2 class="sec-title">{{ title }}</h2>
-      <p class="sec-desc">{{ desc }}</p>
       {% call brows(bd[dim], 0.5, 'shot', dim == 'app_club') %}{{ 'Lie' if dim == 'app_lie' else 'Club' }}{% endcall %}
-      {% if dim == 'app_club' %}<p class="note">{% for r in bd.app_club if r.avg_dist %}{{ r.label }} from ~{{ r.avg_dist }} yds{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
     </section>
     {% endif %}
     {% endfor %}
@@ -594,9 +582,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% if bd[dim] %}
     <section class="sec">
       <h2 class="sec-title">{{ title }}</h2>
-      <p class="sec-desc">{{ desc }}</p>
       {% call brows(bd[dim], 0.5, 'shot', dim == 'atg_dist') %}{{ 'Yards' if dim == 'atg_dist' else 'Lie' }}{% endcall %}
-      {% if dim == 'atg_dist' and insights.atg %}<p class="insight">{{ insights.atg }}</p>{% endif %}
     </section>
     {% endif %}
     {% endfor %}
@@ -604,11 +590,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% if bd.putt_dist %}
     <section class="sec">
       <h2 class="sec-title">Putting · by first-putt distance (ft)</h2>
-      <p class="sec-desc">Each row is where a putt started. Strokes gained compares how many putts you took from there with a scratch golfer. The detail line shows how many you holed and roughly how often a scratch golfer holes from that range.</p>
       {% call brows(bd.putt_dist, 0.5, 'putt', True) %}Feet{% endcall %}
-      {{ chartkey() }}
-      {% if insights.putt %}<p class="insight">{{ insights.putt }}</p>{% endif %}
-      <p class="note">If you didn't log the distance of a follow-up putt, the putts are valued together from the first one.</p>
     </section>
     {% endif %}
   {% else %}
@@ -620,7 +602,6 @@ details.howto li b { color: var(--text); font-weight: 500; }
   <div class="panel" id="tab-holes" role="tabpanel">
     <section class="sec">
       <h2 class="sec-title">Every shot</h2>
-      <p class="sec-desc">Each shot with its club, where it was played from and its strokes gained against a scratch golfer from the same spot. The hole total is on the right of each hole.</p>
       <div>
         {% for h in hole_rows %}
         <div class="hole">
@@ -639,7 +620,6 @@ details.howto li b { color: var(--text); font-weight: 500; }
         </div>
         {% endfor %}
       </div>
-      <p class="note">— means a distance was missing so that shot can't be valued. "incl. above" means the shot is valued together with the one before it.</p>
     </section>
   </div>
 
@@ -647,10 +627,8 @@ details.howto li b { color: var(--text); font-weight: 500; }
   <div class="panel" id="tab-clubs" role="tabpanel">
     <section class="sec">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><h2 class="sec-title">By club · this round</h2><a class="label" href="{{ url_for('bag.index') }}" style="color:var(--gold)">My bag</a></div>
-      <p class="sec-desc">Strokes gained per shot with every club you logged today, across tee, approach and short-game shots.</p>
       {% if bd.club_all %}
       {% call brows(bd.club_all, 0.5, 'shot', True) %}Club{% endcall %}
-      {{ chartkey() }}
       {% else %}
       <p class="note">No clubs were logged this round. Pick your 14 in <a href="{{ url_for('bag.index') }}" style="text-decoration:underline">My Bag</a> and switch on club logging to see strokes gained for every club.</p>
       {% endif %}

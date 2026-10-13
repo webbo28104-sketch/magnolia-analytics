@@ -156,7 +156,6 @@
   <section>
     <div class="sec-h" style="flex-direction:column;align-items:flex-start;gap:4px">
       <h2 class="sec-t">Strokes gained per round</h2>
-      <p class="sec-d">Each grey point is one round (scaled to 18 holes, vs a scratch golfer); click one to open its report. The gold line is the average of your last 5 rounds, which shows the trend. Higher is better. Latest {{ f(trend.latest, 1) }}, best {{ f(trend.best, 1) }}, worst {{ f(trend.worst, 1) }}.</p>
     </div>
     <div class="chart">
       {% for t in trend.ticks %}<span class="yt" style="top: {{ 20 + loop.index0 * 100 }}px">{{ f(t, 1) }}</span>{% endfor %}
@@ -180,7 +179,6 @@
     <section>
       <div class="sec-h" style="flex-direction:column;align-items:flex-start;gap:4px">
         <h2 class="sec-t">By category · last {{ window }} rounds</h2>
-        <p class="sec-d">Average strokes gained per shot in each part of your game{% if bench %}, coloured against what a {{ bench.index_txt }} handicap normally records (green = better than normal for you){% endif %}. The small line shows how it has moved round by round. Change = compared with the {{ window }} rounds before.</p>
       </div>
       <div class="row hdr" style="grid-template-columns: minmax(0,1fr) 90px 64px 58px;"><span>Category</span><span>Per-round trend</span><span class="r">Per shot</span><span class="r">Change</span></div>
       {% for cat in cats %}
@@ -195,7 +193,6 @@
     <section>
       <div class="sec-h" style="flex-direction:column;align-items:flex-start;gap:4px">
         <h2 class="sec-t">Biggest leaks · last {{ window }} rounds</h2>
-        <p class="sec-d">The groups of shots that cost you the most strokes{% if bench %} beyond what a {{ bench.index_txt }} handicap normally loses there{% endif %}, and how often they did it.</p>
       </div>
       <div class="row hdr" style="grid-template-columns: minmax(0,1fr) 40px 58px 60px;"><span>Shots</span><span class="r">Count</span><span class="r">Per shot</span><span class="r">{{ ('vs ' ~ bench.index_txt) if bench else 'Total' }}</span></div>
       {% for l in leaks %}

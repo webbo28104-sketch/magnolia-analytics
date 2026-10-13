@@ -59,6 +59,14 @@
   .bhead { display: grid; gap: 12px; align-items: end; padding-bottom: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: #7a827e; }
   .bhead .r { text-align: right; }
   .axis3 { display: flex; justify-content: space-between; }
+  details.arow > summary { list-style: none; cursor: pointer; }
+  details.arow > summary::-webkit-details-marker { display: none; }
+  details.arow[open] > summary .t { color: var(--gold); }
+  details.arow .rowmeta { margin-top: 0; padding: 4px 0 10px 88px; }
+  details.few > summary { list-style: none; cursor: pointer; min-height: 40px; display: flex; align-items: center; border-top: 1px solid rgba(255,255,255,.06); font-size: 12px; color: #7a827e; }
+  details.few > summary::after { content: '+'; margin-left: 8px; font-family: var(--font-mono); }
+  details.few[open] > summary::after { content: '−'; }
+  details.few .row { opacity: .7; }
   .rowmeta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 14px; padding-bottom: 8px; margin-top: -6px; font-family: var(--font-sans); font-size: 11px; color: #7a827e; }
   .rowmeta .rec { color: var(--loss); } .rowmeta .str { color: var(--gain); }
   .row.thin > span:not(.rowmeta) { opacity: .5; }
@@ -144,16 +152,15 @@
   </details>
 
   <section class="kpis">
-    <div class="kpi"><span class="lbl">Plays like</span><span class="v {{ 'pos' if plays_verdict == 'better' else ('neg' if plays_verdict == 'worse' else '') }}">{{ hcp_fmt(plays_like) }}</span><span class="s">handicap equivalent for {{ cfg.title | lower }}{% if hcp_index is not none %} · your index {{ ('+%.1f' | format(-hcp_index)) if hcp_index < 0 else ('%.1f' | format(hcp_index)) }}{% endif %}<br>4 × strokes lost to scratch per 18 (each part of the game counts a quarter)</span></div>
-    <div class="kpi"><span class="lbl">Strokes gained per {{ cfg.unit }}</span><span class="v {{ cb(per, b_now) }}">{{ f(per, 3) }}</span><span class="s">{{ meter(headline_rel) }} {{ headline_rel.tier_label }}{% if headline_rel.ci is not none and n > 1 %} · likely {{ f(headline_rel.lo) }} to {{ f(headline_rel.hi) }}{% endif %}<br>{{ n }} {{ cfg.unit }}s over {{ rounds_n }} rounds</span></div>
-    <div class="kpi"><span class="lbl">Strokes gained per round</span><span class="v {{ cb(per_round, bench.cat18 if bench else 0) }}">{{ f(per_round) }}</span><span class="s">average {{ cfg.title | lower }} total per round of 9+ holes (holes actually played, not scaled to 18)</span></div>
+    <div class="kpi"><span class="lbl">Plays like</span><span class="v {{ 'pos' if plays_verdict == 'better' else ('neg' if plays_verdict == 'worse' else '') }}">{{ hcp_fmt(plays_like) }}</span><span class="s">{% if hcp_index is not none %}your index {{ ('+%.1f' | format(-hcp_index)) if hcp_index < 0 else ('%.1f' | format(hcp_index)) }}{% endif %}</span></div>
+    <div class="kpi"><span class="lbl">Strokes gained per {{ cfg.unit }}</span><span class="v {{ cb(per, b_now) }}">{{ f(per, 3) }}</span><span class="s">{{ meter(headline_rel) }} {{ n }} {{ cfg.unit }}s · {{ rounds_n }} rounds</span></div>
+    <div class="kpi"><span class="lbl">Strokes gained per round</span><span class="v {{ cb(per_round, bench.cat18 if bench else 0) }}">{{ f(per_round) }}</span><span class="s">vs scratch, 9+ hole rounds</span></div>
     {% for l, v, s in extra %}<div class="kpi"><span class="lbl">{{ l }}</span><span class="v">{{ v }}</span><span class="s">{{ s }}</span></div>{% endfor %}
   </section>
 
   {% if heat %}
   <section>
     <h2 class="sec-title">Round by round, by {{ 'hole length' if cat == 'ott' else ('putt length' if cat == 'putt' else 'distance to the flag') }}</h2>
-    <p class="sec-desc">Each row is a {{ 'hole length' if cat == 'ott' else 'distance' }} range ({{ cfg.heat_label | lower }}); each column is one round, oldest on the left. Colour compares each round with what {{ ('a ' ~ bench.index_txt ~ ' handicap') if bench else 'scratch' }} normally does from there{% if bench %} (your index at the time of each round){% endif %}: green better, orange worse, stronger colour = bigger difference. Hover a square for the exact value and how many {{ cfg.unit }}s it covers. A row that is orange across most rounds is a habit, not bad luck.</p>
     <div class="sec-h">
       <span class="lbl">Rounds, oldest → newest</span>
       <span class="scale">WORSE −0.5 <i></i> +0.5 BETTER THAN {{ ('A ' ~ bench.index_txt ~ ' HCP') if bench else 'SCRATCH' }} · BLANK = NONE FROM HERE</span>
@@ -176,14 +183,12 @@
       </div>
       {% endfor %}
     </div></div>
-    {% if insight %}<p class="note" style="margin-top:12px">{{ insight }}</p>{% endif %}
   </section>
   {% endif %}
 
   {% if trend %}
   <section>
     <h2 class="sec-title">Trend: strokes gained per {{ cfg.unit }}, each round</h2>
-    <p class="sec-desc">One dot per round, {{ trend.first }} to {{ trend.last }}. {% if bench %}Green dots beat what your handicap normally does (gold line), orange dots fell short. {% endif %}Above the 0 line = better than scratch. The dashed line is your average across these rounds ({{ f(trend.avg) }}). A line drifting upward means you are improving.</p>
     <div class="chart" style="margin-top:22px">
       <span class="ytitle">SG / {{ cfg.unit }}</span>
       <span class="yt" style="top:10px">{{ f(trend.hi) }}</span>
@@ -222,24 +227,35 @@
     {% if rows %}
     <section>
       <h2 class="sec-title">{{ title }}</h2>
-      <p class="sec-desc">{{ descs.get(dim, '') }} The bar is strokes gained per {{ cfg.unit }}{% if bench %}, centred on what a {{ bench.index_txt }} handicap averages ({{ f(b_now) }}): right/green is better than normal for you{% endif %}{% if prev_rounds_n %}; the grey tick is your average over the previous {{ prev_rounds_n }} rounds, so you can see whether you are getting better or worse{% endif %}.</p>
-      <div class="bhead" style="grid-template-columns: 76px minmax(0,1fr) 44px 60px 56px;"><span>Group</span><span class="axis3"><span>−0.5</span><span>{{ (bench.index_txt ~ ' HCP') if bench else '0' }}</span><span>+0.5</span></span><span class="r">{{ cfg.unit }}s</span><span class="r">Per {{ cfg.unit }}</span><span class="r">Total</span></div>
-      {% for r in rows %}
-      <div class="row {{ 'thin' if r.rel.tier == 'thin' }}" style="grid-template-columns: 76px minmax(0,1fr) 44px 60px 56px;">
-        <span class="t {{ 'mono' if dim.endswith('club') or dim.endswith('dist') or dim.endswith('len') }}" style="{{ 'font-family:var(--font-mono);font-size:12px' if dim.endswith('dist') or dim.endswith('len') or dim.endswith('club') }}">{{ r.label }}</span>
-        {{ bar(r.per, r.avg, 0.5, b_now) }}
-        <span class="r faint">{{ r.n }}</span>
-        <span class="r {{ cb(r.per, b_now) }}">{{ f(r.per) }}</span>
-        <span class="r {{ cb(r.sg, b_now * r.n) }}">{{ f(r.sg, 1) }}</span>
-        <span class="rowmeta">
-          <span>{{ meter(r.rel) }} {{ r.rel.tier_label }}{% if r.rel.ci is not none and r.n > 1 %} · ±{{ '%.2f' | format(r.rel.ci) }}{% if r.rel.clear == 'loss' %} · loss beyond normal variation{% elif r.rel.clear == 'gain' %} · gain beyond normal variation{% endif %}{% endif %}</span>
-          {% if r.played >= 3 %}<span class="{{ 'rec' if r.lost_in / r.played >= 0.6 else ('str' if r.lost_in / r.played <= 0.4 else '') }}">Lost strokes in {{ r.lost_in }} of {{ r.played }} rounds{% if r.lost_in / r.played >= 0.6 %} · pattern{% endif %}</span>{% elif r.played %}<span>Played in {{ r.played }} round{{ 's' if r.played != 1 }}: too few to call a pattern</span>{% endif %}
-          {% set pl = shots_plays_like(r.per, shots_per18) %}{% if pl is not none and r.n >= 3 %}<span>plays like a {{ hcp_fmt(pl) }} from here</span>{% endif %}
-          {% if r.avg is not none %}<span>Previous {{ prev_rounds_n }} rounds: {{ f(r.avg) }}</span>{% endif %}
-        </span>
-      </div>
-      {% endfor %}
-      <div class="legend"><span><i class="sw-bar"></i>SG per {{ cfg.unit }} (green gained, orange lost)</span>{% if prev_rounds_n %}<span><i class="sw-tick"></i>Previous rounds' average</span>{% endif %}</div>
+      <div class="bhead" style="grid-template-columns: 76px minmax(0,1fr) 40px 56px 56px;"><span>Group</span><span class="axis3"><span>worse</span><span>{{ (bench.index_txt ~ ' hcp') if bench else '0' }}</span><span>better</span></span><span class="r">{{ cfg.unit }}s</span><span class="r">Per {{ cfg.unit }}</span><span class="r">Plays like</span></div>
+      {% set solid = rows | selectattr('n', 'ge', 5) | list %}
+      {% set few = rows | selectattr('n', 'lt', 5) | list %}
+      {% macro arow(r, dim) -%}
+      {% set pl = shots_plays_like(r.per, shots_per18) %}
+      <details class="arow">
+        <summary class="row" style="grid-template-columns: 76px minmax(0,1fr) 40px 56px 56px;">
+          <span class="t" style="{{ 'font-family:var(--font-mono);font-size:12px' if dim.endswith('dist') or dim.endswith('len') or dim.endswith('club') }}">{{ r.label }}</span>
+          {{ bar(r.per, r.avg, 0.5, b_now) }}
+          <span class="r faint">{{ r.n }}</span>
+          <span class="r {{ cb(r.per, b_now) }}">{{ f(r.per) }}</span>
+          <span class="r">{{ hcp_fmt(pl) if pl is not none else '—' }}</span>
+        </summary>
+        <div class="rowmeta">
+          <span>{{ f(r.sg, 1) }} in total</span>
+          {% if r.avg is not none %}<span>Previous {{ prev_rounds_n }} rounds: {{ f(r.avg) }}/{{ cfg.unit }}</span>{% endif %}
+          {% if bench %}<span>A {{ bench.index_txt }} averages {{ f(b_now) }}</span>{% endif %}
+          {% if r.played >= 3 %}<span class="{{ 'rec' if r.lost_in / r.played >= 0.6 else ('str' if r.lost_in / r.played <= 0.4 else '') }}">Worse than your handicap level in {{ r.lost_in }} of {{ r.played }} rounds</span>{% endif %}
+          <span>{{ meter(r.rel) }} {{ r.rel.tier_label }}{% if r.rel.ci is not none and r.n > 1 %} · ±{{ '%.2f' | format(r.rel.ci) }}{% endif %}</span>
+        </div>
+      </details>
+      {%- endmacro %}
+      {% for r in solid %}{{ arow(r, dim) }}{% endfor %}
+      {% if few %}
+      <details class="few">
+        <summary>{{ few | length }} more group{{ 's' if few | length != 1 }} with fewer than 5 {{ cfg.unit }}s</summary>
+        {% for r in few %}{{ arow(r, dim) }}{% endfor %}
+      </details>
+      {% endif %}
     </section>
     {% endif %}
     {% endfor %}
@@ -247,7 +263,6 @@
     {% if wind_rows %}
     <section>
       <h2 class="sec-title">Calm vs windy, by club</h2>
-      <p class="sec-desc">Strokes gained per {{ cfg.unit }} with each club in calm conditions and in wind over {{ windy_kph }} km/h, across your last {{ rounds_n + prev_rounds_n }} rounds. Small counts are noisy.</p>
       <div class="bhead" style="grid-template-columns: 52px minmax(0,1fr) 64px 64px;"><span>Club</span><span>Shots (calm · windy)</span><span class="r">Calm</span><span class="r">Windy</span></div>
       {% for w in wind_rows %}
       <div class="row" style="grid-template-columns: 52px minmax(0,1fr) 64px 64px;">
@@ -257,7 +272,6 @@
         <span class="r {{ cb(w.windy[0], b_now) }}">{{ f(w.windy[0]) }}</span>
       </div>
       {% endfor %}
-      <p class="note" style="font-size:11px;margin-top:10px">The caddy uses these when it picks a club on a windy day.</p>
     </section>
     {% endif %}
   </div>
