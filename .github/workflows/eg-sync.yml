@@ -1,0 +1,16 @@
+name: England Golf daily sync
+
+# Logs in to England Golf for every linked user and stores their handicap and scores.
+on:
+  schedule:
+    - cron: '30 5 * * *'   # 05:30 UTC daily
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger sync
+        run: curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" --max-time 280 https://magnoliaanalytics.golf/internal/eg-sync
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

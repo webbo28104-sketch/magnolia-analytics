@@ -50,3 +50,29 @@ def service_worker():
 def manifest():
     return send_from_directory(current_app.static_folder, 'manifest.json',
                                mimetype='application/manifest+json')
+
+
+@main_bp.route('/internal/eg-sync', methods=['POST'])
+def eg_sync_all():
+    """Daily England Golf sync for every linked user. Called by a GitHub Actions schedule."""
+    import hmac
+    import os
+    from flask import request, jsonify
+    from app.models.user import User
+    from app.utils.eg_sync import sync_user
+
+    secret = os.environ.get('CRON_SECRET', '')
+    given = request.headers.get('Authorization', '').removeprefix('Bearer ')
+    if not secret or not hmac.compare_digest(given, secret):
+        return jsonify({'error': 'unauthorised'}), 401
+    ok = failed = 0
+    for user in User.query.filter(User.eg_member_no.isnot(None)).all():
+        try:
+            if sync_user(user):
+                ok += 1
+            else:
+                failed += 1
+        except Exception:
+            current_app.logger.exception(f'[eg-sync] user {user.id} failed')
+            failed += 1
+    return jsonify({'synced': ok, 'failed': failed})

@@ -265,6 +265,58 @@
   </div>
   {% endif %}
 
+  <!-- England Golf link -->
+  <div class="profile-section" id="england-golf">
+    <div class="profile-section-title">England Golf</div>
+    {% if current_user.eg_member_no %}
+      <div class="hcp-dual">
+        <div class="hcp-dual-item">
+          <div class="hcp-dual-label">England Golf Handicap Index</div>
+          <div class="hcp-dual-val">{% if current_user.eg_handicap_index is not none %}{{ ('+%.1f' | format(-current_user.eg_handicap_index)) if current_user.eg_handicap_index < 0 else ('%.1f' | format(current_user.eg_handicap_index)) }}{% else %}—{% endif %}</div>
+          <div class="hcp-dual-note">Membership {{ current_user.eg_member_no }} · {% if current_user.eg_last_sync %}synced {{ current_user.eg_last_sync.strftime('%d %b %Y, %H:%M') }} UTC{% else %}not synced yet{% endif %}</div>
+        </div>
+        <div class="hcp-dual-item">
+          <div class="hcp-dual-label">Scores found</div>
+          <div class="hcp-dual-val">{{ eg_scores | length }}</div>
+          <div class="hcp-dual-note">from your England Golf record · synced daily</div>
+        </div>
+      </div>
+      {% if current_user.eg_status == 'error' and current_user.eg_error %}
+        <div class="hcp-note" style="margin-top:.75rem;color:var(--loss, #ff6a3d)">Last sync failed: {{ current_user.eg_error }}</div>
+      {% endif %}
+      {% if eg_scores %}
+        <table style="width:100%;margin-top:1rem;font-size:.8rem;border-collapse:collapse">
+          {% for s in eg_scores[:10] %}
+          <tr style="border-top:1px solid var(--border)"><td style="padding:.4rem .5rem .4rem 0;white-space:nowrap">{{ s.date }}</td><td style="padding:.4rem 0;color:var(--text-muted)">{{ s.cells | join(' · ') }}</td></tr>
+          {% endfor %}
+        </table>
+      {% endif %}
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem">
+        <form method="POST" action="{{ url_for('profile.england_golf_sync') }}"><button type="submit" class="btn btn--gold">Sync now</button></form>
+        <form method="POST" action="{{ url_for('profile.england_golf_disconnect') }}" onsubmit="return confirm('Disconnect England Golf and delete the saved password?')"><button type="submit" class="btn btn--outline">Disconnect</button></form>
+      </div>
+    {% else %}
+      <p class="hcp-note" style="margin-bottom:1rem">Connect your England Golf (WHS) account and Magnolia will read your official Handicap Index and scoring record every day. Use the membership number and password you use for the My England Golf app.</p>
+      <form method="POST" action="{{ url_for('profile.england_golf_connect') }}" autocomplete="off">
+        <div class="profile-row">
+          <div class="form-group">
+            <label class="form-label">Membership number</label>
+            <input type="text" name="eg_member_no" class="form-input" inputmode="numeric" placeholder="e.g. 1012345678" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">England Golf password</label>
+            <input type="password" name="eg_password" class="form-input" autocomplete="new-password" required>
+          </div>
+        </div>
+        <label class="hcp-note" style="display:flex;gap:.5rem;align-items:flex-start;margin:.75rem 0 1rem">
+          <input type="checkbox" name="eg_consent" value="yes" required style="margin-top:.2rem">
+          <span>I allow Magnolia to log in to England Golf as me to read my handicap and scores. My password is stored encrypted and deleted when I disconnect.</span>
+        </label>
+        <button type="submit" class="btn btn--gold">Connect England Golf</button>
+      </form>
+    {% endif %}
+  </div>
+
   <!-- Personal details + preferences -->
   <form method="POST" action="{{ url_for('profile.index') }}">
     <div class="profile-section">

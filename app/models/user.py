@@ -54,6 +54,16 @@ class User(UserMixin, db.Model):
     bag_json    = db.Column(db.Text, nullable=True)
     track_clubs = db.Column(db.Boolean, default=False, nullable=True)  # show club picker in shot entry
 
+    # England Golf (WHS platform) link — password Fernet-encrypted (EG_CRED_KEY)
+    eg_member_no      = db.Column(db.String(20), nullable=True)
+    eg_password_enc   = db.Column(db.Text, nullable=True)
+    eg_status         = db.Column(db.String(20), nullable=True)   # connected | error
+    eg_error          = db.Column(db.String(300), nullable=True)
+    eg_last_sync      = db.Column(db.DateTime, nullable=True)
+    eg_handicap_index = db.Column(db.Float, nullable=True)
+    eg_scores_json    = db.Column(db.Text, nullable=True)
+    eg_pages_text     = db.Column(db.Text, nullable=True)   # page text from last sync, for parser upkeep
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)

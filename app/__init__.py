@@ -148,6 +148,14 @@ def _run_column_migrations():
         ('courses',   'coords_unavailable',         'BOOLEAN DEFAULT FALSE'),
         ('users',     'bag_json',                   'TEXT'),
         ('users',     'track_clubs',                'BOOLEAN DEFAULT FALSE'),
+        ('users',     'eg_member_no',               'VARCHAR(20)'),
+        ('users',     'eg_password_enc',            'TEXT'),
+        ('users',     'eg_status',                  'VARCHAR(20)'),
+        ('users',     'eg_error',                   'VARCHAR(300)'),
+        ('users',     'eg_last_sync',               'TIMESTAMP'),
+        ('users',     'eg_handicap_index',          'REAL'),
+        ('users',     'eg_scores_json',             'TEXT'),
+        ('users',     'eg_pages_text',              'TEXT'),
     ]
     # Look up existing columns once, then only ALTER what's missing — keeps
     # serverless cold starts fast (one round trip per table, not per column).
