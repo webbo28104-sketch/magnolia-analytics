@@ -1,17 +1,28 @@
 """
-Strokes Gained calculations — Broadie PGA Tour methodology.
+Strokes Gained calculations — Broadie methodology against a SCRATCH golfer.
 
-All four categories use the same PGA Tour benchmark so values are
-directly comparable to tour data.  The core formula for every shot is:
+The core formula for every shot is unchanged from Broadie:
 
     SG = expected_strokes(start_position) - 1 - expected_strokes(end_position)
 
-Where "expected strokes" is the average number of strokes a PGA Tour
-player needs to hole out from that position / lie.
+"Expected strokes" is the average number of strokes a scratch (0 handicap)
+golfer needs to hole out from that position / lie.
 
-Baseline tables are sourced from Mark Broadie's "Every Shot Counts" (2014)
-and subsequently published tour-average datasets.
+How the scratch baseline is built
+---------------------------------
+Broadie's published tables (Every Shot Counts, 2014) are PGA Tour averages.
+No full scratch table is published, so scratch expectation is the Tour value
+plus a scratch gap that grows with distance from the hole:
+
+    E_scratch(position) = E_tour(position) + gap(position)
+
+The gaps are sized so a round reproduces the measured scratch-vs-Tour
+difference per 18 holes (SwingU, 8,360 scratch rounds vs 14,557 ShotLink rounds):
+off the tee 2.52, approach 1.5, short game 0.5 (≈0.08 per shot), putting 1.0 —
+≈5.5 strokes in all. A shot's SG vs scratch is its SG vs Tour plus
+gap(start) − gap(end), so each category absorbs its own part of that difference.
 """
+import math
 
 # ---------------------------------------------------------------------------
 # Putting baseline: distance in feet → expected putts (PGA Tour average)
@@ -99,6 +110,9 @@ DISTANCE_BANDS = [
 # Interpolation helpers
 # ---------------------------------------------------------------------------
 
+ATG_MAX_YARDS = 50  # ATG baselines only cover up to 50 yards
+
+
 def _interp(table: dict, dist: float) -> float:
     """Linear-interpolate expected strokes from a distance→strokes table."""
     keys = sorted(table.keys())
@@ -114,15 +128,58 @@ def _interp(table: dict, dist: float) -> float:
     return table[keys[-1]]
 
 
-def expected_putts(distance_ft: float) -> float:
+# ---------------------------------------------------------------------------
+# Scratch gap: extra strokes a scratch golfer needs vs Tour from a position
+# ---------------------------------------------------------------------------
+# Putting: ≈0.05 per hole on a typical first putt → ≈1.0 per 18.
+SCRATCH_PUTT_MAX = 0.08
+SCRATCH_PUTT_SCALE_FT = 12.0
+# Short game: ≈0.08 per shot more than the putt it leaves.
+SCRATCH_ATG_BASE = 0.12
+SCRATCH_ATG_PER_YD = 0.001
+# Approach: ≈0.10 per shot at 150 yds, rising with distance → ≈1.5 per 18.
+SCRATCH_APP_LEAVE = 0.065          # gap of the putt/chip a typical approach leaves
+SCRATCH_APP_BASE = 0.03
+SCRATCH_APP_PER_YD = 0.0005
+# Off the tee: 0.18 per driving hole (14 holes → 2.52), on top of the approach left.
+SCRATCH_OTT_PER_DRIVE = 0.18
+SCRATCH_TOUR_DRIVE_YDS = 290       # where a Tour drive leaves the approach from
+
+
+def scratch_gap_putt(distance_ft: float) -> float:
+    if not distance_ft or distance_ft <= 0:
+        return 0.0
+    return SCRATCH_PUTT_MAX * (1 - math.exp(-distance_ft / SCRATCH_PUTT_SCALE_FT))
+
+
+def scratch_gap_atg(distance_yds: float) -> float:
+    return SCRATCH_ATG_BASE + SCRATCH_ATG_PER_YD * max(distance_yds or 0, 0)
+
+
+def scratch_gap_approach(distance_yds: float) -> float:
+    if (distance_yds or 0) <= ATG_MAX_YARDS:
+        return scratch_gap_atg(distance_yds)
+    return SCRATCH_APP_LEAVE + SCRATCH_APP_BASE + SCRATCH_APP_PER_YD * distance_yds
+
+
+def scratch_gap_ott(hole_yardage: float) -> float:
+    left = max((hole_yardage or 0) - SCRATCH_TOUR_DRIVE_YDS, ATG_MAX_YARDS + 1)
+    return SCRATCH_OTT_PER_DRIVE + scratch_gap_approach(left)
+
+
+# ---------------------------------------------------------------------------
+# Expected strokes (scratch). Tour values remain available as tour_expected_*.
+# ---------------------------------------------------------------------------
+
+def tour_expected_putts(distance_ft: float) -> float:
     return _interp(PUTTING_BASELINES, distance_ft)
 
 
-def expected_ott(hole_yardage: float) -> float:
+def tour_expected_ott(hole_yardage: float) -> float:
     return _interp(_OTT_BASELINES, hole_yardage)
 
 
-def expected_approach(distance_yds: float, lie: str = 'fairway') -> float:
+def tour_expected_approach(distance_yds: float, lie: str = 'fairway') -> float:
     table = {
         'fairway':  _APPROACH_FAIRWAY,
         'rough':    _APPROACH_ROUGH,
@@ -132,12 +189,27 @@ def expected_approach(distance_yds: float, lie: str = 'fairway') -> float:
     return _interp(table, distance_yds)
 
 
-def expected_atg(distance_yds: float, lie: str = 'rough') -> float:
+def tour_expected_atg(distance_yds: float, lie: str = 'rough') -> float:
     table = _ATG_BUNKER if lie == 'bunker' else _ATG_FAIRWAY
     return _interp(table, distance_yds)
 
 
-ATG_MAX_YARDS = 50  # ATG baselines only cover up to 50 yards
+def expected_putts(distance_ft: float) -> float:
+    return tour_expected_putts(distance_ft) + scratch_gap_putt(distance_ft)
+
+
+def expected_ott(hole_yardage: float) -> float:
+    return tour_expected_ott(hole_yardage) + scratch_gap_ott(hole_yardage)
+
+
+def expected_approach(distance_yds: float, lie: str = 'fairway') -> float:
+    return tour_expected_approach(distance_yds, lie) + scratch_gap_approach(distance_yds)
+
+
+def expected_atg(distance_yds: float, lie: str = 'rough') -> float:
+    return tour_expected_atg(distance_yds, lie) + scratch_gap_atg(distance_yds)
+
+
 
 
 def expected_scramble(distance_yds: float, lie: str = 'rough') -> float:

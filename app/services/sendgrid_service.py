@@ -6,6 +6,7 @@ appropriate template and calls _send_email.  When SENDGRID_API_KEY is not set,
 emails are printed to stdout so local development still exercises the flow.
 """
 import os
+from app.utils import hcp_equiv
 from datetime import datetime
 
 from flask import current_app, render_template, url_for
@@ -136,6 +137,7 @@ def send_report_email(round_, force_free: bool = False) -> bool:
         sg_cats.append({
             'label':   label,
             'value':   val,
+            'plays_like': hcp_equiv.fmt(hcp_equiv.category_plays_like(val, round_.holes_played)) if val is not None else '',
             'display': _fmt_sg(val),
             'color':   _sg_color(val),
             'bar_pct': _sg_bar_pct(val, 4.0),
@@ -146,6 +148,8 @@ def send_report_email(round_, force_free: bool = False) -> bool:
     sg_total_bar_pct = _sg_bar_pct(round_.sg_total, 8.0)
     sg_total_display = _fmt_sg(round_.sg_total)
     sg_total_positive = round_.sg_total is not None and round_.sg_total >= 0
+    played_to = (hcp_equiv.fmt(hcp_equiv.round_plays_like(round_.sg_total, round_.holes_played))
+                 if round_.sg_total is not None else '')
 
     user_is_pro = (not force_free) and is_pro(user)
 
@@ -176,6 +180,7 @@ def send_report_email(round_, force_free: bool = False) -> bool:
         sg_total_color     = sg_total_color,
         sg_total_bar_pct   = sg_total_bar_pct,
         sg_total_positive  = sg_total_positive,
+        played_to          = played_to,
         narrative          = narrative,
         report_url         = report_url,
         upgrade_url        = upgrade_url,

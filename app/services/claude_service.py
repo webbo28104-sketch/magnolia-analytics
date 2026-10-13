@@ -21,6 +21,7 @@ Two entry points:
 """
 
 import os
+from app.utils import hcp_equiv as _hq
 import time
 from datetime import datetime
 from flask import current_app
@@ -75,7 +76,7 @@ FIR: {round_.fairways_hit}/{round_.fairways_available} ({fw_pct}%)
 GIR: {round_.gir_count}/{holes_played} ({gir_pct}%)
 Penalties: {round_.penalties}
 
-STROKES GAINED vs PGA Tour, for the {holes_played} holes played (not scaled to 18)
+STROKES GAINED vs a scratch (0 handicap) golfer, for the {holes_played} holes played (not scaled to 18)
 --------------
 Off Tee:      {sg_off_tee:+.2f}
 Approach:     {sg_approach:+.2f}
@@ -396,12 +397,12 @@ Round assessment:                                     {hc_sentiment}
 Tone this narrative MUST take:                        {hc_tone}
 
 WHAT THIS MEANS FOR SG INTERPRETATION:
-All SG figures below are measured against the PGA Tour average (0 = tour standard).
+All SG figures below are measured against a scratch golfer (0 = scratch standard).
 A player with a {user.handicap_index} handicap will ALWAYS produce negative SG totals — that is normal and expected.
-Negative SG does NOT mean the player performed poorly. It only means they are not a PGA Tour player.
+Negative SG does NOT mean the player performed poorly. It only means they are not a scratch golfer.
 The correct benchmark is: how does this round compare to WHAT THIS SPECIFIC PLAYER NORMALLY PRODUCES?
 Use the "Performance vs expectation" figure above as the primary quality signal. SG figures explain WHERE
-strokes were lost or gained relative to tour — they do not define whether the round was good or bad.
+strokes were lost or gained relative to scratch — they do not define whether the round was good or bad.
 
 EXAMPLE: A 28-handicap player shooting +20 is performing EXCEPTIONALLY well, even though every SG
 category will be deeply negative. Do not write "your approach play was poor" just because SG Approach
@@ -419,7 +420,7 @@ FIR:       {round_.fairways_hit}/{round_.fairways_available} ({fw_pct}%)
 GIR:       {round_.gir_count}/{holes_played} ({gir_pct}%)
 Penalties: {round_.penalties}
 
-STROKES GAINED vs PGA Tour baseline, for the {holes_played} holes actually played (NOT scaled to 18 holes;
+STROKES GAINED vs scratch baseline, for the {holes_played} holes actually played (NOT scaled to 18 holes;
 negative is normal for all amateurs)
 -----------------------------------------------------------------------------
 SG Off Tee:      {sg_off_tee:+.2f}  ({_cnt.get('ott', 0)} shots)
@@ -427,6 +428,9 @@ SG Approach:     {sg_approach:+.2f}  ({_cnt.get('app', 0)} shots)
 SG Around Green: {sg_atg:+.2f}  ({_cnt.get('atg', 0)} shots)
 SG Putting:      {sg_put_total:+.2f}  ({_cnt.get('putt', 0)} putts)
 SG Total:        {sg_total:+.2f}
+HANDICAP EQUIVALENTS ("plays like" = strokes lost to scratch per 18 holes; each part weighted a quarter):
+  Round played to {_hq.fmt(_hq.round_plays_like(sg_total, holes_played))}; tee shots {_hq.fmt(_hq.category_plays_like(sg_off_tee, holes_played))}, approach {_hq.fmt(_hq.category_plays_like(sg_approach, holes_played))}, short game {_hq.fmt(_hq.category_plays_like(sg_atg, holes_played))}, putting {_hq.fmt(_hq.category_plays_like(sg_put_total, holes_played))}.
+  Use these to explain the round in plain English (e.g. "your tee shots played like a 16 handicap").
 Never describe these as 18-hole figures. If you mention SG Total, say it is for the {holes_played} holes played.
 
 BIGGEST LEAKS THIS ROUND (ranked by strokes lost)
@@ -451,7 +455,7 @@ ANALYTICAL INSTRUCTIONS — follow all sections:
 - Do NOT say a category is "poor" or "a weakness" because its SG value is negative; negative SG is expected for amateurs
 - Only flag a category as a concern if it is materially worse than the other three categories this round, OR if personal baseline data shows it below the player's own average
 - Back up every SG observation with numbers: SG per shot, shot counts and distance bands from the breakdowns, plus specific holes from the shot log
-- If personal baseline data is available, compare each category to the player's OWN average — this is more meaningful than comparing to tour
+- If personal baseline data is available, compare each category to the player's OWN average — this is more meaningful than comparing to scratch
 
 2. MISS PATTERN ANALYSIS
 - Systematically examine the Miss and Lie columns for directional bias
@@ -473,7 +477,7 @@ ANALYTICAL INSTRUCTIONS — follow all sections:
 5. PRACTICE RECOMMENDATIONS (end of narrative, exactly 2–3)
 - Rank by impact: the category or pattern with the most strokes to recover goes first
 - Be specific and quantitative: name the distance band, lie or club, its SG per shot and total, and compare to the golfer's own average where shown
-- Calibrate to the player's level — do not recommend tour-level practice goals for a high handicapper
+- Calibrate to the player's level — do not recommend scratch-level practice goals for a high handicapper
 - If the data is insufficient for a specific recommendation, say so; do not substitute generic advice
 - Write as a coach speaking directly to the player, not as a data summary
 
@@ -482,7 +486,7 @@ TONE RULES — these are non-negotiable
 - STRONGLY POSITIVE means: open with clear, specific praise before any analysis. Name what went well
 - NEUTRAL means: skip the praise, go straight to patterns — accurate, not harsh
 - CONSTRUCTIVE/HONEST means: acknowledge the underperformance directly but immediately pivot to causes
-- Never compare a player's performance to scratch or PGA Tour standard when assessing quality
+- Never compare a player's performance to the scratch standard when assessing quality
 - Never repeat the same observation across paragraphs
 - Vary sentence structure; avoid chains of "your X was Y" constructions
 - Write as if you watched the round, not as if you scanned a scorecard

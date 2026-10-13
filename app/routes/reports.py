@@ -21,9 +21,11 @@ logger = logging.getLogger(__name__)
 
 reports_bp = Blueprint('reports', __name__)
 
+GLANCE_LABELS = {'ott': 'Tee shots', 'app': 'Approach', 'atg': 'Short game', 'putt': 'Putting'}
+
 # Bump whenever the coaching prompt changes significantly: any cached narrative
 # with a lower version is regenerated on the next report view.
-NARRATIVE_VERSION = 3
+NARRATIVE_VERSION = 4   # v4: scratch baseline + handicap equivalents
 
 
 # ---------------------------------------------------------------------------
@@ -228,7 +230,7 @@ def _hole_rows(round_data, holes_data):
 def _waterfall(round_data, cats_allowed):
     """
     Expected-score walk for fully measured holes:
-    Tour expects X → strokes lost per category → your score on those holes.
+    Scratch expects X → strokes lost per category → your score on those holes.
     """
     measured = round_data['measured']
     if not measured['holes']:
@@ -349,6 +351,17 @@ def view_report(round_id):
                 if k:
                     prev_vals.append(d['totals'][cat['cat']] / k)
             cat['pattern'] = ev.pattern(cat['per'], prev_vals) if cat['per'] is not None else None
+    # ── Clubhouse glance: handicap equivalents ──
+    from app.utils import hcp_equiv
+    hcp_index = (current_user.official_handicap_index if current_user.official_handicap_index is not None
+                 else current_user.handicap_index)
+    glance = hcp_equiv.glance(
+        [(c['cat'], GLANCE_LABELS[c['cat']], hcp_equiv.category_plays_like(c['total'], holes_played))
+         for c in cats if c['allowed'] and c['n']],
+        hcp_equiv.round_plays_like(sum(totals[c] for c in CATEGORIES), holes_played) if user_is_pro else None,
+        hcp_index)
+    # Shots of each kind per 18 holes this round, for "plays like" on breakdown rows
+    shots_per18 = {c: counts[c] * 18 / holes_played for c in CATEGORIES} if holes_played else {}
     cat_total_n = sum(c['n'] or 0 for c in cats if c['allowed'])
     cat_total_sg = round(sum(c['total'] or 0 for c in cats if c['allowed']), 2)
     sg_total = round_data['sg_total'] if user_is_pro else None
@@ -466,6 +479,7 @@ def view_report(round_id):
         hist_rounds=len(hist_datas),
         weather=weather, summary_text=summary_text, narrative=narrative,
         pb_banner=pb_banner, sg_data=sg_data,
+        glance=glance, shots_per18=shots_per18, dim_cat=ev.DIM_CAT,
     )
 
 

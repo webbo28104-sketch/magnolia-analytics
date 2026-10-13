@@ -69,7 +69,7 @@ THE ROUND YOU'RE DISCUSSING: {course_name}, {round_.date_played.strftime('%d %B 
 
 {round_context(round_)}
 
-You have every logged shot of this round above, plus the golfer's previous rounds. Answer questions about any shot, hole, distance, club or comparison directly from this data — e.g. "how far was my second putt on 7" is the putt 2 line under H7. Strokes gained is measured against the PGA Tour average, so negative numbers are normal for amateurs; judge performance against the golfer's own previous rounds. Only say you don't have something if it genuinely isn't in the data (for example a distance they didn't log), and say exactly what's missing. You can also draw on general golf coaching knowledge to explain why something happened or what to practise."""
+You have every logged shot of this round above, plus the golfer's previous rounds. Answer questions about any shot, hole, distance, club or comparison directly from this data — e.g. "how far was my second putt on 7" is the putt 2 line under H7. Strokes gained is measured against a scratch golfer, so negative numbers are normal for anyone above scratch; judge performance against the golfer's own previous rounds. Only say you don't have something if it genuinely isn't in the data (for example a distance they didn't log), and say exactly what's missing. You can also draw on general golf coaching knowledge to explain why something happened or what to practise."""
 
 
 def _profile_facts(user, rounds: list) -> str:
@@ -82,7 +82,7 @@ Rounds on file: {len(rounds)}
 
 {profile_context(user)}
 
-Answer from the data above: round summaries, breakdowns, club stats and full shot logs for the most recent rounds. Strokes gained is vs the PGA Tour average, so judge the golfer against their own history. If they ask about a round or shot that isn't in the data, say so plainly. Keep track of what's been discussed earlier in this conversation."""
+Answer from the data above: round summaries, breakdowns, club stats and full shot logs for the most recent rounds. Strokes gained is vs a scratch golfer, so judge the golfer against their own history. If they ask about a round or shot that isn't in the data, say so plainly. Keep track of what's been discussed earlier in this conversation."""
 
 
 def _chat_completion(system_prompt: str, history_msgs: list) -> str | None:

@@ -223,8 +223,10 @@ details.howto li b { color: var(--text); font-weight: 500; }
       <span class="num {{ c(r.sg) }}">{{ f(r.sg) }}</span>
     </div>
     <div class="bdetail">
-      <span>{{ r.n }} {{ unit }}{{ 's' if r.n != 1 }}{% if r.holed is defined and r.holed is not none %} · {{ r.holed }} holed{% if r.tour_make %} (Tour holes {{ r.tour_make }}%){% endif %}{% endif %}</span>
+      <span>{{ r.n }} {{ unit }}{{ 's' if r.n != 1 }}{% if r.holed is defined and r.holed is not none %} · {{ r.holed }} holed{% if r.scratch_make %} (scratch holes ~{{ r.scratch_make }}%){% endif %}{% endif %}</span>
       {% if r.rel %}<span>{{ meter(r.rel) }} {{ r.rel.tier_label }}{% if r.rel.ci is not none and r.n > 1 %} · ±{{ '%.2f' | format(r.rel.ci) }}{% endif %}</span>{% endif %}
+      {% set pl = shots_plays_like(r.per, shots_per18.get(dim_cat.get(r.dim))) if r.dim is defined else none %}
+      {% if pl is not none and r.n >= 3 %}<span title="If every one of these shots in 18 holes were like this">plays like a {{ hcp_fmt(pl) }} from here</span>{% endif %}
       {% if r.avg is not none %}<span>your usual {{ f(r.avg) }}/{{ unit }}</span>{% endif %}
       {% if r.pattern and r.pattern.kind in ('recurring', 'one-off', 'improving') %}<span class="pat {{ r.pattern.kind }}">{{ r.pattern.text }}</span>{% endif %}
     </div>
@@ -240,8 +242,8 @@ details.howto li b { color: var(--text); font-weight: 500; }
 {%- endmacro %}
 {% macro chartkey() -%}
 <div class="legend">
-  <span><i style="width:12px;height:8px;background:var(--loss)"></i>Lost to Tour</span>
-  <span><i style="width:12px;height:8px;background:var(--gain)"></i>Gained on Tour</span>
+  <span><i style="width:12px;height:8px;background:var(--loss)"></i>Lost to scratch</span>
+  <span><i style="width:12px;height:8px;background:var(--gain)"></i>Gained on scratch</span>
   <span><i style="width:14px;height:2px;background:rgba(236,239,237,.5)"></i>Likely range (95%)</span>
   <span><i style="width:2px;height:12px;background:var(--gold)"></i>Your 10-round average</span>
 </div>
@@ -266,7 +268,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
         <span class="sub">{{ score_vs_par_label }} to par {{ par }}</span>
       </div>
       <div class="hero-block r">
-        <span class="label">Strokes gained vs Tour</span>
+        <span class="label">Strokes gained vs scratch</span>
         {% if sg_total is not none %}
         <span class="big-sg {{ c(sg_total) }}">{{ f(sg_total) }}</span>
         <span class="sub">over the {{ holes_played }} holes played · {% if shots_measured %}{{ f(sg_total / shots_measured, 3) }} per shot across {{ shots_measured }} measured shots{% endif %}{% if sg_pace18 is not none %}<br>18-hole pace {{ f(sg_pace18, 1) }}{% endif %}</span>
@@ -279,6 +281,9 @@ details.howto li b { color: var(--text); font-weight: 500; }
   </header>
 
   {% if pb_banner %}<div class="pb"><b>Personal best</b> · {{ pb_banner.label }}</div>{% endif %}
+
+  {% from '_glance.html' import glance_strip %}
+  {% if glance.tiles %}<div style="margin:2px 20px 6px">{{ glance_strip(glance, 'Your round at a glance', 'Handicap you played to in each part of the game, from your strokes gained vs scratch') }}</div>{% endif %}
 
   <nav class="tabs no-print" role="tablist" aria-label="Report sections">
     <button class="tab active" data-tab="overview" role="tab" aria-selected="true">Overview</button>
@@ -297,7 +302,8 @@ details.howto li b { color: var(--text); font-weight: 500; }
       <details class="howto">
         <summary>How to read this report</summary>
         <ul>
-          <li><b>Strokes gained (SG)</b> compares every shot with what a PGA Tour pro averages from the same distance and lie. <b>0 = Tour average.</b> −0.30 means that shot cost you 0.3 strokes more than a Tour pro; negative numbers are normal for every amateur.</li>
+          <li><b>Strokes gained (SG)</b> compares every shot with what a scratch (0 handicap) golfer averages from the same distance and lie. <b>0 = scratch.</b> −0.30 means that shot cost you 0.3 strokes more than a scratch golfer; negative numbers are normal for anyone who isn’t scratch.</li>
+          <li><b>Plays like</b> turns that into a handicap: strokes lost to scratch, scaled to 18 holes. Each part of the game counts for a quarter, so −2 off the tee over 9 holes is −4 per 18 and plays like a 16 handicap. On a breakdown row it means “if every shot like this were played this well, you’d play to a …”.</li>
           <li><b>Per shot</b> is the average across the shots in that group; <b>Total</b> is all of them added up. Category totals add up to your round total.</li>
           <li><b>The confidence bars</b> (▮▮▮▮) show how much data is behind a number: 1 bar = fewer than 3 shots, too few to judge; 4 bars = 30+ shots, solid. The <b>± range</b> is where the true average probably sits; if the whole range is below 0, the loss is more than normal shot-to-shot luck.</li>
           <li><b>Gold tick</b> = your own average over your previous 10 rounds, so you can see whether today was normal for you.</li>
@@ -309,11 +315,11 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% if waterfall %}
     {% set lost = waterfall.score - waterfall.expected %}
     <section class="sec">
-      <h2 class="sec-title">Your score vs a Tour pro</h2>
-      <p class="sec-desc">A Tour pro would average {{ '%.1f' | format(waterfall.expected) }} strokes on {% if waterfall.complete %}these {{ waterfall.holes }} holes{% else %}the {{ waterfall.holes }} of {{ waterfall.holes_total }} holes where every shot was measured{% endif %}. Each bar shows how many strokes you lost (red) or gained (green) against that in one part of the game, ending at your score.</p>
+      <h2 class="sec-title">Your score vs a scratch golfer</h2>
+      <p class="sec-desc">A scratch golfer would average {{ '%.1f' | format(waterfall.expected) }} strokes on {% if waterfall.complete %}these {{ waterfall.holes }} holes{% else %}the {{ waterfall.holes }} of {{ waterfall.holes_total }} holes where every shot was measured{% endif %}. Each bar shows how many strokes you lost (red) or gained (green) against that in one part of the game, ending at your score.</p>
       <div>
         <div class="wf-row">
-          <span class="lbl dim">Tour average</span>
+          <span class="lbl dim">Scratch golfer</span>
           <span class="wf-track">{% for t in waterfall.ticks %}<span class="grid" style="left: {{ t.pct }}%;"></span>{% endfor %}
             <span class="seg" style="left: 0; width: {{ waterfall.exp_pct }}%; background: rgba(255,255,255,.18);"></span>
             <span class="link" style="left: {{ waterfall.exp_pct }}%;"></span></span>
@@ -340,7 +346,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
           <span></span>
         </div>
       </div>
-      <p class="note">Strokes gained is measured against the Tour, not par. Right column: strokes lost (+) or gained (−) per category.</p>
+      <p class="note">Strokes gained is measured against a scratch golfer, not par. Right column: strokes lost (+) or gained (−) per category.</p>
     </section>
     {% endif %}
 
@@ -427,7 +433,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% set in_sg = hole_rows | selectattr('hole_number', 'gt', 9) | map(attribute='sg') | sum %}
     <section class="sec">
       <h2 class="sec-title">Strokes gained on each hole</h2>
-      <p class="sec-desc">Bars above the line gained strokes on a Tour pro, bars below lost them.{% if split.front and split.back %} Front nine {{ f(out_sg, 1) }}, back nine {{ f(in_sg, 1) }}.{% endif %} Faded bars are holes with a shot missing a distance.</p>
+      <p class="sec-desc">Bars above the line gained strokes on a scratch golfer, bars below lost them.{% if split.front and split.back %} Front nine {{ f(out_sg, 1) }}, back nine {{ f(in_sg, 1) }}.{% endif %} Faded bars are holes with a shot missing a distance.</p>
       <div class="hchart-wrap">
         <div class="hy" style="height: {{ hchart.h }}px">
           <span style="top: 0">{{ f(hchart.max_pos, 1) }}</span>
@@ -485,7 +491,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
           </tbody>
         </table>
       </div>
-      <p class="note">GIR ● = green in regulation. SG = strokes gained on the hole vs a Tour pro.</p>
+      <p class="note">GIR ● = green in regulation. SG = strokes gained on the hole vs a scratch golfer.</p>
     </section>
   </div>
 
@@ -515,7 +521,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
     <section class="sec"><p class="note">Turn on club logging in <a href="{{ url_for('bag.index') }}" style="text-decoration:underline">My Bag</a> to see SG and distance for each club off the tee.</p></section>
     {% endif %}
 
-    {% for dim, title, desc in [('ott_result', 'By where it finished', 'How much each result cost or gained per tee shot, compared with a Tour pro hitting from the same tee.'), ('ott_len', 'By hole length (yds)', 'Are you losing more on long holes or short ones?')] %}
+    {% for dim, title, desc in [('ott_result', 'By where it finished', 'How much each result cost or gained per tee shot, compared with a scratch golfer hitting from the same tee.'), ('ott_len', 'By hole length (yds)', 'Are you losing more on long holes or short ones?')] %}
     {% if bd[dim] %}
     <section class="sec">
       <h2 class="sec-title">{{ title }}</h2>
@@ -577,7 +583,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
       </div>
     </section>
 
-    {% for dim, title, desc in [('atg_dist', 'Around the green · by distance (yds)', 'Chips, pitches and bunker shots within about 50 yards.'), ('atg_lie', 'Around the green · by lie', 'Chipping from rough is harder for everyone, so it is judged against the Tour average from rough.')] %}
+    {% for dim, title, desc in [('atg_dist', 'Around the green · by distance (yds)', 'Chips, pitches and bunker shots within about 50 yards.'), ('atg_lie', 'Around the green · by lie', 'Chipping from rough is harder for everyone, so it is judged against a scratch golfer from rough.')] %}
     {% if bd[dim] %}
     <section class="sec">
       <h2 class="sec-title">{{ title }}</h2>
@@ -591,7 +597,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
     {% if bd.putt_dist %}
     <section class="sec">
       <h2 class="sec-title">Putting · by first-putt distance (ft)</h2>
-      <p class="sec-desc">Each row is where a putt started. Strokes gained compares how many putts you took from there with a Tour pro. The detail line shows how many you holed and the Tour make rate from that range.</p>
+      <p class="sec-desc">Each row is where a putt started. Strokes gained compares how many putts you took from there with a scratch golfer. The detail line shows how many you holed and roughly how often a scratch golfer holes from that range.</p>
       {% call brows(bd.putt_dist, 0.5, 'putt', True) %}Feet{% endcall %}
       {{ chartkey() }}
       {% if insights.putt %}<p class="insight">{{ insights.putt }}</p>{% endif %}
@@ -607,7 +613,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
   <div class="panel" id="tab-holes" role="tabpanel">
     <section class="sec">
       <h2 class="sec-title">Every shot</h2>
-      <p class="sec-desc">Each shot with its club, where it was played from and its strokes gained against a Tour pro from the same spot. The hole total is on the right of each hole.</p>
+      <p class="sec-desc">Each shot with its club, where it was played from and its strokes gained against a scratch golfer from the same spot. The hole total is on the right of each hole.</p>
       <div>
         {% for h in hole_rows %}
         <div class="hole">

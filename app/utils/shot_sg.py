@@ -5,7 +5,7 @@ Every logged shot gets its own SG value using Broadie's formula:
 
     SG(shot) = E(start) - 1 - penalty_strokes - E(start of next shot)
 
-where E() is the PGA Tour expected strokes to hole out from that position
+where E() is a scratch golfer's expected strokes to hole out from that position
 (baseline tables in app/utils/strokes_gained.py) and E = 0 once holed.
 
 Because the formula telescopes, the SG values of a fully-measured hole sum to
@@ -50,7 +50,7 @@ CATEGORY_LABELS = {
 
 def expected_short_game(distance_yds, lie):
     """
-    Tour expected strokes for a shot around the green, by lie:
+    Scratch expected strokes for a shot around the green, by lie:
     bunker → ATG bunker baseline; rough → rough baseline (chips from rough are
     harder than from tight lies); fringe/fairway → ATG fairway baseline.
     Beyond 50 yds the approach baselines take over (expected_scramble).
@@ -175,7 +175,7 @@ def compute_hole(h, yardage=None) -> dict:
     Returns {
         'shots':     [shot record, ...],
         'complete':  True when every stroke is accounted for in a valued block,
-        'start_exp': Tour expected strokes from the tee (None if unknown),
+        'start_exp': scratch expected strokes from the tee (None if unknown),
         'sg_total':  sum of valued shot SG,
     }
     """

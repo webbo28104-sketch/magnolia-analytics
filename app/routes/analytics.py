@@ -83,6 +83,13 @@ def _category_page(cat):
     per, n = _per(cur_shots)
     pper, pn = _per(prev_shots)
     per_round_totals = [d['totals'][cat] for r, d in cur if (r.holes_played or 0) >= 9]
+    from app.utils import hcp_equiv
+    plays_like = hcp_equiv.per18_from_values(
+        [hcp_equiv.category_plays_like(d['totals'][cat], r.holes_played) for r, d in cur if (r.holes_played or 0) >= 9])
+    holes_total = sum(r.holes_played or 0 for r, _ in cur)
+    shots_per18 = len(cur_shots) * 18 / holes_total if holes_total else None
+    hcp_index = (current_user.official_handicap_index if current_user.official_handicap_index is not None
+                 else current_user.handicap_index)
 
     # ── Heatmap: SG per shot by band (rows) × round (columns, oldest → newest) ──
     cols = list(reversed(cur))
@@ -117,7 +124,7 @@ def _category_page(cat):
         insight = (f"{worst['label']} {unit} has lost strokes in {worst['neg']} of the {worst['played']} rounds "
                    f"you played from there ({worst['per']:+.2f}/{cfg['unit']}).")
         if best is not worst and best['neg'] < best['played'] / 2:
-            insight += (f" {best['label']} {unit} was at or above Tour level in "
+            insight += (f" {best['label']} {unit} was at or above scratch level in "
                         f"{best['played'] - best['neg']} of {best['played']} ({best['per']:+.2f}/{cfg['unit']}).")
 
     # ── Per-round trend (SG per shot, oldest → newest) ──
@@ -202,6 +209,8 @@ def _category_page(cat):
         insight=insight, trend=trend, tables=tables, heat_rows=heat_rows_detail,
         wind_rows=wind_rows, extra=extra, lie=lie, wind=wind, windy_kph=WINDY_KPH,
         headline_rel=headline_rel, prev_n=pn, prev_rounds_n=len(prev),
+        plays_like=plays_like, plays_verdict=hcp_equiv.verdict(plays_like, hcp_index), hcp_index=hcp_index,
+        shots_per18=shots_per18,
     )
 
 

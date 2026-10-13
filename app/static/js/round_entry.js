@@ -104,7 +104,7 @@ function applyPanelContextWarn(type) {
   if (type === 'ott') {
     if (count === 0 && par === 3) {
       showPanelWarn('ott',
-        'On a par 3, tee shots are classified as Approach in PGA Tour SG methodology. ' +
+        'On a par 3, tee shots are classified as Approach in the standard strokes-gained method (Broadie). ' +
         'Recording as OTT will count toward SG Off the Tee rather than SG Approach.');
     } else if (count > 0 && !hasPenalty) {
       showPanelWarn('ott',
@@ -633,7 +633,7 @@ function _doCommitShot() {
 }
 
 // ── Commit-time guards ─────────────────────────────────────────────────────────
-// Guards check PGA Tour SG distance thresholds and sequence rules.
+// Guards check the standard strokes-gained distance thresholds and sequence rules.
 // Returns a guard object { msg, toType, dist } if a modal should fire, else null.
 function _getCommitGuard() {
   const type = _activeType;
@@ -642,9 +642,9 @@ function _getCommitGuard() {
   if (type === 'app') {
     const dist = parseInt(document.getElementById('app-dist-exact')?.value);
     if (dist > 0 && dist <= 30) {
-      // PGA Tour ATG boundary: ≤30y = Around the Green
+      // Standard SG ATG boundary: ≤30y = Around the Green
       return {
-        msg: `${dist} yards is within the PGA Tour's 30-yard ATG boundary. At this distance ` +
+        msg: `${dist} yards is within the standard 30-yard around-the-green boundary. At this distance ` +
              `you are likely chipping or pitching — "Around the Green" will produce more ` +
              `accurate Strokes Gained data.`,
         toType: 'atg', dist
@@ -657,7 +657,7 @@ function _getCommitGuard() {
     if (dist > 0 && dist > 50) {
       // System ATG baselines only cover up to 50 yards
       return {
-        msg: `${dist} yards exceeds the ATG baseline range (max 50 yards). The PGA Tour ATG ` +
+        msg: `${dist} yards exceeds the ATG baseline range (max 50 yards). The standard ATG ` +
              `category covers shots within 30 yards. Beyond 50 yards, Approach will give ` +
              `more accurate Strokes Gained data.`,
         toType: 'app', dist
@@ -928,9 +928,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const val = parseInt(this.value);
     if (!val || val <= 0) { hidePanelWarn('app'); applyPanelContextWarn('app'); return; }
     if (val <= 30) {
-      showPanelWarn('app', `${val} yards — PGA Tour classifies shots within 30 yards as Around the Green (ATG). Consider switching type.`);
+      showPanelWarn('app', `${val} yards — Strokes gained classifies shots within 30 yards as Around the Green (ATG). Consider switching type.`);
     } else if (val <= 50) {
-      showPanelWarn('app', `${val} yards is in the 30–50 yard scoring zone. PGA Tour's ATG boundary is 30 yards; this system's ATG baseline covers up to 50 yards. Use ATG if this is a chip or pitch.`);
+      showPanelWarn('app', `${val} yards is in the 30–50 yard scoring zone. The standard ATG boundary is 30 yards; this system's ATG baseline covers up to 50 yards. Use ATG if this is a chip or pitch.`);
     } else {
       hidePanelWarn('app');
     }
@@ -940,9 +940,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const val = parseInt(this.value);
     if (!val || val <= 0) { hidePanelWarn('atg'); applyPanelContextWarn('atg'); return; }
     if (val > 50) {
-      showPanelWarn('atg', `${val} yards exceeds the ATG baseline range (50 yards max). PGA Tour ATG threshold is 30 yards — beyond 50 yards is Approach territory.`);
+      showPanelWarn('atg', `${val} yards exceeds the ATG baseline range (50 yards max). The standard ATG threshold is 30 yards — beyond 50 yards is Approach territory.`);
     } else if (val > 30) {
-      showPanelWarn('atg', `${val} yards is between the PGA Tour's 30-yard ATG limit and this system's 50-yard ATG range. If this is a full wedge shot, Approach may be more accurate.`);
+      showPanelWarn('atg', `${val} yards is between the standard 30-yard ATG limit and this system's 50-yard ATG range. If this is a full wedge shot, Approach may be more accurate.`);
     } else {
       hidePanelWarn('atg');
     }

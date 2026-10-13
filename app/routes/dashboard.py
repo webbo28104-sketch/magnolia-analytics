@@ -154,6 +154,22 @@ def index():
             cat['rel'] = ev.reliability(cat['per'], cat['n'], sd[cat['cat']])
         trend = _trend(all_complete[:TREND_ROUNDS])
 
+    # ── Clubhouse glance: handicap equivalents over the last N rounds ──────
+    from app.utils import hcp_equiv
+    labels = {'ott': 'Tee shots', 'app': 'Approach', 'atg': 'Short game', 'putt': 'Putting'}
+    shown = CATEGORIES if user_is_pro else ('ott',)
+    eligible = [r for r in cur if (r.holes_played or 0) >= 9]
+    def _avg_plays_like(fn, value_of):
+        vals = [fn(value_of(r), r.holes_played) for r in eligible]
+        return hcp_equiv.per18_from_values(vals)
+    glance = hcp_equiv.glance(
+        [(c, labels[c], _avg_plays_like(hcp_equiv.category_plays_like, lambda r, c=c: datas[r.id]['totals'][c]))
+         for c in shown],
+        _avg_plays_like(hcp_equiv.round_plays_like, lambda r: sum(datas[r.id]['totals'][c] for c in CATEGORIES))
+        if user_is_pro else None,
+        current_user.official_handicap_index if current_user.official_handicap_index is not None
+        else current_user.handicap_index) if eligible else None
+
     # ── Recent rounds table ──────────────────────────────────────────────
     # Score-only rounds come from England Golf and have no shot data
     score_only = (Round.query.filter_by(user_id=current_user.id, status='score_only')
@@ -181,6 +197,6 @@ def index():
         total_complete=len(all_complete),
         window=len(cur),
         kpi=kpi, cats=cats, leaks=leaks, trend=trend,
-        recent=recent, more_rounds=max(len(all_complete) - 25, 0),
+        recent=recent, more_rounds=max(len(all_complete) - 25, 0), glance=glance, glance_n=len(eligible) if eligible else 0,
         in_progress_rounds=_in_progress(),
     )

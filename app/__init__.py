@@ -79,6 +79,9 @@ def create_app(config_name='default'):
     # Custom Jinja2 globals — callable from any template without passing in context
     from app.utils.access import is_pro
     app.jinja_env.globals['is_pro'] = is_pro
+    from app.utils import hcp_equiv
+    app.jinja_env.globals['hcp_fmt'] = hcp_equiv.fmt
+    app.jinja_env.globals['shots_plays_like'] = hcp_equiv.shots_plays_like
 
     # Create all tables on startup (safe to call repeatedly)
     with app.app_context():

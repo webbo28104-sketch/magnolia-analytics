@@ -124,11 +124,17 @@
   </div>
   {% endfor %}
 
+  {% if glance and glance.tiles %}
+  {% from '_glance.html' import glance_strip %}
+  {{ glance_strip(glance, 'Your game at a glance', 'Handicap you’ve played to in each part of the game, average of your last ' ~ glance_n ~ ' rounds') }}
+  {% endif %}
+
   {% if total_complete %}
   <details class="howto">
     <summary>How to read these numbers</summary>
     <ul>
-      <li><b>Strokes gained (SG)</b> compares every shot you log with what a PGA Tour pro averages from the same distance and lie. 0 = Tour average; negative is normal for every amateur. What matters is whether your numbers move towards 0 over time.</li>
+      <li><b>Strokes gained (SG)</b> compares every shot you log with what a scratch (0 handicap) golfer averages from the same distance and lie. 0 = scratch; negative is normal for anyone who isn’t scratch. What matters is whether your numbers move towards 0 over time.</li>
+      <li><b>Plays like</b> turns strokes gained into a handicap: strokes lost to scratch per 18 holes. Each part of the game counts for a quarter, so losing 4 strokes off the tee over 18 holes means your tee shots play like a 16 handicap.</li>
       <li><b>SG per round</b> is scaled to 18 holes so 9-hole rounds compare fairly. <b>SG per shot</b> is the average across every measured shot.</li>
       <li><b>Last {{ window }}</b> = your most recent {{ window }} rounds; changes compare them with the {{ window }} before.</li>
       <li><b>Confidence bars</b> show how much data is behind a number. Patterns need several rounds before they mean much.</li>
@@ -138,7 +144,7 @@
     <div class="kpi"><span class="lbl">Scoring average</span><span class="v">{{ kpi.scoring_avg if kpi.scoring_avg is not none else '—' }}</span><span class="s">Average gross score over your {{ kpi.scoring_n }} most recent 18-hole round{{ 's' if kpi.scoring_n != 1 }}</span></div>
     {% if user_is_pro %}
     <div class="kpi"><span class="lbl">Strokes gained / round</span><span class="v {{ c(kpi.sg_round) }}">{{ f(kpi.sg_round) }}</span>
-      <span class="s">vs a Tour pro, per 18 holes, last {{ window }} rounds{% if kpi.sg_round_delta is not none %}. <span class="{{ c(kpi.sg_round_delta) }}">{{ f(kpi.sg_round_delta, 1) }}</span> compared with the {{ window }} before{% endif %}</span></div>
+      <span class="s">vs a scratch golfer, per 18 holes, last {{ window }} rounds{% if kpi.sg_round_delta is not none %}. <span class="{{ c(kpi.sg_round_delta) }}">{{ f(kpi.sg_round_delta, 1) }}</span> compared with the {{ window }} before{% endif %}</span></div>
     <div class="kpi"><span class="lbl">Strokes gained / shot</span><span class="v {{ c(kpi.sg_shot) }}">{{ f(kpi.sg_shot, 3) }}</span><span class="s">Average over {{ kpi.shots }} measured shots in the last {{ window }} rounds</span></div>
     {% endif %}
     <div class="kpi"><span class="lbl">Rounds logged</span><span class="v">{{ total_complete }}</span><span class="s">All time · <a href="{{ url_for('bag.index') }}" style="color:var(--text-muted);text-decoration:underline">my bag</a></span></div>
@@ -149,7 +155,7 @@
   <section>
     <div class="sec-h" style="flex-direction:column;align-items:flex-start;gap:4px">
       <h2 class="sec-t">Strokes gained per round</h2>
-      <p class="sec-d">Each grey point is one round (scaled to 18 holes, vs a Tour pro); click one to open its report. The gold line is the average of your last 5 rounds, which shows the trend. Higher is better. Latest {{ f(trend.latest, 1) }}, best {{ f(trend.best, 1) }}, worst {{ f(trend.worst, 1) }}.</p>
+      <p class="sec-d">Each grey point is one round (scaled to 18 holes, vs a scratch golfer); click one to open its report. The gold line is the average of your last 5 rounds, which shows the trend. Higher is better. Latest {{ f(trend.latest, 1) }}, best {{ f(trend.best, 1) }}, worst {{ f(trend.worst, 1) }}.</p>
     </div>
     <div class="chart">
       {% for t in trend.ticks %}<span class="yt" style="top: {{ 20 + loop.index0 * 100 }}px">{{ f(t, 1) }}</span>{% endfor %}
@@ -163,7 +169,7 @@
       </svg>
       {% for d in trend.dots %}<a href="{{ url_for('reports.view_report', round_id=d.id) }}" class="dot" style="left: calc(40px + (100% - 40px) * {{ d.x / 1000 }}); top: {{ d.y }}px" title="{{ d.date }}: {{ f(d.v, 1) }}" aria-label="{{ d.date }} round, {{ f(d.v, 1) }} strokes gained"></a>{% endfor %}
     </div>
-    <div class="chart-x"><span>{{ trend.dots[0].date }}</span><span class="faint">Rounds, oldest to newest · strokes gained per 18 holes{% if trend.zero is not none %} · dashed line = Tour average{% endif %}</span><span>{{ trend.dots[-1].date }}</span></div>
+    <div class="chart-x"><span>{{ trend.dots[0].date }}</span><span class="faint">Rounds, oldest to newest · strokes gained per 18 holes{% if trend.zero is not none %} · dashed line = scratch level{% endif %}</span><span>{{ trend.dots[-1].date }}</span></div>
   </section>
   {% endif %}
 
@@ -254,7 +260,7 @@
       </div>
       {% endfor %}
     </div></div>
-    <p class="m" style="font-size:11px;color:#7a827e;margin-top:10px">SG = total strokes gained vs a Tour pro for the holes actually played (a 9-hole round shows its 9-hole total). Tee, App (approach), Short (around the green) and Putt split that total by category. Official/Casual sets whether the round counts towards your official handicap.</p>
+    <p class="m" style="font-size:11px;color:#7a827e;margin-top:10px">SG = total strokes gained vs a scratch golfer for the holes actually played (a 9-hole round shows its 9-hole total). Tee, App (approach), Short (around the green) and Putt split that total by category. Official/Casual sets whether the round counts towards your official handicap.</p>
     {% else %}
     <div class="empty">
       <p style="margin:0;color:var(--text-muted)">No rounds logged yet.</p>

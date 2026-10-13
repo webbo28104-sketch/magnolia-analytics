@@ -26,8 +26,9 @@ OTT_RESULTS = [('fairway', 'Fairway'), ('left', 'Left rough'), ('right', 'Right 
 APP_LIE_LABELS = [('fairway', 'Fairway'), ('rough', 'Rough'), ('bunker', 'Bunker'), ('recovery', 'Recovery')]
 ATG_LIE_LABELS = [('fringe', 'Fringe'), ('rough', 'Rough'), ('bunker', 'Bunker')]
 
-# Tour make % by putt band (Broadie): used as a reference marker
-TOUR_MAKE_PCT = {'< 3': 99, '3–6': 80, '6–10': 52, '10–20': 25, '20–35': 8, '35+': 3}
+# Approximate scratch make % by putt band: Broadie's Tour rates lowered in line with
+# the scratch putting gap (≈1 stroke per 18, scratch three-putts ≈38% more often).
+SCRATCH_MAKE_PCT = {'< 3': 98, '3–6': 75, '6–10': 46, '10–20': 21, '20–35': 6, '35+': 2}
 
 
 def _band(value, bands):
@@ -123,7 +124,7 @@ def _row(dim, key, b, h=None) -> dict:
     row['clubs'] = [club_label(c) for c in clubs]
     if dim == 'putt_dist':
         row['holed'] = sum(1 for s in shots if s['holed'])
-        row['tour_make'] = TOUR_MAKE_PCT.get(key)
+        row['scratch_make'] = SCRATCH_MAKE_PCT.get(key)
     if dim in ('ott_club',):
         travel = [s.get('travel') for s in shots if s.get('travel')]
         row['avg_travel'] = round(sum(travel) / len(travel)) if travel else None

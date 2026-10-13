@@ -151,12 +151,18 @@ def round_context(round_, n_previous=5) -> str:
         f"  {CATEGORY_LABELS[c]}: {totals[c]:+.2f} over {counts[c]} valued shots"
         f" ({(totals[c] / counts[c]) if counts[c] else 0:+.3f}/shot)" for c in CATEGORIES)
     m = data['measured']
+    from app.utils import hcp_equiv
+    hp = round_.holes_played
+    plays = ', '.join(f"{CATEGORY_LABELS[c]} {hcp_equiv.fmt(hcp_equiv.category_plays_like(totals[c], hp))}"
+                      for c in CATEGORIES if counts[c])
+    played_to = hcp_equiv.fmt(hcp_equiv.round_plays_like(data['sg_total'], hp))
     return f"""THIS ROUND — {summary_line(this)}
 
-STROKES GAINED vs PGA Tour for the {round_.holes_played} holes actually played (NOT scaled to 18 holes):
+STROKES GAINED vs a scratch golfer for the {round_.holes_played} holes actually played (NOT scaled to 18 holes):
 {sg_lines}
   Total: {data['sg_total']:+.2f}
-Fully measured holes: {m['holes']} of {m['holes_total']}. On those holes a Tour pro would expect {m['expected']:.1f} strokes; the golfer took {m['score']}.
+HANDICAP EQUIVALENTS ("plays like" = strokes lost to scratch per 18 holes; each part of the game weighted a quarter, so 4 × per-18 loss): round played to {played_to}; {plays}. Lead with these when explaining the round in plain English.
+Fully measured holes: {m['holes']} of {m['holes_total']}. On those holes a scratch golfer would expect {m['expected']:.1f} strokes; the golfer took {m['score']}.
 
 SHOT-BY-SHOT LOG (distances are to the flag at the START of each shot; 'est. travelled' = start distance minus distance left)
 {shot_log_text(round_, data)}

@@ -1,0 +1,42 @@
+{#- Clubhouse glance: handicap equivalents for the round (or a period).
+    g = hcp_equiv.glance(...); title / subtitle are plain strings. -#}
+{% macro glance_strip(g, title, subtitle) -%}
+<section class="glance" aria-label="{{ title }}">
+  <style>
+    .glance { display: flex; flex-direction: column; gap: 12px; padding: 18px 0 20px; border-top: 1px solid var(--border, var(--rule)); border-bottom: 1px solid var(--border, var(--rule)); }
+    .glance .gh { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; }
+    .glance .gt { font-size: 17px; font-weight: 600; letter-spacing: -.02em; color: var(--ink, var(--text)); }
+    .glance .gs { font-size: 12px; color: var(--text-muted, var(--dim)); }
+    .glance .gg { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; }
+    .glance .gc { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--border, var(--rule)); background: var(--panel); }
+    .glance .gc.main { border-color: rgba(201,168,76,.45); }
+    .glance .gl { font-family: var(--font-mono, var(--mono)); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted, var(--dim)); }
+    .glance .gv { font-family: var(--font-mono, var(--mono)); font-size: 30px; font-weight: 500; letter-spacing: -.04em; line-height: 1.05; color: var(--ink, var(--text)); }
+    .glance .gv small { font-family: var(--font-sans, var(--sans)); font-size: 11px; font-weight: 400; letter-spacing: 0; color: var(--text-muted, var(--dim)); margin-right: 4px; }
+    .glance .gv.better { color: var(--gain); } .glance .gv.worse { color: var(--loss); }
+    .glance .gn { font-size: 11px; color: var(--text-muted, var(--dim)); }
+    .glance .gk { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink, var(--text)); }
+  </style>
+  <div class="gh">
+    <span class="gt">{{ title }}</span>
+    <span class="gs">{{ subtitle }}{% if g.index is not none %} · green = better than your {{ '+%.1f' | format(-g.index) if g.index < 0 else '%.1f' | format(g.index) }} index, orange = worse{% endif %}</span>
+  </div>
+  <div class="gg">
+    {% if g.overall is not none %}
+    <div class="gc main" title="Strokes lost to a scratch golfer, scaled to 18 holes">
+      <span class="gl">Overall</span>
+      <span class="gv {{ g.overall_verdict or '' }}"><small>played to</small>{{ g.overall_txt }}</span>
+      <span class="gn">handicap equivalent</span>
+    </div>
+    {% endif %}
+    {% for t in g.tiles %}
+    <div class="gc" title="4 × strokes lost to scratch per 18 holes in this part of the game (each part weighted 25%)">
+      <span class="gl">{{ t.label }}</span>
+      <span class="gv {{ t.verdict or '' }}"><small>plays like</small>{{ t.txt }}</span>
+      <span class="gn">{% if t.verdict == 'better' %}better than your handicap{% elif t.verdict == 'worse' %}worse than your handicap{% elif t.verdict == 'level' %}about your handicap{% elif t.v is none %}not enough shots logged{% else %}&nbsp;{% endif %}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% if g.takeaway %}<p class="gk">{{ g.takeaway }}</p>{% endif %}
+</section>
+{%- endmacro %}

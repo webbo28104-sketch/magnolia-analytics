@@ -100,7 +100,7 @@
   <div class="an-head">
     <div style="display:flex;align-items:baseline;gap:18px;flex-wrap:wrap">
       <h1>{{ cfg.title }}</h1>
-      <span class="mono {{ c(per) }}" style="font-size:22px" title="Average strokes gained per {{ cfg.unit }} vs a Tour player">{{ f(per, 3) }} strokes / {{ cfg.unit }}</span>
+      <span class="mono {{ c(per) }}" style="font-size:22px" title="Average strokes gained per {{ cfg.unit }} vs a scratch golfer">{{ f(per, 3) }} strokes / {{ cfg.unit }}</span>
       {% if delta is not none %}<span class="mono {{ c(delta) }}" style="font-size:12px">{{ f(delta, 3) }} vs your previous {{ prev_rounds_n }} rounds</span>{% endif %}
     </div>
     <form class="filters" method="GET">
@@ -131,7 +131,8 @@
   <details class="howto">
     <summary>How to read this page</summary>
     <ul>
-      <li><b>Strokes gained (SG)</b> compares each {{ cfg.unit }} with what a Tour player averages from the same spot. <b>+0.10</b> means that {{ cfg.unit }} was a tenth of a stroke better than Tour; <b>−0.30</b> means it cost you about a third of a stroke. 0 = Tour level.</li>
+      <li><b>Strokes gained (SG)</b> compares each {{ cfg.unit }} with what a scratch golfer averages from the same spot. <b>+0.10</b> means that {{ cfg.unit }} was a tenth of a stroke better than scratch; <b>−0.30</b> means it cost you about a third of a stroke. 0 = scratch level.</li>
+      <li><b>Plays like</b> is the handicap these {{ cfg.unit }}s play to: 4 × strokes lost to scratch per 18 holes, as each part of the game counts for a quarter. On a row, it’s the handicap you’d play to if every {{ cfg.unit }} were like those.</li>
       <li><b>Per {{ cfg.unit }}</b> is the average, so you can compare groups of different sizes. <b>Total</b> is the sum: how many strokes that group actually cost or gained over the period.</li>
       <li><b>Confidence bars</b> (▮▮▮▮) show how much data is behind a number: 1 bar = under 3 {{ cfg.unit }}s, too few to judge; 2 = early signal; 3 = developing (10+); 4 = solid (30+). The <b>± range</b> is where your true average probably sits. If the whole range is below 0, the loss is more than normal shot-to-shot luck.</li>
       <li><b>Lost strokes in X of Y rounds</b> tells you whether something is a pattern (most rounds) or a one-off bad day.</li>
@@ -140,6 +141,7 @@
   </details>
 
   <section class="kpis">
+    <div class="kpi"><span class="lbl">Plays like</span><span class="v {{ 'pos' if plays_verdict == 'better' else ('neg' if plays_verdict == 'worse' else '') }}">{{ hcp_fmt(plays_like) }}</span><span class="s">handicap equivalent for {{ cfg.title | lower }}{% if hcp_index is not none %} · your index {{ ('+%.1f' | format(-hcp_index)) if hcp_index < 0 else ('%.1f' | format(hcp_index)) }}{% endif %}<br>4 × strokes lost to scratch per 18 (each part of the game counts a quarter)</span></div>
     <div class="kpi"><span class="lbl">Strokes gained per {{ cfg.unit }}</span><span class="v {{ c(per) }}">{{ f(per, 3) }}</span><span class="s">{{ meter(headline_rel) }} {{ headline_rel.tier_label }}{% if headline_rel.ci is not none and n > 1 %} · likely {{ f(headline_rel.lo) }} to {{ f(headline_rel.hi) }}{% endif %}<br>{{ n }} {{ cfg.unit }}s over {{ rounds_n }} rounds</span></div>
     <div class="kpi"><span class="lbl">Strokes gained per round</span><span class="v {{ c(per_round) }}">{{ f(per_round) }}</span><span class="s">average {{ cfg.title | lower }} total per round of 9+ holes (holes actually played, not scaled to 18)</span></div>
     {% for l, v, s in extra %}<div class="kpi"><span class="lbl">{{ l }}</span><span class="v">{{ v }}</span><span class="s">{{ s }}</span></div>{% endfor %}
@@ -148,7 +150,7 @@
   {% if heat %}
   <section>
     <h2 class="sec-title">Round by round, by {{ 'hole length' if cat == 'ott' else ('putt length' if cat == 'putt' else 'distance to the flag') }}</h2>
-    <p class="sec-desc">Each row is a {{ 'hole length' if cat == 'ott' else 'distance' }} range ({{ cfg.heat_label | lower }}); each column is one round, oldest on the left. Colour shows strokes gained per {{ cfg.unit }} in that round: green beat Tour, orange lost to Tour, stronger colour = bigger number. Hover a square for the exact value and how many {{ cfg.unit }}s it covers. A row that is orange across most rounds is a habit, not bad luck.</p>
+    <p class="sec-desc">Each row is a {{ 'hole length' if cat == 'ott' else 'distance' }} range ({{ cfg.heat_label | lower }}); each column is one round, oldest on the left. Colour shows strokes gained per {{ cfg.unit }} in that round: green beat scratch, orange lost to scratch, stronger colour = bigger number. Hover a square for the exact value and how many {{ cfg.unit }}s it covers. A row that is orange across most rounds is a habit, not bad luck.</p>
     <div class="sec-h">
       <span class="lbl">Rounds, oldest → newest</span>
       <span class="scale">LOST −0.5 <i></i> +0.5 GAINED · BLANK = NONE FROM HERE</span>
@@ -178,11 +180,11 @@
   {% if trend %}
   <section>
     <h2 class="sec-title">Trend: strokes gained per {{ cfg.unit }}, each round</h2>
-    <p class="sec-desc">One dot per round, {{ trend.first }} to {{ trend.last }}. Above the 0 line = better than Tour that round; below = worse. The dashed line is your average across these rounds ({{ f(trend.avg) }}). A line drifting upward means you are improving.</p>
+    <p class="sec-desc">One dot per round, {{ trend.first }} to {{ trend.last }}. Above the 0 line = better than scratch that round; below = worse. The dashed line is your average across these rounds ({{ f(trend.avg) }}). A line drifting upward means you are improving.</p>
     <div class="chart" style="margin-top:22px">
       <span class="ytitle">SG / {{ cfg.unit }}</span>
       <span class="yt" style="top:10px">{{ f(trend.hi) }}</span>
-      <span class="yt" style="top:{{ trend.zero }}px">0 Tour</span>
+      <span class="yt" style="top:{{ trend.zero }}px">0 Scratch</span>
       <span class="yt" style="top:190px">{{ f(trend.lo) }}</span>
       <div class="plot">
         <svg viewBox="0 0 1000 200" preserveAspectRatio="none" role="img" aria-label="Strokes gained per {{ cfg.unit }} by round">
@@ -194,7 +196,7 @@
       </div>
       <div class="xt">{% for pt in trend.points %}<span>{{ pt.date }}</span>{% endfor %}</div>
     </div>
-    <div class="legend"><span><i class="sw-line"></i>Your SG per {{ cfg.unit }} that round</span><span><i class="sw-dash"></i>Your average</span><span>Solid line = Tour level (0)</span></div>
+    <div class="legend"><span><i class="sw-line"></i>Your SG per {{ cfg.unit }} that round</span><span><i class="sw-dash"></i>Your average</span><span>Solid line = scratch level (0)</span></div>
   </section>
   {% endif %}
 
@@ -208,7 +210,7 @@
       'app_lie': 'Approach shots grouped by the lie you played from.',
       'app_club': 'Approach shots grouped by the club you hit.',
       'atg_dist': 'Chips, pitches and bunker shots grouped by distance to the flag (yards).',
-      'atg_lie': 'Short-game shots grouped by lie. Rough and bunker shots are judged against Tour from that same lie.',
+      'atg_lie': 'Short-game shots grouped by lie. Rough and bunker shots are judged against scratch from that same lie.',
       'atg_club': 'Short-game shots grouped by the club you hit.',
       'putt_dist': 'Putts grouped by length (feet).'} %}
     {% for title, rows, dim in [(detail_title, heat_rows, cfg.heat)] + tables %}
@@ -227,6 +229,7 @@
         <span class="rowmeta">
           <span>{{ meter(r.rel) }} {{ r.rel.tier_label }}{% if r.rel.ci is not none and r.n > 1 %} · ±{{ '%.2f' | format(r.rel.ci) }}{% if r.rel.clear == 'loss' %} · loss beyond normal variation{% elif r.rel.clear == 'gain' %} · gain beyond normal variation{% endif %}{% endif %}</span>
           {% if r.played >= 3 %}<span class="{{ 'rec' if r.lost_in / r.played >= 0.6 else ('str' if r.lost_in / r.played <= 0.4 else '') }}">Lost strokes in {{ r.lost_in }} of {{ r.played }} rounds{% if r.lost_in / r.played >= 0.6 %} · pattern{% endif %}</span>{% elif r.played %}<span>Played in {{ r.played }} round{{ 's' if r.played != 1 }}: too few to call a pattern</span>{% endif %}
+          {% set pl = shots_plays_like(r.per, shots_per18) %}{% if pl is not none and r.n >= 3 %}<span>plays like a {{ hcp_fmt(pl) }} from here</span>{% endif %}
           {% if r.avg is not none %}<span>Previous {{ prev_rounds_n }} rounds: {{ f(r.avg) }}</span>{% endif %}
         </span>
       </div>

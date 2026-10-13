@@ -56,7 +56,8 @@
 
   <!-- Strokes Gained section -->
   <div style="border:1px solid #e8e4dc;border-radius:6px;padding:20px 22px;margin-bottom:24px;">
-    <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:16px;">Strokes Gained</div>
+    <div style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8a9a7a;margin-bottom:6px;">Strokes Gained vs a scratch golfer</div>
+    <div style="font-size:11px;color:#8a9a7a;margin-bottom:16px;">Right column: the handicap each part of your game played to (strokes lost to scratch per 18 holes; each part counts a quarter).</div>
 
     {% for cat in sg_cats %}
     {% set is_free_cat = (cat.label == 'Off the Tee') %}
@@ -94,6 +95,7 @@
         <td style="width:46px;padding-left:10px;font-size:12px;font-weight:600;color:{% if show_value %}{{ cat.color }}{% else %}#c8c0b0{% endif %};font-family:'Courier New',monospace;text-align:right;vertical-align:middle;">
           {% if show_value %}{{ cat.display }}{% else %}🔒{% endif %}
         </td>
+        <td style="width:62px;padding-left:8px;font-size:11px;color:#8a9a7a;text-align:right;vertical-align:middle;white-space:nowrap;">{% if show_value and cat.plays_like %}plays {{ cat.plays_like }}{% endif %}</td>
       </tr>
     </table>
     {% endfor %}
@@ -122,6 +124,7 @@
           </table>
         </td>
         <td style="width:46px;padding-left:10px;font-size:13px;font-weight:700;color:{{ sg_total_color }};font-family:'Courier New',monospace;text-align:right;vertical-align:middle;">{{ sg_total_display }}</td>
+        <td style="width:62px;padding-left:8px;font-size:11px;font-weight:600;color:#1B4332;text-align:right;vertical-align:middle;white-space:nowrap;">{% if played_to %}played to {{ played_to }}{% endif %}</td>
       </tr>
     </table>
     {% else %}
