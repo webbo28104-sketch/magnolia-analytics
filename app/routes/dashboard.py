@@ -77,8 +77,22 @@ def _trend(rounds, bench_v=None):
     for i in range(len(vals)):
         win = vals[max(0, i - 4):i + 1]
         avg.append(f'{x(i):.1f},{y(sum(win) / len(win)):.1f}')
-    dots = [{'x': round(x(i), 1), 'y': round(y(v), 1), 'v': round(v, 1),
-             'date': r.date_played.strftime('%d %b'), 'id': r.id} for i, (r, v) in enumerate(pts)]
+    from app.utils import hcp_equiv
+    dots = []
+    for i, (r, v) in enumerate(pts):
+        vs_par = r.score_vs_par()
+        dots.append({
+            'x': round(x(i), 1), 'y': round(y(v), 1), 'v': round(v, 1),
+            'date': r.date_played.strftime('%d %b'), 'id': r.id,
+            'long_date': r.date_played.strftime('%a %d %b %Y'),
+            'course': r.course.name if r.course else 'Unknown course',
+            'score': r.total_score, 'holes': r.holes_played,
+            'vs_par': None if vs_par is None else ('E' if vs_par == 0 else f'{vs_par:+d}'),
+            'played_to': hcp_equiv.fmt(hcp_equiv.round_plays_like(r.sg_total, r.holes_played)),
+            'raw_sg': round(r.sg_total, 1) if r.sg_total is not None else None,
+            'vs_bench': round(v - bench_v, 1) if bench_v is not None else None,
+            'official': bool(r.eg_score_uid),
+        })
     ticks = [round(hi - (hi - lo) * k / 2, 1) for k in range(3)]
     return {'line': line, 'avg': ' '.join(avg), 'dots': dots, 'ticks': ticks, 'n': len(pts),
             'zero': round(y(0), 1) if lo < 0 < hi else None,

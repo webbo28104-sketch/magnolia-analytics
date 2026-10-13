@@ -73,7 +73,15 @@
   .row.hdr { min-height: 0; padding-bottom: 6px; border-top: 0; font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #7a827e; }
   .row.hdr .r { text-align: right; }
   .chart .dot { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #9aa29e; }
-  .chart .dot:hover { background: var(--ink); }
+  .chart .dot:hover, .chart .dot:focus-visible, .chart .dot.on { background: var(--ink); width: 12px; height: 12px; margin: -6px 0 0 -6px; outline: none; }
+  .chart .tip { position: absolute; z-index: 5; width: 230px; padding: 12px 14px; background: var(--panel); border: 1px solid rgba(255,255,255,.18); box-shadow: 0 8px 24px rgba(0,0,0,.5); pointer-events: none; opacity: 0; transform: translateY(4px); transition: opacity .12s, transform .12s; }
+  .chart .tip.show { opacity: 1; transform: none; }
+  .chart .tip .td { font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: #7a827e; }
+  .chart .tip .tc { margin: 2px 0 8px; font-size: 14px; font-weight: 500; color: var(--ink); }
+  .chart .tip .tg { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 12px; color: var(--text-muted); }
+  .chart .tip .tg b { font-family: var(--font-mono); font-weight: 500; color: var(--ink); text-align: right; }
+  .chart .tip .tg b.pos { color: var(--gain); } .chart .tip .tg b.neg { color: var(--loss); }
+  .chart .tip .tl { margin-top: 8px; font-size: 11px; color: var(--gold); }
   .conf { display: inline-flex; gap: 2px; vertical-align: middle; }
   .conf i { display: inline-block; width: 3px; height: 8px; background: rgba(255,255,255,.16); }
   .conf i.on { background: var(--ink); }
@@ -173,7 +181,12 @@
         <polyline points="{{ trend.line }}" fill="none" stroke="rgba(154,162,158,.55)" stroke-width="1" vector-effect="non-scaling-stroke"></polyline>
         <polyline points="{{ trend.avg }}" fill="none" stroke="#c9a84c" stroke-width="2" vector-effect="non-scaling-stroke"></polyline>
       </svg>
-      {% for d in trend.dots %}<a href="{{ url_for('reports.view_report', round_id=d.id) }}" class="dot" style="left: calc(40px + (100% - 40px) * {{ d.x / 1000 }}); top: {{ d.y }}px" title="{{ d.date }}: {{ f(d.v, 1) }}" aria-label="{{ d.date }} round, {{ f(d.v, 1) }} strokes gained"></a>{% endfor %}
+      {% for d in trend.dots %}<a href="{{ url_for('reports.view_report', round_id=d.id) }}" class="dot" style="left: calc(40px + (100% - 40px) * {{ d.x / 1000 }}); top: {{ d.y }}px" aria-label="{{ d.date }} round, {{ f(d.v, 1) }} strokes gained"
+        data-date="{{ d.long_date }}" data-course="{{ d.course }}" data-score="{{ d.score or '—' }}{% if d.vs_par %} ({{ d.vs_par }}){% endif %}" data-holes="{{ d.holes }}"
+        data-sg18="{{ f(d.v, 1) }}" data-sg="{{ f(d.raw_sg, 1) if d.raw_sg is not none else '—' }}" data-played="{{ d.played_to }}"
+        data-vs="{{ f(d.vs_bench, 1) if d.vs_bench is not none else '' }}" data-vscls="{{ 'pos' if d.vs_bench is not none and d.vs_bench >= 0 else 'neg' }}"
+        data-official="{{ '1' if d.official else '' }}"></a>{% endfor %}
+      <div class="tip" id="trend-tip" role="tooltip" aria-hidden="true"></div>
     </div>
     <div class="chart-x"><span>{{ trend.dots[0].date }}</span><span class="faint">Rounds, oldest to newest · strokes gained per 18 holes{% if trend.zero is not none %} · dashed line = scratch level{% endif %}{% if trend.bench is not none %} · <span style="color:var(--gold)">gold dotted = typical for a {{ bench.index_txt }} ({{ f(trend.bench_v, 1) }})</span>{% endif %}</span><span>{{ trend.dots[-1].date }}</span></div>
   </section>
@@ -296,5 +309,49 @@ function hideDel(id) {
   if (c) c.style.display = 'none';
   if (b) b.style.display = '';
 }
+</script>
+<script>
+(function () {
+  var chart = document.querySelector('.chart'), tip = document.getElementById('trend-tip');
+  if (!chart || !tip) return;
+  var bench = {{ (bench.index_txt if bench else '') | tojson }};
+  function esc(t) { var d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML; }
+  function show(dot) {
+    var d = dot.dataset;
+    tip.innerHTML = '<div class="td">' + esc(d.date) + (d.holes && d.holes !== '18' ? ' · ' + esc(d.holes) + ' holes' : '') + '</div>' +
+      '<div class="tc">' + esc(d.course) + '</div>' +
+      '<div class="tg"><span>Score</span><b>' + esc(d.score) + '</b>' +
+      '<span>Played to</span><b>' + esc(d.played) + '</b>' +
+      '<span>Strokes gained' + (d.holes !== '18' ? ' (' + esc(d.holes) + ' holes)' : '') + '</span><b>' + esc(d.sg) + '</b>' +
+      (d.holes !== '18' ? '<span>Per 18 holes</span><b>' + esc(d.sg18) + '</b>' : '') +
+      (d.vs && bench ? '<span>vs a ' + esc(bench) + ' handicap</span><b class="' + d.vscls + '">' + esc(d.vs) + '</b>' : '') +
+      '</div>' + (d.official ? '<div class="tl">Official · on England Golf</div>' : '') +
+      '<div class="tl" style="color:#7a827e">Click to open the report</div>';
+    var cr = chart.getBoundingClientRect(), dr = dot.getBoundingClientRect();
+    var x = dr.left - cr.left + dr.width / 2, y = dr.top - cr.top;
+    var left = Math.min(Math.max(x - 115, 0), cr.width - 230);
+    tip.style.left = left + 'px';
+    tip.style.top = (y > 150 ? y - tip.offsetHeight - 12 : y + 18) + 'px';
+    chart.querySelectorAll('.dot.on').forEach(function (o) { o.classList.remove('on'); });
+    dot.classList.add('on');
+    tip.classList.add('show'); tip.setAttribute('aria-hidden', 'false');
+  }
+  function hide() {
+    tip.classList.remove('show'); tip.setAttribute('aria-hidden', 'true');
+    chart.querySelectorAll('.dot.on').forEach(function (o) { o.classList.remove('on'); });
+  }
+  chart.querySelectorAll('.dot').forEach(function (dot) {
+    dot.removeAttribute('title');
+    dot.addEventListener('mouseenter', function () { show(dot); });
+    dot.addEventListener('focus', function () { show(dot); });
+    dot.addEventListener('mouseleave', hide);
+    dot.addEventListener('blur', hide);
+    // Touch: first tap shows the card, second tap opens the report
+    dot.addEventListener('touchstart', function (e) {
+      if (!dot.classList.contains('on')) { e.preventDefault(); show(dot); }
+    }, { passive: false });
+  });
+  document.addEventListener('touchstart', function (e) { if (!e.target.closest('.chart .dot')) hide(); }, { passive: true });
+})();
 </script>
 {% endblock %}
