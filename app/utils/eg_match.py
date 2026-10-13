@@ -21,6 +21,7 @@ from rapidfuzz import fuzz
 from app import db
 from app.models.course import Course
 from app.models.round import Round
+from app.models.tee_set import TeeSet
 
 DAY_WINDOW = 1
 MAX_SCORE_GAP = 15
@@ -50,9 +51,23 @@ def _float(v):
         return None
 
 
-def _same_course(eg_name, rnd):
-    if not eg_name or not rnd.course:
+def _rating_match(score, tee_set):
+    """Course rating + slope identify a course and tee far better than a name."""
+    cr, slope = _float(score.get('course_rating')), _float(score.get('slope'))
+    if cr is None or slope is None or score.get('holes') == 9:
+        return False
+    return abs(tee_set.course_rating - cr) <= 0.05 and int(tee_set.slope_rating) == int(slope)
+
+
+def _same_course(score, rnd):
+    eg_name = score.get('course')
+    if not rnd.course:
         return True   # nothing to compare; date and score decide
+    # Primary: England Golf's rating/slope matches one of this course's tees
+    if any(_rating_match(score, ts) for ts in rnd.course.tee_sets):
+        return True
+    if not eg_name:
+        return True
     # Date and score already agree, so it's enough that England Golf's words all
     # appear in the course name ("Singing Hills" → "Singing Hills … Lake And Valley")
     eg_words = set(_norm(eg_name).split())
@@ -82,7 +97,7 @@ def _best_round(score, candidates):
     best, best_cost = None, None
     for r in candidates:
         gap = abs((r.date_played - d).days)
-        if gap > DAY_WINDOW or not _same_course(score['course'], r):
+        if gap > DAY_WINDOW or not _same_course(score, r):
             continue
         diff = _score_gap(score, r)
         if diff is None or diff > MAX_SCORE_GAP:
@@ -93,18 +108,37 @@ def _best_round(score, candidates):
     return best
 
 
-def _course_for(user_id, eg_name):
-    """A course this golfer has played whose name matches England Golf's."""
+def _course_for(user_id, score):
+    """
+    (course, tee_set) for an England Golf score with no logged round.
+
+    1. Tees whose course rating and slope equal England Golf's — the reliable check.
+    2. Otherwise a course this golfer has played whose name matches.
+    Ties go to the course the golfer has played most. Returns (None, None) rather
+    than guess.
+    """
+    plays = dict(db.session.query(Round.course_id, db.func.count(Round.id))
+                 .filter(Round.user_id == user_id, Round.status == 'complete', Round.course_id.isnot(None))
+                 .group_by(Round.course_id).all())
+    eg_name = score.get('course')
+
+    cr = _float(score.get('course_rating'))
+    if cr is not None and score.get('holes') != 9:
+        tees = [t for t in TeeSet.query.filter(TeeSet.course_rating.between(cr - 0.05, cr + 0.05)).all()
+                if _rating_match(score, t)]
+        if tees:
+            def rank(t):
+                return (_name_score(eg_name, t.course.name) if eg_name else 0, plays.get(t.course_id, 0),
+                        (score.get('tees') or '').lower() in (t.name or '').lower())
+            best = max(tees, key=rank)
+            return best.course, best
+
     if not eg_name:
-        return None
-    played = (db.session.query(Course, db.func.count(Round.id))
-              .join(Round, Round.course_id == Course.id)
-              .filter(Round.user_id == user_id, Round.status == 'complete')
-              .group_by(Course.id).all())
-    scored = [(_name_score(eg_name, c.name), n, c) for c, n in played]
+        return None, None
+    scored = [(_name_score(eg_name, c.name), plays[c.id], c)
+              for c in Course.query.filter(Course.id.in_(list(plays))).all()]
     scored = [x for x in scored if x[0] >= COURSE_MATCH]
-    # Best name match; among equals, the course this golfer plays most
-    return max(scored, key=lambda x: (x[0], x[1]))[2] if scored else None
+    return (max(scored, key=lambda x: (x[0], x[1]))[2], None) if scored else (None, None)
 
 
 def _link(rnd, score):
@@ -143,16 +177,18 @@ def reconcile(user, scores) -> dict:
         if held:
             _link(held, s)                      # refresh in case England Golf revised it
             if held.status == 'score_only':
-                course = _course_for(user.id, s['course'])
+                course, tee = _course_for(user.id, s)
                 held.course_id = course.id if course else None
+                held.tee_set_id = tee.id if tee else None
             continue
         rnd = _best_round(s, free)
         if rnd:
             free.remove(rnd)
             linked += 1
         else:
-            course = _course_for(user.id, s['course'])
+            course, tee = _course_for(user.id, s)
             rnd = Round(user_id=user.id, course_id=course.id if course else None,
+                        tee_set_id=tee.id if tee else None,
                         date_played=date.fromisoformat(s['date']), holes_played=s['holes'] or 18,
                         tee_set=s.get('tees') or None, total_score=s['adj_gross'], status='score_only')
             db.session.add(rnd)
