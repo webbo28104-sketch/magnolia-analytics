@@ -13,7 +13,8 @@ handicaps (it applies net double bogey, PCC and the correct ratings). Rounds
 with no England Golf score are casual.
 """
 
-from datetime import date, timedelta
+import re
+from datetime import date
 
 from rapidfuzz import fuzz
 
@@ -23,7 +24,23 @@ from app.models.round import Round
 
 DAY_WINDOW = 1
 MAX_SCORE_GAP = 15
-COURSE_MATCH = 70
+COURSE_MATCH = 90   # on names with generic words removed — "Seaford" ≠ "Seaford Head"
+
+_GENERIC = {'golf', 'club', 'course', 'gc', 'the', 'and', 'links', 'ltd', 'limited', 'g', 'c'}
+
+
+def _norm(name):
+    words = re.sub(r'[^a-z0-9 ]+', ' ', (name or '').lower()).split()
+    return ' '.join(w for w in words if w not in _GENERIC)
+
+
+def _name_score(eg_name, course_name):
+    """Whole-name similarity after dropping generic words, so a distinguishing
+    word like 'Head' counts against the match instead of being ignored."""
+    a, b = _norm(eg_name), _norm(course_name)
+    if not a or not b:
+        return 0
+    return fuzz.token_sort_ratio(a, b)
 
 
 def _float(v):
@@ -36,7 +53,11 @@ def _float(v):
 def _same_course(eg_name, rnd):
     if not eg_name or not rnd.course:
         return True   # nothing to compare; date and score decide
-    return fuzz.partial_ratio(eg_name.lower(), rnd.course.name.lower()) >= COURSE_MATCH
+    # Date and score already agree, so it's enough that England Golf's words all
+    # appear in the course name ("Singing Hills" → "Singing Hills … Lake And Valley")
+    eg_words = set(_norm(eg_name).split())
+    return bool(eg_words and eg_words <= set(_norm(rnd.course.name).split())) or \
+        _name_score(eg_name, rnd.course.name) >= COURSE_MATCH
 
 
 def _score_gap(score, rnd):
@@ -76,11 +97,14 @@ def _course_for(user_id, eg_name):
     """A course this golfer has played whose name matches England Golf's."""
     if not eg_name:
         return None
-    played = (Course.query.join(Round, Round.course_id == Course.id)
-              .filter(Round.user_id == user_id).distinct().all())
-    scored = [(fuzz.partial_ratio(eg_name.lower(), c.name.lower()), c) for c in played]
+    played = (db.session.query(Course, db.func.count(Round.id))
+              .join(Round, Round.course_id == Course.id)
+              .filter(Round.user_id == user_id, Round.status == 'complete')
+              .group_by(Course.id).all())
+    scored = [(_name_score(eg_name, c.name), n, c) for c, n in played]
     scored = [x for x in scored if x[0] >= COURSE_MATCH]
-    return max(scored, key=lambda x: x[0])[1] if scored else None
+    # Best name match; among equals, the course this golfer plays most
+    return max(scored, key=lambda x: (x[0], x[1]))[2] if scored else None
 
 
 def _link(rnd, score):
@@ -118,6 +142,9 @@ def reconcile(user, scores) -> dict:
                 continue
         if held:
             _link(held, s)                      # refresh in case England Golf revised it
+            if held.status == 'score_only':
+                course = _course_for(user.id, s['course'])
+                held.course_id = course.id if course else None
             continue
         rnd = _best_round(s, free)
         if rnd:
