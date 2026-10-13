@@ -232,11 +232,7 @@
         <span class="r {{ c(item.ott) }}">{{ f(item.ott, 1) }}</span>
         {% endif %}
         <span class="acts">
-          {% if current_user.eg_member_no %}
-          <span class="chip {{ 'is-counting' if r.eg_score_uid }}" style="cursor:default;display:inline-flex;align-items:center" title="{{ ('On England Golf' ~ (': adjusted gross ' ~ r.eg_adj_gross if r.eg_adj_gross) ~ (', differential ' ~ r.eg_differential if r.eg_differential is not none) ~ '. England Golf’s score is used for handicaps.') if r.eg_score_uid else 'Not on England Golf: a casual round' }}">{{ 'Official' if r.eg_score_uid else 'Casual' }}</span>
-          {% else %}
-          <button type="button" class="chip {{ 'is-counting' if r.counts_for_official_hc != False }}" data-round-id="{{ r.id }}" title="Counts towards your official handicap?">{{ 'Official' if r.counts_for_official_hc != False else 'Casual' }}</button>
-          {% endif %}
+          <span class="chip {{ 'is-counting' if r.eg_score_uid }}" style="cursor:default;display:inline-flex;align-items:center" title="{% if r.eg_score_uid %}On England Golf{{ ': adjusted gross ' ~ r.eg_adj_gross if r.eg_adj_gross }}{{ ', differential ' ~ r.eg_differential if r.eg_differential is not none }}{{ ' (full round; ' ~ r.holes_played ~ ' holes logged here)' if r.status == 'complete' and r.eg_adj_gross and (r.holes_played or 18) < 18 and r.holes_played > 9 }}. England Golf’s score is used for handicaps.{% elif current_user.eg_member_no %}Not on England Golf: a casual round. Set automatically by the England Golf sync.{% else %}Connect England Golf on your Profile and official rounds are marked automatically.{% endif %}">{{ 'Official' if r.eg_score_uid else 'Casual' }}</span>
           {% if r.status != 'score_only' %}
           <a class="icon-btn" href="{{ url_for('reports.view_report', round_id=r.id) }}#share" aria-label="Share report" title="Share report">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -284,21 +280,5 @@ function hideDel(id) {
   if (c) c.style.display = 'none';
   if (b) b.style.display = '';
 }
-document.querySelectorAll('.chip[data-round-id]').forEach(function (chip) {
-  chip.addEventListener('click', function () {
-    chip.style.opacity = '.5'; chip.style.pointerEvents = 'none';
-    fetch('/rounds/' + chip.dataset.roundId + '/toggle-official-hc', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        chip.classList.toggle('is-counting', !!data.counts);
-        chip.textContent = data.counts ? 'Official' : 'Casual';
-        var o = document.getElementById('official-hcp'), a = document.getElementById('all-hcp');
-        if (o) o.textContent = data.official_hcp !== null ? parseFloat(data.official_hcp).toFixed(1) : '—';
-        if (a) a.textContent = data.all_hcp !== null ? parseFloat(data.all_hcp).toFixed(1) : '—';
-      })
-      .catch(function () {})
-      .finally(function () { chip.style.opacity = ''; chip.style.pointerEvents = ''; });
-  });
-});
 </script>
 {% endblock %}

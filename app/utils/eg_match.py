@@ -2,9 +2,11 @@
 Reconcile England Golf scores with the golfer's Magnolia rounds.
 
 Every England Golf score ends up attached to exactly one Magnolia round:
-  - an existing round played the same day (±1), same course and 9/18 holes,
-    choosing the closest total when there are several; or
-  - a new 'score_only' round holding the England Golf score.
+  - an existing round played the same day (±1) at the same course whose total is
+    close to England Golf's (rounds logged only part-way, e.g. to the 16th, are
+    projected to 9/18 holes first), choosing the closest when there are several; or
+  - a new 'score_only' round holding the England Golf score. If the golfer logs
+    that round later, the next match merges it into the logged round.
 
 Linked rounds count as official and use England Golf's differential for
 handicaps (it applies net double bogey, PCC and the correct ratings). Rounds
@@ -37,9 +39,21 @@ def _same_course(eg_name, rnd):
     return fuzz.partial_ratio(eg_name.lower(), rnd.course.name.lower()) >= COURSE_MATCH
 
 
-def _holes_match(eg_holes, rnd):
+def _score_gap(score, rnd):
+    """
+    How far the Magnolia total is from England Golf's, allowing for holes not logged.
+
+    A round logged to the 16th against a full 18 on England Golf is compared by
+    projecting the missing holes at the golfer's own scoring rate for that round.
+    Returns None when the hole counts can't be the same round.
+    """
+    eg_holes = 9 if score['holes'] == 9 else 18
     played = rnd.holes_played or 18
-    return (played >= 18) == (eg_holes != 9)
+    if played > eg_holes or played < (10 if eg_holes == 18 else 6) or not rnd.total_score:
+        return None
+    missing = eg_holes - played
+    projected = rnd.total_score + missing * rnd.total_score / played
+    return abs((score['adj_gross'] or 0) - projected)
 
 
 def _best_round(score, candidates):
@@ -47,10 +61,10 @@ def _best_round(score, candidates):
     best, best_cost = None, None
     for r in candidates:
         gap = abs((r.date_played - d).days)
-        if gap > DAY_WINDOW or not _holes_match(score['holes'], r) or not _same_course(score['course'], r):
+        if gap > DAY_WINDOW or not _same_course(score['course'], r):
             continue
-        diff = abs((r.total_score or 0) - (score['adj_gross'] or 0)) if r.total_score else MAX_SCORE_GAP
-        if diff > MAX_SCORE_GAP:
+        diff = _score_gap(score, r)
+        if diff is None or diff > MAX_SCORE_GAP:
             continue
         cost = gap * 20 + diff
         if best_cost is None or cost < best_cost:
@@ -89,10 +103,21 @@ def reconcile(user, scores) -> dict:
     by_uid = {r.eg_score_uid: r for r in rounds if r.eg_score_uid}
     free = [r for r in rounds if not r.eg_score_uid and r.status == 'complete']
 
-    linked = created = 0
+    linked = created = merged = 0
     for s in sorted(usable, key=lambda x: x['date']):
-        if s['uid'] in by_uid:
-            _link(by_uid[s['uid']], s)          # refresh in case England Golf revised it
+        held = by_uid.get(s['uid'])
+        if held and held.status == 'score_only':
+            # A logged round for this score has appeared since: merge into it
+            rnd = _best_round(s, free)
+            if rnd:
+                free.remove(rnd)
+                db.session.delete(held)
+                _link(rnd, s)
+                by_uid[s['uid']] = rnd
+                merged += 1
+                continue
+        if held:
+            _link(held, s)                      # refresh in case England Golf revised it
             continue
         rnd = _best_round(s, free)
         if rnd:
@@ -112,4 +137,16 @@ def reconcile(user, scores) -> dict:
     for r in free:
         r.counts_for_official_hc = False
     db.session.commit()
-    return {'linked': linked, 'created': created, 'casual': len(free)}
+    return {'linked': linked, 'created': created, 'merged': merged, 'casual': len(free)}
+
+
+def reconcile_stored(user) -> dict | None:
+    """Re-run matching against the scores saved at the last sync (no England Golf call)."""
+    import json
+    if not (user.eg_member_no and user.eg_scores_json):
+        return None
+    try:
+        scores = json.loads(user.eg_scores_json)
+    except ValueError:
+        return None
+    return reconcile(user, scores)

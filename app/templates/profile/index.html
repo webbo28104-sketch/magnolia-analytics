@@ -119,7 +119,7 @@
           {%- elif current_user.official_handicap_index < 0 -%}+{{ '%.1f'|format(-current_user.official_handicap_index) }}
           {%- else -%}{{ '%.1f'|format(current_user.official_handicap_index) }}{%- endif -%}
         </div>
-        <div class="hcp-dual-note">{{ 'Your England Golf Handicap Index' if current_user.eg_member_no and current_user.eg_handicap_index is not none else 'Rounds marked Official (connect England Golf below to use your real index)' }}</div>
+        <div class="hcp-dual-note">{{ 'Your England Golf Handicap Index' if current_user.eg_member_no and current_user.eg_handicap_index is not none else 'Connect England Golf below to show your official index' }}</div>
       </div>
       <div class="hcp-dual-item">
         <div class="hcp-dual-label">Magnolia</div>
@@ -127,7 +127,7 @@
         <div class="hcp-dual-note">Every Magnolia round · England Golf's score used where a round is on England Golf</div>
       </div>
     </div>
-    <div class="hcp-note" style="margin-top:.75rem">WHS method, last 20 rounds. {{ 'Rounds on England Golf are matched automatically and marked Official; everything else is Casual.' if current_user.eg_member_no else 'Toggle rounds on the dashboard to mark as Official or Casual.' }}</div>
+    <div class="hcp-note" style="margin-top:.75rem">WHS method, last 20 rounds. Rounds are marked Official automatically when the England Golf sync finds them; everything else is Casual.</div>
 
     <div class="lifetime-row">
       <div class="lifetime-stat">

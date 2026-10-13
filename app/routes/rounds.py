@@ -72,8 +72,8 @@ def _recalculate_handicap(user):
     Computes:
       - user.handicap_index          — Magnolia index: every round, including score-only
                                        rounds from England Golf (their differential wins)
-      - user.official_handicap_index — England Golf's Handicap Index when connected,
-                                       otherwise rounds with counts_for_official_hc=True
+      - user.official_handicap_index — England Golf's Handicap Index; None when not
+                                       connected (official status only comes from the sync)
 
     Uses the same WHS differential logic for both. Requires at least 3
     qualifying 18-hole differentials (9-hole pairs count as one 18-hole diff).
@@ -93,11 +93,7 @@ def _recalculate_handicap(user):
         user.handicap_index = new_all
 
     # Official handicap — rounds explicitly marked as counting (None treated as True)
-    if user.eg_member_no and user.eg_handicap_index is not None:
-        user.official_handicap_index = user.eg_handicap_index
-    else:
-        official_rounds = [r for r in all_rounds if r.counts_for_official_hc is not False]
-        user.official_handicap_index = _compute_whs_index(official_rounds)
+    user.official_handicap_index = user.eg_handicap_index if user.eg_member_no else None
 
     db.session.commit()
     current_app.logger.info(
@@ -384,6 +380,13 @@ def submit_round(round_id):
             flash('There was a problem saving your round. Please try again.', 'error')
             return redirect(url_for('dashboard.index'))
         try:
+            # Link to / merge with the England Golf score for this round, if already synced
+            from app.utils.eg_match import reconcile_stored
+            reconcile_stored(current_user)
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception(f"[submit_round] England Golf match failed: {e}")
+        try:
             _recalculate_handicap(current_user)
         except Exception as e:
             current_app.logger.exception(f"[submit_round] Handicap recalc failed: {e}")
@@ -527,33 +530,18 @@ def edit_round_meta(round_id):
     )
 
 
-@rounds_bp.route('/<int:round_id>/toggle-official-hc', methods=['POST'])
-@login_required
-def toggle_official_hc(round_id):
-    """Toggle whether a round counts towards the Official Handicap."""
-    round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
-    if current_user.eg_member_no:
-        return jsonify({'error': 'Official rounds are set by England Golf.'}), 409
-    # Treat None (pre-migration rows) as True before toggling
-    current_state = round_.counts_for_official_hc
-    if current_state is None:
-        current_state = True
-    round_.counts_for_official_hc = not current_state
-    db.session.commit()
-    _recalculate_handicap(current_user)
-    return jsonify({
-        'counts': round_.counts_for_official_hc,
-        'official_hcp': current_user.official_handicap_index,
-        'all_hcp': current_user.handicap_index,
-    })
-
-
 @rounds_bp.route('/<int:round_id>/delete', methods=['POST'])
 @login_required
 def delete_round(round_id):
     round_ = Round.query.filter_by(id=round_id, user_id=current_user.id).first_or_404()
     db.session.delete(round_)
     db.session.commit()
+    try:
+        from app.utils.eg_match import reconcile_stored
+        reconcile_stored(current_user)
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(f"[delete_round] England Golf match failed: {e}")
     try:
         _recalculate_handicap(current_user)
     except Exception as e:
