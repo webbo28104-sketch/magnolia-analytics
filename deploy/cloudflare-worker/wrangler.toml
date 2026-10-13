@@ -5,5 +5,5 @@ workers_dev = false
 
 routes = [
   { pattern = "magnoliaanalytics.golf/*", zone_name = "magnoliaanalytics.golf" },
-  { pattern = "www.magnoliaanalytics.golf/*", zone_name = "magnoliaanalytics.golf" },
+  { pattern = "www.magnoliaanalytics.golf", custom_domain = true },
 ]
