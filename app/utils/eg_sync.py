@@ -1,6 +1,7 @@
 """Run an England Golf sync for one user and store the result on the user row."""
 
 import json
+import re
 from datetime import datetime
 
 from bs4 import BeautifulSoup
@@ -8,13 +9,23 @@ from bs4 import BeautifulSoup
 from app import db
 from app.utils import england_golf as eg
 
-PAGES_TEXT_LIMIT = 60_000
+PAGES_TEXT_LIMIT = 120_000
 
 
 def _pages_text(pages):
     parts = []
     for label, url, html in pages:
         soup = BeautifulSoup(html, 'html.parser')
+        # Data on these pages loads via script calls; keep the lines that name endpoints
+        calls = []
+        for sc in soup.find_all('script'):
+            if sc.get('src'):
+                calls.append('src ' + sc['src'])
+            for line in (sc.string or '').splitlines():
+                if re.search(r'asmx|ashx|/api/|url\s*:|\$\.(ajax|get|post|getJSON)|fetch\(', line):
+                    calls.append(line.strip()[:300])
+        if calls:
+            parts.append(f'=== SCRIPTS {label}\n' + '\n'.join(dict.fromkeys(calls)))
         for t in soup(['script', 'style', 'noscript']):
             t.decompose()
         parts.append(f'=== {label} — {url}\n{soup.get_text(chr(10), strip=True)}')
