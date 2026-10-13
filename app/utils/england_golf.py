@@ -10,6 +10,7 @@ Credentials are encrypted at rest with Fernet; the key lives only in the
 EG_CRED_KEY environment variable.
 """
 
+import json
 import os
 import re
 from datetime import datetime
@@ -25,8 +26,6 @@ UA = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/130.0 Safari/537.36')
 TIMEOUT = 20
 
-# Pages worth reading after login, matched against link text / href
-PAGE_HINTS = ('handicap', 'record', 'score', 'dashboard', 'profile', 'my golf')
 
 
 class EGError(Exception):
@@ -144,46 +143,118 @@ def parse_score_rows(html: str) -> list:
     return rows
 
 
-def _candidate_links(html, base_url):
-    soup = BeautifulSoup(html, 'html.parser')
-    seen, out = set(), []
-    for a in soup.find_all('a', href=True):
-        href = urljoin(base_url, a['href'])
-        label = a.get_text(' ', strip=True)
-        if not href.startswith(BASE) or href in seen:
-            continue
-        if 'logout' in href.lower() or 'log out' in label.lower():
-            continue
-        if any(h in (label + ' ' + href).lower() for h in PAGE_HINTS):
-            seen.add(href)
-            out.append((label, href))
-    return out[:8]
+# ── JSON API (what the My Overview page calls after login) ───────────────────
+
+def _post_json(s, path, payload):
+    r = s.post(BASE + path, json=payload, timeout=TIMEOUT,
+               headers={'X-Requested-With': 'XMLHttpRequest', 'Referer': BASE + '/my-overview'})
+    r.raise_for_status()
+    return r.json()
+
+
+def _parse_index_text(text):
+    if text is None:
+        return None
+    m = re.search(r'([+]?)\s*(\d{1,2}(?:\.\d)?)', str(text))
+    if not m:
+        return None
+    v = float(m.group(2))
+    return -v if m.group(1) == '+' else v
+
+
+_MS_DATE = re.compile(r'/Date\((-?\d+)')
+
+
+def _iso_date(v):
+    if not v:
+        return None
+    m = _MS_DATE.search(str(v))
+    if m:
+        return datetime.utcfromtimestamp(int(m.group(1)) / 1000).date().isoformat()
+    m = re.match(r'(\d{4})-(\d{2})-(\d{2})', str(v))
+    if m:
+        return '-'.join(m.groups())
+    m = _DATE_RE.search(str(v))
+    if m:
+        d, mth, y = m.groups()
+        y = int(y) + (2000 if len(y) == 2 else 0)
+        return f'{y:04d}-{int(mth):02d}-{int(d):02d}'
+    return None
+
+
+def _first(item, *keys):
+    for k in keys:
+        if item.get(k) not in (None, '', 0):
+            return item[k]
+    return None
+
+
+def _score_row(item):
+    """Normalise one GetMyScores item; keeps the scalar fields in 'raw'."""
+    raw = {k: v for k, v in item.items()
+           if not isinstance(v, (dict, list)) and v not in (None, '')
+           and not re.match(r'Hole\d+(Score|Par|Distance|Fairway|GIR|Putts)', k)}
+    holes = []
+    for n in range(1, 19):
+        sc = item.get(f'Hole{n}Score')
+        if sc:
+            holes.append({'n': n, 'score': sc, 'par': item.get(f'Hole{n}Par'),
+                          'yds': item.get(f'Hole{n}Distance')})
+    row = {
+        'date': _iso_date(_first(item, 'PlayDate', 'DatePlayed', 'CaptureDate', 'Date')),
+        'course': _first(item, 'CourseName', 'Course', 'FacilityName', 'ClubName'),
+        'gross': _first(item, 'GrossScore', 'Gross', 'TotalGross'),
+        'adj_gross': _first(item, 'AdjustedGrossScore', 'AdjGrossScore', 'AdjustedGross'),
+        'differential': _first(item, 'ScoreDifferential', 'Differential', 'SD'),
+        'holes': len(holes) or _first(item, 'NoOfHoles', 'HolesPlayed'),
+        'counted': item.get('CountedInHandicap'),
+        'raw': raw,
+    }
+    if holes:
+        row['hole_scores'] = holes
+    row['cells'] = [str(x) for x in (row['course'], row['gross'] and f"Gross {row['gross']}",
+                                       row['adj_gross'] and f"Adj {row['adj_gross']}",
+                                       row['differential'] and f"Diff {row['differential']}") if x]
+    return row
 
 
 def sync(member_no: str, password: str) -> dict:
     """
-    Log in and read handicap + scores. Returns
-    {'handicap_index', 'scores', 'pages': [(label, url, html)]}.
+    Log in, then call the same JSON endpoints the My Overview page uses. Returns
+    {'handicap_index', 'low_index', 'scores', 'pages': [(label, url, text)]}.
     """
     s, html, url = login(member_no, password)
     pages = [('Landing', url, html)]
-    for label, href in _candidate_links(html, url):
-        try:
-            r = s.get(href, timeout=TIMEOUT)
-            if r.ok:
-                pages.append((label, r.url, r.text))
-        except requests.RequestException:
-            continue
 
-    hi = None
-    scores, seen = [], set()
-    for _, _, p in pages:
-        if hi is None:
-            hi = parse_handicap_index(p)
-        for row in parse_score_rows(p):
-            sig = (row['date'], tuple(row['cells']))
-            if sig not in seen:
-                seen.add(sig)
-                scores.append(row)
-    scores.sort(key=lambda r: r['date'], reverse=True)
-    return {'handicap_index': hi, 'scores': scores, 'pages': pages}
+    hi = low = None
+    try:
+        h = _post_json(s, '/api/Score/GetMemberHandicapIndex',
+                       {'OtherPassportId': None, 'OtherPassportMemberCode': None})
+        hi = _parse_index_text(h.get('HandicapIndexText'))
+        low = _parse_index_text(h.get('LowHandicapIndexText'))
+        pages.append(('API GetMemberHandicapIndex', '', json.dumps(h)[:4000]))
+    except (requests.RequestException, ValueError) as e:
+        pages.append(('API GetMemberHandicapIndex', '', f'failed: {e}'))
+
+    scores = []
+    try:
+        for page in range(1, 6):
+            d = _post_json(s, '/api/Score/GetMyScores', {
+                'pageNumber': page, 'pageSize': 100, 'dateString': None, 'otherPassportId': None,
+                'includeCasualScores': True, 'getDefaultFacility': True, 'facilityTypeUID': None,
+                'noOfHoles': None, 'casualScoresOnly': False})
+            items = d.get('Scores') or []
+            if page == 1:
+                sample = {k: v for k, v in d.items() if k != 'Scores'}
+                sample['Scores[0]'] = items[0] if items else None
+                pages.append(('API GetMyScores', '', json.dumps(sample, default=str)[:12000]))
+            scores.extend(_score_row(it) for it in items)
+            if len(items) < 100:
+                break
+    except (requests.RequestException, ValueError) as e:
+        pages.append(('API GetMyScores', '', f'failed: {e}'))
+
+    if hi is None:
+        hi = parse_handicap_index(html)
+    scores.sort(key=lambda r: r['date'] or '', reverse=True)
+    return {'handicap_index': hi, 'low_index': low, 'scores': scores, 'pages': pages}
