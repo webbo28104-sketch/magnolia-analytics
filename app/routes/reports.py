@@ -372,7 +372,8 @@ def view_report(round_id):
     dims = ('app_dist', 'app_lie', 'app_club', 'ott_club', 'ott_result', 'ott_len',
             'atg_dist', 'atg_lie', 'putt_dist', 'club_all')
     hist_vals = {dim: ev.per_round_values(hist_datas, dim) for dim in dims}
-    breakdown = {dim: ev.annotate(bd.rows(vis_shots, dim, vis_hist), sd_by_cat, hist_vals) for dim in dims}
+    breakdown = {dim: bd.fill_gaps(ev.annotate(bd.rows(vis_shots, dim, vis_hist), sd_by_cat, hist_vals), dim, vis_hist)
+                 for dim in dims}
     # ── Handicap benchmark: what a golfer of the golfer's index typically records ──
     from app.utils import benchmark as bm
     b_index, b_label = bm.index_at(current_user, round_.date_played)

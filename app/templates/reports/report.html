@@ -95,6 +95,7 @@ details.howto li b { color: var(--text); font-weight: 500; }
 .track .bar { opacity: .55; }
 .track .dot { position: absolute; top: 5px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; border: 2px solid var(--text); }
 .track .dot.pos { background: var(--gain); } .track .dot.neg { background: var(--loss); }
+details.brow.empty .lbl { color: var(--faint); }
 .track .dot.few { background: var(--bg); border-color: var(--dim); }
 details.brow > summary { list-style: none; cursor: pointer; }
 details.brow > summary::-webkit-details-marker { display: none; }
@@ -218,11 +219,11 @@ details.brow[open] > summary .lbl { color: var(--gold); }
 {%- endmacro %}
 {#- One row: bar = your usual (previous rounds) from there, dot = today; both vs your handicap benchmark -#}
 {% macro bchart(r, s, bm=0) -%}
-  {%- set d = r.per - bm -%}
+  {%- set d = (r.per - bm) if r.per is not none else none -%}
   <span class="track" role="img" aria-label="{{ r.label }}: today {{ f(r.per) }} per shot{% if r.avg is not none %}, usually {{ f(r.avg) }}{% endif %}">
     <span class="zero"></span>
     {%- if r.avg is not none %}{% set u = r.avg - bm %}{% set w = ([(u | abs) / s, 1.0] | min) * 50 %}<span class="bar" style="{{ 'left' if u >= 0 else 'right' }}: 50%; width: {{ '%.2f' | format(w) }}%; background: {{ 'var(--gain)' if u >= 0 else 'var(--loss)' }};"></span>{% endif %}
-    <span class="dot {{ 'pos' if d >= 0 else 'neg' }} {{ 'few' if r.n < 3 }}" style="left: {{ x(d, s) }}%;"></span>
+    {%- if d is not none %}<span class="dot {{ 'pos' if d >= 0 else 'neg' }} {{ 'few' if r.n < 3 }}" style="left: {{ x(d, s) }}%;"></span>{% endif %}
   </span>
 {%- endmacro %}
 {% macro brows(rows, s, unit='shot', mono=False) -%}
@@ -230,15 +231,15 @@ details.brow[open] > summary .lbl { color: var(--gold); }
   {% for r in rows %}
   {% set bm = bshot.get((r.dim or '').split('_')[0], bshot['all']) if r.dim is defined else 0 %}
   {% set pl = shots_plays_like(r.per, shots_per18.get(dim_cat.get(r.dim))) if r.dim is defined else none %}
-  <details class="brow">
+  <details class="brow {{ 'empty' if r.empty }}">
     <summary class="bmain">
       <span class="lbl {{ 'm' if mono }}">{{ r.label }}</span>
       {{ bchart(r, s, bm) }}
       <span class="num {{ cb(r.per, bm) }}">{{ f(r.per) }}</span>
-      <span class="num">{% if r.n < 3 %}<span class="faint">{{ r.n }} {{ unit }}{{ 's' if r.n != 1 }}</span>{% elif pl is not none %}{{ hcp_fmt(pl) }}{% else %}—{% endif %}</span>
+      <span class="num">{% if r.empty %}<span class="faint">none today</span>{% elif r.n < 3 %}<span class="faint">{{ r.n }} {{ unit }}{{ 's' if r.n != 1 }}</span>{% elif pl is not none %}{{ hcp_fmt(pl) }}{% else %}—{% endif %}</span>
     </summary>
     <div class="bdetail">
-      <span>Today: {{ r.n }} {{ unit }}{{ 's' if r.n != 1 }}, {{ f(r.sg) }} in total{% if r.holed is defined and r.holed is not none %}, {{ r.holed }} holed{% if r.scratch_make %} (scratch holes ~{{ r.scratch_make }}%){% endif %}{% endif %}</span>
+      {% if r.empty %}<span>No {{ unit }}s from here today</span>{% else %}<span>Today: {{ r.n }} {{ unit }}{{ 's' if r.n != 1 }}, {{ f(r.sg) }} in total{% if r.holed is defined and r.holed is not none %}, {{ r.holed }} holed{% if r.scratch_make %} (scratch holes ~{{ r.scratch_make }}%){% endif %}{% endif %}</span>{% endif %}
       {% if r.avg is not none %}<span>Usually {{ f(r.avg) }}/{{ unit }} (previous rounds)</span>{% else %}<span>No earlier shots from here yet</span>{% endif %}
       {% if bench %}<span>A {{ bench.index_txt }} averages {{ f(bm) }}/{{ unit }}</span>{% endif %}
       {% if r.rel %}<span>{{ meter(r.rel) }} {{ r.rel.tier_label }}{% if r.rel.ci is not none and r.n > 1 %} · ±{{ '%.2f' | format(r.rel.ci) }}{% endif %}</span>{% endif %}

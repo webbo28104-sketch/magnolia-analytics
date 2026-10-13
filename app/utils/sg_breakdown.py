@@ -110,6 +110,29 @@ def rows(shots, dim, history_shots=None) -> list:
     return out
 
 
+def fill_gaps(rows_, dim, history_shots) -> list:
+    """
+    For ordered dimensions (distance bands, lies, results), add a row for every
+    bucket the golfer has history in but didn't play today, so a report never
+    jumps from 50–75 to 130–145. Added rows have n=0, per=None and empty=True.
+    """
+    _, _, order = _dims()[dim]
+    if not order or not history_shots:
+        return rows_
+    hist = aggregate(history_shots, dim)
+    have = {r['key']: r for r in rows_}
+    out = []
+    for k in order:
+        if k in have:
+            out.append(have.pop(k))
+        elif k in hist and hist[k]['n'] >= 3:
+            h = hist[k]
+            out.append({'dim': dim, 'key': k, 'label': _label(dim, k), 'n': 0, 'sg': 0.0, 'per': None,
+                        'avg': round(h['sg'] / h['n'], 3), 'avg_n': h['n'], 'empty': True,
+                        'rel': None, 'pattern': None})
+    return out + list(have.values())
+
+
 def _row(dim, key, b, h=None) -> dict:
     shots = b['shots']
     row = {
