@@ -247,6 +247,19 @@ def get_tees(external_id: str):
             'hint': f'Check /api/debug/raw-course/{external_id} to inspect the raw response.'
         }), 404
 
+    # The same course can come back from a different search source under another
+    # external_id; reuse the existing record (same name, within ~1km) instead of
+    # creating a duplicate.
+    if detail.get('lat') is not None and detail.get('lng') is not None:
+        twin = Course.query.filter(
+            db.func.lower(Course.name) == detail['name'].strip().lower(),
+            Course.lat.between(detail['lat'] - 0.01, detail['lat'] + 0.01),
+            Course.lng.between(detail['lng'] - 0.01, detail['lng'] + 0.01),
+        ).first()
+        if twin and twin.tee_sets.count():
+            current_app.logger.info(f"[tees] {external_id} is a duplicate of course {twin.id}; reusing it")
+            return jsonify([_tee_to_dict(t) for t in twin.tee_sets.all()])
+
     # Persist course
     course = Course(
         external_id=str(external_id),
