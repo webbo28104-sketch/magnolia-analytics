@@ -60,10 +60,10 @@ def _spark(values, w=90, h=24):
 
 
 def _trend(rounds, bench_v=None):
-    """SG per round on an 18-hole basis, oldest → newest, with a 5-round average.
+    """SG per full 18-hole round (9-hole and partial rounds left out), oldest → newest, with a 5-round average.
     bench_v: what the golfer's handicap typically records per 18 (drawn as a line)."""
     pts = [(r, normalize_to_18(r.sg_total, r.holes_played)) for r in reversed(rounds)
-           if r.sg_total is not None and (r.holes_played or 0) >= 9]
+           if r.sg_total is not None and r.holes_played == 18]
     if len(pts) < 2:
         return None
     vals = [v for _, v in pts]
@@ -176,7 +176,8 @@ def index():
             l['pattern'] = ev.pattern(None, ev.per_round_values(cur_pairs, l['dim']).get(l['key'], []))
         for cat in cats:
             cat['rel'] = ev.reliability(cat['per'], cat['n'], sd[cat['cat']])
-        trend = _trend(all_complete[:TREND_ROUNDS], bench['round18'] if bench else None)
+        trend = _trend([r for r in all_complete if r.holes_played == 18][:TREND_ROUNDS],
+                       bench['round18'] if bench else None)
 
     # ── Clubhouse glance: handicap equivalents over the last N rounds ──────
     from app.utils import hcp_equiv

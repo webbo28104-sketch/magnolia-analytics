@@ -168,7 +168,7 @@
   {% if trend %}
   <section>
     <div class="sec-h" style="flex-direction:column;align-items:flex-start;gap:4px">
-      <h2 class="sec-t">Strokes gained per round</h2>
+      <h2 class="sec-t">Strokes gained per 18-hole round</h2>
     </div>
     <div class="chart">
       {% for t in trend.ticks %}<span class="yt" style="top: {{ 20 + loop.index0 * 100 }}px">{{ f(t, 1) }}</span>{% endfor %}
